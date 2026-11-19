@@ -194,6 +194,14 @@ Thrown when a signer adapter is configured but does not currently have a connect
 
 **How to handle:** Prompt the user to connect or unlock their wallet.
 
+### WalletAccountNotReadyError
+
+**Code:** `WALLET_ACCOUNT_NOT_READY`
+
+Thrown when an async signer adapter has not resolved its wallet account yet. The error carries the `operation` name that was attempted.
+
+**How to handle:** Retry once the account resolves. The error is retryable, so `isRetryable(error)` is `true`.
+
 ### ChainMismatchError
 
 **Code:** `CHAIN_MISMATCH`

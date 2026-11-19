@@ -110,8 +110,8 @@ await approve({ amount: 1000n }); // exact amount
 
 **Throws:**
 
-- `SigningRejectedError` -- if the user rejects the wallet prompt
-- `TransactionRevertedError` -- if the approval transaction reverts
+- [`SigningRejectedError`](../sdk/errors.md#signingrejectederror) -- if the user rejects the wallet prompt
+- [`TransactionRevertedError`](../sdk/errors.md#transactionrevertederror) -- if the approval transaction reverts
 
 ## Return Type
 

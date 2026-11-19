@@ -152,7 +152,7 @@ await shield({
 
 **Throws:**
 
-- `InsufficientERC20BalanceError` -- if the ERC-20 balance is less than `amount` (exposes `requested`, `available`, `token`)
+- [`InsufficientERC20BalanceError`](../sdk/errors.md#insufficienterc20balanceerror) -- if the ERC-20 balance is less than `amount` (exposes `requested`, `available`, `token`)
 
 ## Return Type
 
