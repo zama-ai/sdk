@@ -125,6 +125,7 @@ export {
   TransportKeyPairExpiredError,
   UnshieldAlreadyFinalizedError,
   VaultBatcherPausedError,
+  VaultBatcherReadFailedError,
   VaultBatchNotDispatchedError,
   VaultJoinUnconfirmedError,
   WalletAccountNotReadyError,
@@ -136,6 +137,7 @@ export {
   type SigningErrorMetadata,
   type UnshieldAlreadyFinalizedDetails,
   type VaultBatcherPausedDetails,
+  type VaultBatcherReadFailedDetails,
   type VaultBatchNotDispatchedDetails,
   type VaultJoinUnconfirmedDetails,
 } from "./errors";

@@ -21,7 +21,7 @@ export interface Call {
 export interface VaultLeg {
   /** The vault this leg joins. */
   readonly vaultId: string;
-  /** The vault's active batcher when the join was prepared. */
+  /** The vault's batcher whose open batch the join reaches, chosen when the join was prepared. */
   readonly batcher: Address;
   /** The confidential token the leg spends: the asset for a deposit, the vault's share for a redeem. */
   readonly token: Address;
@@ -180,13 +180,13 @@ export type Batch =
         readonly exchangeRate: { readonly rate: bigint; readonly decimals: number };
       });
 
-/** The open batch of one vault's active batcher. */
+/** The batch a join into one vault reaches now. */
 export interface OpenBatch extends BatchRef {
   /** The vault whose open batch this is. */
   readonly vaultId: string;
   /** The time from which anyone may dispatch the batch, in chain seconds. */
   readonly dispatchableAt: bigint;
-  /** Whether the batcher is paused. */
+  /** Whether every batcher of the vault is paused or closed, so no join can be sent. */
   readonly paused: boolean;
   /** The block timestamp the read was made at. */
   readonly observedAt: bigint;
