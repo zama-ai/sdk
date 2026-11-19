@@ -28734,28 +28734,28 @@ A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using wagm
 ## Architecture at a glance
 
 ```
-page.tsx                         — wallet connect, network picker, token selector
-├── lib/networks.ts              — the network table: one row per chain (viem chain, FHE preset, flags)
-├── lib/relayers.ts              — server-side: upstream relayer URL + API key per network
-├── lib/environment.ts           — optional custom Zama environment: its Sepolia config, network ids and labels
-├── lib/wallet.tsx               — wallet stack: Dynamic connect dialog or wagmi injected connector, built from the table
-├── lib/dynamic.ts               — Dynamic headless client: wallet catalogue and connect step
-├── lib/dynamicConnector.ts      — wagmi connector over a Dynamic-authorized wallet
-├── lib/zodJitless.ts            — turns off zod's eval probe, which the page CSP blocks
-├── ConnectWalletDialog.tsx      — wallet picker and WalletConnect pairing
-├── providers.tsx                — wallet providers + one ZamaProvider config per environment
-│   ├── /api/networks            — which networks the server can serve (drives the picker)
-│   └── /api/relayer/[network]/[...path] — Next.js proxy (keeps API keys server-side)
-├── PageChrome.tsx               — connect screen, header, network picker, token selector
-├── SelectedTokenPanel.tsx       — composes the cards below for the selected token
-├── BalancesCard.tsx             — native / ERC-20 / confidential balance display
-├── ShieldCard.tsx               — ERC-20 → confidential via `useShield`
-├── TransferCard.tsx             — confidential → confidential
-├── UnshieldCard.tsx             — confidential → ERC-20 (2-phase)
-├── PendingUnshieldCard.tsx      — recover an interrupted unshield from IndexedDB
-├── DelegateDecryptionCard.tsx   — grant another wallet the right to decrypt your balance
-├── RevokeDelegationCard.tsx     — revoke that right
-└── DecryptAsCard.tsx            — decrypt another wallet's balance (as a delegate)
+page.tsx                         # wallet connect, network picker, token selector
+├── lib/networks.ts              # the network table: one row per chain (viem chain, FHE preset, flags)
+├── lib/relayers.ts              # server-side: upstream relayer URL + API key per network
+├── lib/environment.ts           # optional custom Zama environment: its Sepolia config, network ids and labels
+├── lib/wallet.tsx               # wallet stack: Dynamic connect dialog or wagmi injected connector, built from the table
+├── lib/dynamic.ts               # Dynamic headless client: wallet catalogue and connect step
+├── lib/dynamicConnector.ts      # wagmi connector over a Dynamic-authorized wallet
+├── lib/zodJitless.ts            # turns off zod's eval probe, which the page CSP blocks
+├── ConnectWalletDialog.tsx      # wallet picker and WalletConnect pairing
+├── providers.tsx                # wallet providers + one ZamaProvider config per environment
+│   ├── /api/networks            # which networks the server can serve (drives the picker)
+│   └── /api/relayer/[network]/[...path] # Next.js proxy (keeps API keys server-side)
+├── PageChrome.tsx               # connect screen, header, network picker, token selector
+├── SelectedTokenPanel.tsx       # composes the cards below for the selected token
+├── BalancesCard.tsx             # native / ERC-20 / confidential balance display
+├── ShieldCard.tsx               # ERC-20 → confidential via `useShield`
+├── TransferCard.tsx             # confidential → confidential
+├── UnshieldCard.tsx             # confidential → ERC-20 (2-phase)
+├── PendingUnshieldCard.tsx      # recover an interrupted unshield from IndexedDB
+├── DelegateDecryptionCard.tsx   # grant another wallet the right to decrypt your balance
+├── RevokeDelegationCard.tsx     # revoke that right
+└── DecryptAsCard.tsx            # decrypt another wallet's balance (as a delegate)
 ```
 
 ---
