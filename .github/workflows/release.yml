@@ -312,6 +312,60 @@ jobs:
             exit 1
           fi
 
+  # Main only: prerelease pins would reach main through promotions and conflict on backmerges.
+  # A chore title keeps the bump PR's merge from cutting another release.
+  bump-examples:
+    needs: [release]
+    if: >-
+      ${{ !cancelled() && github.ref_name == 'main'
+      && needs.release.result == 'success' && needs.release.outputs.released == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ needs.release.outputs.version }}
+      BASE: ${{ github.ref_name }}
+      BRANCH: chore/examples-sdk-${{ needs.release.outputs.version }}
+      TITLE: "chore(no-release): bump examples to SDK ${{ needs.release.outputs.version }}"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.ref_name }}
+          persist-credentials: false
+
+      # Puts safe-chain in front of the npm installs that rewrite the example lockfiles.
+      - name: Install dependencies
+        uses: ./.github/actions/install-deps
+        with:
+          ignore-scripts: "true"
+
+      # Waits for the release on npm and pins it only if it is npm latest, so a re-run for an older release never downgrades.
+      - name: Pin the examples
+        id: bump
+        run: node scripts/examples/bump-sdk.mjs "${VERSION}"
+
+      # The releaser token, not GITHUB_TOKEN, so the PR triggers Examples CI.
+      - name: Open the bump PR
+        if: steps.bump.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.SDK_RELEASER_TOKEN }}
+        run: |
+          if [[ "$(gh pr list --repo "${GITHUB_REPOSITORY}" --head "${BRANCH}" --state open --json number --jq length)" != "0" ]]; then
+            echo "::notice::A bump PR for ${VERSION} is already open."
+            exit 0
+          fi
+          git switch -c "${BRANCH}"
+          git add examples
+          git -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "${TITLE}"
+          # Overwrites a branch left by a closed bump PR for the same version.
+          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${BRANCH}"
+          gh pr create --repo "${GITHUB_REPOSITORY}" --base "${BASE}" --head "${BRANCH}" --title "${TITLE}" \
+            --body "Pins the example apps to \`@zama-fhe/sdk\` and \`@zama-fhe/react-sdk\` ${VERSION}."
+
   # Runs even if npm publish failed: the tag exists and a re-run of the release job cannot republish it.
   publish-image:
     needs: [release, verify-tag]

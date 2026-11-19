@@ -17,6 +17,7 @@ The daemon reads its process configuration from environment variables at startup
 | `ZAMA_SDK_DAEMON_MAX_CONTEXTS`               | Unset (no limit)     | Maximum open SDK contexts. Creating another context fails with `CONTEXT_LIMIT`.                                                                  |
 | `ZAMA_SDK_DAEMON_MAX_OPERATIONS_PER_CONTEXT` | Unset (no limit)     | Maximum in-flight operations per SDK context. Another operation fails with `OPERATION_LIMIT`.                                                    |
 | `ZAMA_SDK_DAEMON_SHUTDOWN_TIMEOUT_MS`        | `120000`             | Longest wait, in milliseconds, for running SDK work after `SIGTERM` or `SIGINT`. Past it, the daemon removes its socket and exits with status 1. |
+| `ZAMA_SDK_TELEMETRY`                         | Unset (`header`)     | Usage telemetry mode: `header`, `query`, or `off`. See [Telemetry](../operations/run-in-production.md#telemetry).                                |
 
 Numeric limits must be positive integers. The daemon exits at startup when a path is relative or a limit is invalid.
 

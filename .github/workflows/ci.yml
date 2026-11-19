@@ -55,6 +55,16 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: false
+          # The em dash check below diffs against HEAD^1.
+          fetch-depth: 2
+
+      # On a PR, HEAD is the merge commit and HEAD^1 is the base branch tip,
+      # so this checks exactly the lines the PR adds. Promotion and sync PRs
+      # from this repo carry lines that were already reviewed; fork PRs are
+      # always checked, even from a branch named main.
+      - name: Check for added em dashes
+        if: github.event_name == 'pull_request' && !(github.event.pull_request.head.repo.full_name == github.repository && (contains(fromJSON('["main","beta","alpha"]'), github.head_ref) || startsWith(github.head_ref, 'sync/')))
+        run: node scripts/lint/no-em-dash.mjs --base HEAD^1
 
       - name: Install dependencies
         uses: ./.github/actions/install-deps

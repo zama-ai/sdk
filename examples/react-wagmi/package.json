@@ -9,12 +9,12 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@dynamic-labs-sdk/client": "1.47.0",
-    "@dynamic-labs-sdk/evm": "1.47.0",
+    "@dynamic-labs-sdk/client": "1.52.1",
+    "@dynamic-labs-sdk/evm": "1.52.1",
     "@tanstack/react-query": "5.107.0",
     "@zama-fhe/react-sdk": "4.0.0-alpha.5",
     "@zama-fhe/sdk": "4.0.0-alpha.5",
-    "next": "16.4.2",
+    "next": "16.4.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "viem": "2.57.5",

@@ -4,7 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { credentials, Metadata, status, type ServiceError } from "@grpc/grpc-js";
 import { expect, test, vi } from "vitest";
-import { DaemonServiceClient } from "../src/generated/zama/sdk/v1beta1/daemon.js";
+import {
+  CreateContextRequest,
+  DaemonServiceClient,
+} from "../src/generated/zama/sdk/v1beta1/daemon.js";
 import { createCoordinator } from "../src/coordination.js";
 import { type ContextSdk, DaemonRuntime } from "../src/runtime.js";
 import { startServer } from "../src/server.js";
@@ -40,16 +43,8 @@ test("serves typed unary calls over a private socket and sanitizes errors", asyn
     );
     expect(info.sdkVersion).toBe("test-version");
     const created = await new Promise<{ contextId: string }>((resolve, reject) =>
-      client.createContext(
-        {
-          storage: undefined,
-          permitStorage: undefined,
-          transportKeyPairDerivationSecret: undefined,
-          config: undefined,
-          signerEnabled: false,
-          account: undefined,
-        },
-        (error, response) => (error ? reject(error) : resolve(response)),
+      client.createContext(CreateContextRequest.fromPartial({}), (error, response) =>
+        error ? reject(error) : resolve(response),
       ),
     );
     const error = await new Promise<ServiceError>((resolve, reject) =>
@@ -124,14 +119,7 @@ test.each(["cancel", "deadline"] as const)(
       }),
       createCoordinator(),
     );
-    const contextId = await runtime.createContext({
-      storage: undefined,
-      permitStorage: undefined,
-      transportKeyPairDerivationSecret: undefined,
-      config: undefined,
-      signerEnabled: false,
-      account: undefined,
-    });
+    const contextId = await runtime.createContext(CreateContextRequest.fromPartial({}));
     const stop = await startServer(runtime, socket, "test");
     const client = new DaemonServiceClient(`unix:${socket}`, credentials.createInsecure());
     try {
@@ -177,14 +165,7 @@ test("closing contexts with both callback channels permits prompt server shutdow
   try {
     const created = await new Promise<{ contextId: string }>((resolve, reject) =>
       client.createContext(
-        {
-          config: undefined,
-          signerEnabled: true,
-          account: undefined,
-          storage: undefined,
-          permitStorage: undefined,
-          transportKeyPairDerivationSecret: undefined,
-        },
+        CreateContextRequest.fromPartial({ signerEnabled: true }),
         (error, value) => (error ? reject(error) : resolve(value)),
       ),
     );

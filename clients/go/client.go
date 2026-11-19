@@ -70,6 +70,7 @@ func (c *Client) CreateContext(ctx context.Context, config SDKConfig, signer Sig
 	response, err := c.rpc.CreateContext(ctx, &pb.CreateContextRequest{
 		Config: serialized, TransportKeyPairDerivationSecret: wireDerivationSecret(config.TransportKeyPairDerivationSecret),
 		SignerEnabled: signer.enabled(), Account: accountWire(signer.Account), Storage: storage, PermitStorage: permits,
+		ClientLanguage: pb.ClientLanguage_CLIENT_LANGUAGE_GO,
 	}, grpc.Trailer(&trailers))
 	if err != nil {
 		return nil, rpcError(err, trailers)

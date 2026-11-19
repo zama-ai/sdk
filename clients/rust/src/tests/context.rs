@@ -48,6 +48,10 @@ async fn preserves_context_options_typed_values_and_sdk_errors() {
     let handler = move |path: &str, bytes: &[u8]| match path.rsplit('/').next().unwrap() {
         "CreateContext" => {
             let request = CreateContextRequest::decode(bytes).unwrap();
+            assert_eq!(
+                request.client_language,
+                generated::ClientLanguage::Rust as i32
+            );
             assert!(!request.signer_enabled);
             assert!(request.account.is_none());
             assert_eq!(request.config, Some(expected_config.clone()));
