@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.0.0-alpha.6](https://github.com/zama-ai/sdk/compare/v4.0.0-alpha.5...v4.0.0-alpha.6) (2026-11-19)
+
+### Features
+
+- **daemon:** report daemon traffic in telemetry ([#947](https://github.com/zama-ai/sdk/issues/947)) ([d640d72]())
+- **examples:** offer Sepolia alongside the custom environment in react-wagmi ([#952](https://github.com/zama-ai/sdk/issues/952)) ([59d9236]())
+
+### Bug Fixes
+
+- **deps:** raise the Next.js floor to 16.4.6 in the examples and test app ([#955](https://github.com/zama-ai/sdk/issues/955)) ([c83d715]())
+
 ## [3.9.0-beta.3](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.2...v3.9.0-beta.3) (2026-11-19)
 
 ### Features
