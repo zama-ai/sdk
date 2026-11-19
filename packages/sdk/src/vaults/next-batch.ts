@@ -1,6 +1,11 @@
 import type { Address } from "viem";
-import { VaultBatcherPausedError, VaultBatcherReadFailedError } from "../errors";
+import {
+  ConfigurationError,
+  VaultBatcherPausedError,
+  VaultBatcherReadFailedError,
+} from "../errors";
 import type { GenericProvider } from "../types";
+import { isContractCallError } from "../utils/error";
 import { batchersOf, type BatcherEntry, type Vault } from "./config";
 import {
   batchCreatedAtContract,
@@ -10,13 +15,13 @@ import {
   currentBatchIdContract,
   pausedContract,
 } from "./contracts";
-import type { JoinDirection } from "./types";
+import type { BatchState, JoinDirection } from "./types";
 
 /** A join sent this close to its batch's due time can land after the dispatch and wait a whole cycle. */
 export const JOIN_MARGIN_SECONDS = 60n;
 
-// The index of "dispatched" in the batcher's `BatchState` enum.
-const DISPATCHED = 1;
+// The batcher's `BatchState` enum, in on-chain order.
+const BATCH_STATES: readonly BatchState[] = ["pending", "dispatched", "finalized", "canceled"];
 
 /** What one batcher offers a join. */
 export type BatcherOffer =
@@ -25,7 +30,7 @@ export type BatcherOffer =
       readonly batcher: Address;
       readonly batchId: bigint;
       readonly dispatchableAt: bigint;
-      /** The previous batch is still in flight, so `dispatchBatch` reverts until it settles. */
+      /** The previous batch is still in flight, so this batch waits for it to settle before it is dispatched. */
       readonly blocked: boolean;
     }
   | {
@@ -71,7 +76,6 @@ export function pickNextBatch(
 
 /**
  * The batch a join into each vault reaches, in vault order, and the chain time it was picked at.
- * Never cached: it moves with every dispatch.
  *
  * @internal
  * @throws if a vault lists no batcher, or an address or `lastBatchId` is invalid. {@link ConfigurationError}
@@ -83,32 +87,59 @@ export async function readNextBatches(
   chainId: number,
   vaults: readonly Vault[],
   direction: JoinDirection,
-): Promise<{ readonly now: bigint; readonly next: readonly (OpenOffer | PausedOffer)[] }> {
-  const listed = vaults.map((vault) => ({ vault, entries: batchersOf(vault, direction) }));
-  const [now, offers] = await Promise.all([
+): Promise<{
+  readonly now: bigint;
+  readonly next: readonly { readonly vault: Vault; readonly offer: OpenOffer | PausedOffer }[];
+}> {
+  const [now, read] = await Promise.all([
     provider.getBlockTimestamp(chainId),
     Promise.all(
-      listed.map(({ vault, entries }) =>
-        Promise.all(entries.map((entry) => offerOf(provider, chainId, vault.id, entry))),
-      ),
+      vaults.map(async (vault) => {
+        const entries = batchersOf(vault, direction);
+        const offers = await Promise.all(
+          entries.map((entry) => offerOf(provider, chainId, vault.id, entry)),
+        );
+        return { vault, entries, offers };
+      }),
     ),
   ]);
-  const next = listed.map(({ vault, entries }, index) => {
-    const picked = pickNextBatch(offers[index] ?? [], now);
-    if (picked === undefined) {
+  const next = read.map(({ vault, entries, offers }) => {
+    const offer = pickNextBatch(offers, now);
+    if (offer === undefined) {
       throw new VaultBatcherPausedError(
         `Every ${direction} batcher of vault "${vault.id}" is closed, so the vault takes no joins`,
         { batcher: entries[0].address, vaultId: vault.id },
       );
     }
-    return picked;
+    return { vault, offer };
   });
   return { now, next };
 }
 
 /**
- * Whether the batch before `batchId` is still in flight. `dispatchBatch` reverts then, on
- * batchers with `PreviousBatchInFlight`.
+ * The state of one batch.
+ *
+ * @internal
+ * @throws if the batcher returns a state outside its enum. {@link ConfigurationError}
+ */
+export async function readBatchState(
+  provider: GenericProvider,
+  chainId: number,
+  batcher: Address,
+  batchId: bigint,
+): Promise<BatchState> {
+  const index = await provider.readContract({ ...batchStateContract(batcher, batchId), chainId });
+  const state = BATCH_STATES[index];
+  if (state === undefined) {
+    throw new ConfigurationError(
+      `Batcher ${batcher} returned unknown batch state ${index} for batch ${batchId}; is it a vault batcher?`,
+    );
+  }
+  return state;
+}
+
+/**
+ * Whether the batch before `batchId` is still in flight, so `batchId` should not be dispatched yet.
  *
  * @internal
  */
@@ -118,14 +149,10 @@ export async function waitsOnPrevious(
   batcher: Address,
   batchId: bigint,
 ): Promise<boolean> {
-  if (batchId <= 1n) {
-    return false;
-  }
-  const state = await provider.readContract({
-    ...batchStateContract(batcher, batchId - 1n),
-    chainId,
-  });
-  return state === DISPATCHED;
+  return (
+    batchId > 1n &&
+    (await readBatchState(provider, chainId, batcher, batchId - 1n)) === "dispatched"
+  );
 }
 
 async function offerOf(
@@ -136,26 +163,29 @@ async function offerOf(
 ): Promise<BatcherOffer> {
   const details = { batcher: entry.address, vaultId };
   const where = `vault "${vaultId}"`;
-  let offer: BatcherOffer | undefined;
   try {
     // A stale read is most likely one block behind, so one more read settles it.
-    offer =
+    const offer =
       (await readOffer(provider, chainId, entry)) ?? (await readOffer(provider, chainId, entry));
+    if (offer !== undefined) {
+      return offer;
+    }
   } catch (cause) {
+    // A provider on another chain, or a batcher that is not one, is a setup problem, not a read failure.
+    if (cause instanceof ConfigurationError) {
+      throw cause;
+    }
     throw new VaultBatcherReadFailedError(
       `Could not read batcher ${entry.address} of ${where}`,
       details,
       { cause },
     );
   }
-  if (offer === undefined) {
-    throw new VaultBatcherReadFailedError(
-      `Batcher ${entry.address} of ${where} has no open batch but is not closed; the RPC returned reads from different blocks`,
-      details,
-      { retryable: true },
-    );
-  }
-  return offer;
+  throw new VaultBatcherReadFailedError(
+    `Batcher ${entry.address} of ${where} has no open batch but is not closed; the RPC returned reads from different blocks`,
+    details,
+    { retryable: true },
+  );
 }
 
 // `undefined` when the reads disagree: a current batch with no creation time on a batcher that is not closed.
@@ -195,7 +225,10 @@ async function isClosed(
 ): Promise<boolean> {
   try {
     return await provider.readContract({ ...closedContract(batcher), chainId });
-  } catch {
-    return false;
+  } catch (error) {
+    if (isContractCallError(error)) {
+      return false;
+    }
+    throw error;
   }
 }

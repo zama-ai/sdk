@@ -2546,7 +2546,7 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 
 ### Vaults
 
-**Several batchers per vault direction.** A vault's `batchers.deposit` and `batchers.redeem` take an address, or a list of addresses and `BatcherEntry` objects (`{ address, lastBatchId? }`). A join goes to the open batch that is dispatched next among the batchers that are not paused or closed, and `readOpenBatches` returns that batch. `openBatchesQueryOptions` and `useOpenBatches` refetch when that batch comes within a minute of its due time. `VaultBatcherPausedError` is now thrown only when no batcher of a vault is open, and also when every batcher is closed. The new `VaultBatcherReadFailedError` names the batcher and the vault when one cannot be read. `readBatch` no longer lists `dispatch` while the previous batch is in flight. See [Several batchers](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#several-batchers).
+**Several batchers per vault direction.** A vault's `batchers.deposit` and `batchers.redeem` take an address, or a list of addresses and `BatcherEntry` objects (`{ address, lastBatchId? }`). A join goes to the open batch that is dispatched next among the batchers that are not paused or closed, and `readOpenBatches` returns that batch. `openBatchesQueryOptions` and `useOpenBatches` refetch when that batch comes within a minute of its due time. `VaultBatcherPausedError` is now thrown only when no batcher of a vault is open. `readOpenBatches` also throws it, instead of `ConfigurationError`, when every batcher of a vault is closed. The new `VaultBatcherReadFailedError` names the batcher and the vault when one cannot be read. `readBatch` no longer lists `dispatch` while the previous batch is in flight. See [Several batchers](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#several-batchers).
 
 **`BatcherHistory` and `RetiredBatcher` are deprecated.** A history reads as the list `[...retired, latest]`, so `latest` takes joins as soon as it is open. It no longer waits for the retired batchers to pass their `lastBatchId`. Replace `{ retired, latest }` with that list. Code that reads `vault.batchers` must also handle a list.
 
@@ -6575,7 +6575,7 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 
 ### 8. Retry transient failures
 
-Six causes are transient, so the operation can simply be retried, ideally with backoff: `RpcRateLimitError` (`RPC_RATE_LIMITED`), `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`, only on a 429, or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`), `DelegationCooldownError` (`DELEGATION_COOLDOWN`), `WalletAccountNotReadyError` (`WALLET_ACCOUNT_NOT_READY`), and `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`). `VaultBatcherReadFailedError` (`VAULT_BATCHER_READ_FAILED`) is transient when its cause is. Rather than hardcoding that set of codes, use `isRetryable(error)` and `retryAfterSeconds(error)`: they stay correct as the taxonomy grows, since every `ZamaError` declares its own `.retryable`.
+Six causes are transient, so the operation can simply be retried, ideally with backoff: `RpcRateLimitError` (`RPC_RATE_LIMITED`), `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`, only on a 429, or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`), `DelegationCooldownError` (`DELEGATION_COOLDOWN`), `WalletAccountNotReadyError` (`WALLET_ACCOUNT_NOT_READY`), and `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`). `VaultBatcherReadFailedError` (`VAULT_BATCHER_READ_FAILED`) is transient when the RPC returned reads from different blocks, or when its cause is an RPC rate limit or another retryable SDK error. Rather than hardcoding that set of codes, use `isRetryable(error)` and `retryAfterSeconds(error)`: they stay correct as the taxonomy grows, since every `ZamaError` declares its own `.retryable`.
 
 | Cause                                                        | `retryAfterSeconds`                               | Notes                                                                                                   |
 | ------------------------------------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -14460,7 +14460,7 @@ try {
 | `isRetryable`       | `(error: unknown) => error is ZamaError & { retryable: true }` | `true` only for a `ZamaError` instance whose `.retryable` is `true`; `false` for anything else, including non-SDK errors.                                                                                                                            |
 | `retryAfterSeconds` | `(error: unknown) => number \| undefined`                      | Reads the error's own `retryAfter` field when the error is retryable and carries one. Only `RelayerRequestFailedError` and `RpcRateLimitError` currently carry `retryAfter` — treat `undefined` as "retry with your own backoff," not "don't retry." |
 
-Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequestFailedError` (only on an HTTP 429 or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, `WalletAccountNotReadyError`, and `HcuBlockLimitExceededError`. See [Retry transient failures](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/handle-errors.md#8-retry-transient-failures) for the full guide, including React Query integration.
+Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequestFailedError` (only on an HTTP 429 or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, `WalletAccountNotReadyError`, and `HcuBlockLimitExceededError`. `VaultBatcherReadFailedError` is retryable for some instances: see [VaultBatcherReadFailedError](#vaultbatcherreadfailederror). See [Retry transient failures](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/handle-errors.md#8-retry-transient-failures) for the full guide, including React Query integration.
 
 ## Error summary
 
@@ -14697,7 +14697,7 @@ Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()` and `prepareRe
 
 Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()`, `prepareRedeem()` and `readOpenBatches()` when a batcher of a vault cannot be read, before anything is sent. The error carries the `batcher`, the `vaultId`, and the read error as `cause`. It is also thrown when the RPC returns reads from different blocks, so a batcher looks closed while its `closed()` is not true.
 
-**How to handle:** Check `isRetryable(error)`. It is retryable when the cause is (for example a rate limit), and when the reads came from different blocks. Otherwise check that the vault config lists the right batcher address on the right chain.
+**How to handle:** Check `isRetryable(error)`. It is retryable when the cause is an RPC rate limit or another retryable SDK error, and when the reads came from different blocks. Otherwise check that the vault config lists the right batcher address on the right chain.
 
 ### VaultBatchNotDispatchedError
 
@@ -24969,7 +24969,7 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 # useOpenBatches
 
-Query hook that reads the batch the next join lands in, for every vault of a group: when it can be dispatched, and whether every batcher of the vault is paused or closed. Wraps [`VaultClient.readOpenBatches`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#readopenbatches).
+Query hook that reads the batch the next join lands in, for every vault of a group: when it can be dispatched, and whether the vault takes no joins because its batchers are paused. When every batcher of a vault is closed, `error` is a `VaultBatcherPausedError`. Wraps [`VaultClient.readOpenBatches`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#readopenbatches).
 
 ## Import
 
@@ -25079,7 +25079,7 @@ Poll at a fixed interval. Set to `false` or omit to disable polling.
 Re-fetch when the browser tab regains focus. Defaults to `true`.
 
 
-The hook refetches one second after a batch comes within a minute of its due time, when joins move to another batch, then every 15 seconds until a keeper dispatches it. It stops while every vault is paused. A `refetchInterval` you pass replaces this.
+The hook refetches one second after a batch comes within a minute of its due time, since joins may then move to another batch, then every 15 seconds until a keeper dispatches it. It stops while every vault is paused. A `refetchInterval` you pass replaces this.
 
 ## Return Type
 

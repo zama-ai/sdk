@@ -36,13 +36,12 @@ import { isEncryptedValueZero } from "../utils/handles";
 import { submitTransaction } from "../utils/submit-transaction";
 import type { ZamaSDK } from "../zama-sdk";
 import { scopeOf, type Vault, type VaultGroup, type VaultIdOf } from "./config";
-import { readNextBatches, waitsOnPrevious } from "./next-batch";
+import { readBatchState, readNextBatches, waitsOnPrevious } from "./next-batch";
 import {
   batchCallbackDeadlineContract,
   batchCreatedAtContract,
   batchDispatchedAtContract,
   batchMinBatchAgeContract,
-  batchStateContract,
   claimContract,
   depositsContract,
   dispatchBatchCallbackContract,
@@ -61,7 +60,6 @@ import type {
   Batch,
   BatchAction,
   BatchRef,
-  BatchState,
   BatcherRef,
   Call,
   JoinCall,
@@ -83,9 +81,6 @@ import type {
 
 // A router pulls a share token only for its holder's join, so a year-long approval is safe.
 const OPERATOR_APPROVAL_VALIDITY_SECONDS = 365n * 24n * 60n * 60n;
-
-// The contract's uint8 enum, by index.
-const BATCH_STATES: readonly BatchState[] = ["pending", "dispatched", "finalized", "canceled"];
 
 const ENCRYPT_OPERATION = {
   deposit: "vault-deposit",
@@ -270,7 +265,7 @@ export class VaultClient {
   async #planFinalize(batch: BatchRef): Promise<Planned<PreparedFinalize>> {
     const batcher = getAddress(batch.batcher);
     const [state, requestId, wrapper] = await Promise.all([
-      this.#batchState(batch.chainId, batcher, batch.batchId),
+      readBatchState(this.#sdk.provider, batch.chainId, batcher, batch.batchId),
       this.#read(batch.chainId, unwrapRequestIdContract(batcher, batch.batchId)),
       this.#fromToken(batch.chainId, batcher),
     ]);
@@ -455,7 +450,7 @@ export class VaultClient {
       now,
       blocked,
     ] = await Promise.all([
-      this.#batchState(chainId, batcher, batchId),
+      readBatchState(this.#sdk.provider, chainId, batcher, batchId),
       this.#read(chainId, batchCreatedAtContract(batcher, batchId)),
       this.#read(chainId, batchMinBatchAgeContract(batcher, batchId)),
       this.#read(chainId, batchDispatchedAtContract(batcher, batchId)),
@@ -521,8 +516,8 @@ export class VaultClient {
   ): Promise<readonly OpenBatch[]> {
     const { vaults, chainId } = scopeOf(target);
     const { now, next } = await readNextBatches(this.#sdk.provider, chainId, vaults, direction);
-    return next.map(({ status, batcher, batchId, dispatchableAt }, index) => ({
-      vaultId: at(vaults, index).id,
+    return next.map(({ vault, offer: { status, batcher, batchId, dispatchableAt } }) => ({
+      vaultId: vault.id,
       chainId,
       batcher,
       batchId,
@@ -547,18 +542,17 @@ export class VaultClient {
     await this.#requireProviderChain(chainId, `vault ${direction}`);
     const router = group !== undefined && route === "router" ? this.#router(group) : undefined;
     // A paused batcher reverts the whole join, so every leg needs an open batch.
-    const { next: picked } = await readNextBatches(this.#sdk.provider, chainId, vaults, direction);
-    const batchers = picked.map((next, index) => {
-      const vault = at(vaults, index);
-      if (next.status === "paused") {
+    const { next } = await readNextBatches(this.#sdk.provider, chainId, vaults, direction);
+    const batchers = next.map(({ vault, offer }) => {
+      if (offer.status === "paused") {
         throw new VaultBatcherPausedError(
           group === undefined
             ? `Every ${direction} batcher of vault "${vault.id}" is paused or closed, so the vault cannot be joined until one resumes`
             : `Every ${direction} batcher of vault "${vault.id}" in group "${group.id}" is paused or closed, so no vault of the group can be joined until one resumes`,
-          { batcher: next.batcher, vaultId: vault.id },
+          { batcher: offer.batcher, vaultId: vault.id },
         );
       }
-      return next.batcher;
+      return offer.batcher;
     });
     const tokens = await Promise.all(batchers.map((batcher) => this.#fromToken(chainId, batcher)));
     const legs = nonEmpty(
@@ -836,17 +830,6 @@ export class VaultClient {
         },
       };
     });
-  }
-
-  async #batchState(chainId: number, batcher: Address, batchId: bigint): Promise<BatchState> {
-    const index = await this.#read(chainId, batchStateContract(batcher, batchId));
-    const state = BATCH_STATES[index];
-    if (state === undefined) {
-      throw new ConfigurationError(
-        `Batcher ${batcher} returned unknown batch state ${index} for batch ${batchId}; is it a vault batcher?`,
-      );
-    }
-    return state;
   }
 
   #signer(operation: string): GenericSigner {

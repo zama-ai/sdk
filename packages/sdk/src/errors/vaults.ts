@@ -1,6 +1,7 @@
 import type { Address, Hex } from "viem";
 import type { TransactionReceipt } from "../types/transaction";
 import type { BatchState } from "../vaults/types";
+import { isRpcRateLimitError } from "../utils/error";
 import { isRetryable, ZamaError, ZamaErrorCode } from "./base";
 
 /** What a {@link VaultBatcherPausedError} carries. */
@@ -11,7 +12,7 @@ export interface VaultBatcherPausedDetails {
   readonly vaultId: string;
 }
 
-/** No batcher of a vault a join needs is open: each one is paused or closed. */
+/** No batcher of a vault is open: each one is paused or closed. */
 export class VaultBatcherPausedError extends ZamaError {
   /** A paused or closed batcher of the vault. */
   readonly batcher: Address;
@@ -51,7 +52,9 @@ export class VaultBatcherReadFailedError extends ZamaError {
   ) {
     super(ZamaErrorCode.VaultBatcherReadFailed, message, {
       ...options,
-      retryable: options?.retryable ?? isRetryable(options?.cause),
+      // Providers pass an RPC rate limit through as a raw viem or ethers error, not an SDK one.
+      retryable:
+        options?.retryable ?? (isRetryable(options?.cause) || isRpcRateLimitError(options?.cause)),
     });
     this.name = "VaultBatcherReadFailedError";
     this.batcher = details.batcher;

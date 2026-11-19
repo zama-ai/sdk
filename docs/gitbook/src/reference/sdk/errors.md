@@ -112,7 +112,7 @@ try {
 | `isRetryable`       | `(error: unknown) => error is ZamaError & { retryable: true }` | `true` only for a `ZamaError` instance whose `.retryable` is `true`; `false` for anything else, including non-SDK errors.                                                                                                                            |
 | `retryAfterSeconds` | `(error: unknown) => number \| undefined`                      | Reads the error's own `retryAfter` field when the error is retryable and carries one. Only `RelayerRequestFailedError` and `RpcRateLimitError` currently carry `retryAfter` — treat `undefined` as "retry with your own backoff," not "don't retry." |
 
-Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequestFailedError` (only on an HTTP 429 or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, `WalletAccountNotReadyError`, and `HcuBlockLimitExceededError`. See [Retry transient failures](../../guides/handle-errors.md#8-retry-transient-failures) for the full guide, including React Query integration.
+Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequestFailedError` (only on an HTTP 429 or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, `WalletAccountNotReadyError`, and `HcuBlockLimitExceededError`. `VaultBatcherReadFailedError` is retryable for some instances: see [VaultBatcherReadFailedError](#vaultbatcherreadfailederror). See [Retry transient failures](../../guides/handle-errors.md#8-retry-transient-failures) for the full guide, including React Query integration.
 
 ## Error summary
 
@@ -349,7 +349,7 @@ Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()` and `prepareRe
 
 Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()`, `prepareRedeem()` and `readOpenBatches()` when a batcher of a vault cannot be read, before anything is sent. The error carries the `batcher`, the `vaultId`, and the read error as `cause`. It is also thrown when the RPC returns reads from different blocks, so a batcher looks closed while its `closed()` is not true.
 
-**How to handle:** Check `isRetryable(error)`. It is retryable when the cause is (for example a rate limit), and when the reads came from different blocks. Otherwise check that the vault config lists the right batcher address on the right chain.
+**How to handle:** Check `isRetryable(error)`. It is retryable when the cause is an RPC rate limit or another retryable SDK error, and when the reads came from different blocks. Otherwise check that the vault config lists the right batcher address on the right chain.
 
 ### VaultBatchNotDispatchedError
 

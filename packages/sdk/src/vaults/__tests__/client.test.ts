@@ -5,7 +5,6 @@ import {
   BalanceCheckUnavailableError,
   ConfigurationError,
   InsufficientConfidentialBalanceError,
-  RpcRateLimitError,
   VaultBatcherPausedError,
   VaultBatcherReadFailedError,
   type VaultBatchNotDispatchedError,
@@ -247,6 +246,21 @@ describe("config checks, where the config is used", () => {
     const read = createVaultClient(sdk).readOpenBatches(broken, "deposit");
     await expect(read).rejects.toBeInstanceOf(ConfigurationError);
     await expect(read).rejects.toThrow(message);
+  });
+
+  test("refuses a lone batcher entry, which is not a list", async ({ sdk, provider }) => {
+    mockChain(provider);
+    const broken = defineVault({
+      id: "broken",
+      chainId: CHAIN_ID,
+      batchers: {
+        deposit: { address: ALPHA.depositBatcher } as never,
+        redeem: ALPHA.redeemBatcher,
+      },
+    });
+    await expect(createVaultClient(sdk).readOpenBatches(broken, "deposit")).rejects.toThrow(
+      /must be an address or a list/,
+    );
   });
 
   test("refuses an invalid lastBatchId", async ({ sdk, provider }) => {
@@ -820,27 +834,65 @@ describe("several batchers in one direction", () => {
       const read = nextBatcher(sdk);
       await expect(read).rejects.toBeInstanceOf(VaultBatcherReadFailedError);
       await expect(read).rejects.toMatchObject({ batcher: EARLY, vaultId: "set", retryable: true });
+      const createdAtReads = vi
+        .mocked(provider.readContract)
+        .mock.calls.filter(
+          ([call]) =>
+            (call as { functionName: string }).functionName === "batchCreatedAt" &&
+            getAddress((call as { address: Address }).address) === EARLY,
+        );
+      // Read once, then once more before giving up.
+      expect(createdAtReads).toHaveLength(2);
     },
   );
 
-  test("names the batcher and the vault when a read fails, and keeps the cause's retryability", async ({
+  test.for([
+    ["an RPC rate limit", Object.assign(new Error("limit exceeded"), { code: -32005 }), true],
+    ["any other failure", new Error("socket hang up"), false],
+  ] as const)(
+    "names the batcher and the vault when a read fails with %s",
+    async ([, cause, retryable], { sdk, provider }) => {
+      mockChain(provider);
+      const answer = vi.mocked(provider.readContract).getMockImplementation();
+      vi.mocked(provider.readContract).mockImplementation(async (call: unknown) => {
+        if (getAddress((call as { address: Address }).address) === LATE) {
+          throw cause;
+        }
+        return answer?.(call as never);
+      });
+      const read = nextBatcher(sdk);
+      await expect(read).rejects.toThrow(`batcher ${LATE} of vault "set"`);
+      await expect(read).rejects.toMatchObject({ batcher: LATE, vaultId: "set", cause, retryable });
+    },
+  );
+
+  test("passes a provider's ConfigurationError through, as a read on another chain throws", async ({
     sdk,
     provider,
   }) => {
     mockChain(provider);
+    const wrongChain = new ConfigurationError("provider is bound to another chain");
+    vi.mocked(provider.readContract).mockRejectedValue(wrongChain);
+    await expect(nextBatcher(sdk)).rejects.toBe(wrongChain);
+  });
+
+  test("keeps the cause when closed() fails for a reason other than a revert", async ({
+    sdk,
+    provider,
+  }) => {
+    mockChain(provider, {
+      batches: { [EARLY]: { createdAt: 0n }, [LATE]: { createdAt: NOW, minAge: 600n } },
+    });
     const answer = vi.mocked(provider.readContract).getMockImplementation();
-    const cause = new RpcRateLimitError("rate limited");
+    const cause = new Error("Too Many Requests");
     vi.mocked(provider.readContract).mockImplementation(async (call: unknown) => {
-      if (getAddress((call as { address: Address }).address) === LATE) {
+      if ((call as { functionName: string }).functionName === "closed") {
         throw cause;
       }
       return answer?.(call as never);
     });
-    const read = nextBatcher(sdk);
-    await expect(read).rejects.toThrow(`batcher ${LATE} of vault "set"`);
-    await expect(read).rejects.toMatchObject({
-      batcher: LATE,
-      vaultId: "set",
+    await expect(nextBatcher(sdk)).rejects.toMatchObject({
+      message: expect.stringContaining("Could not read"),
       cause,
       retryable: true,
     });

@@ -87,6 +87,15 @@ describe("openBatchesQueryOptions refetch schedule", () => {
     expect(openIntervalFor(sdk, [open])).toBe(15_000);
   });
 
+  test("follows the open vault when another is paused", ({ sdk }) => {
+    expect(
+      openIntervalFor(sdk, [
+        { ...open, paused: true },
+        { ...open, observedAt: 900n },
+      ]),
+    ).toBe(41_000);
+  });
+
   test("stops while every vault is paused", ({ sdk }) => {
     expect(openIntervalFor(sdk, [{ ...open, paused: true }])).toBe(false);
   });

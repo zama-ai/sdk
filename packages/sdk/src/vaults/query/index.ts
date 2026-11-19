@@ -64,6 +64,11 @@ export interface BatchQueryConfig {
   query?: { readonly enabled?: boolean };
 }
 
+// One second past chain time `at`, so the read lands after the change.
+function refetchAt(at: bigint, observedAt: bigint): number {
+  return Math.min(Number(at - observedAt) * 1000 + 1000, MAX_REFETCH_MS);
+}
+
 /** How long to wait before reading a batch again, or `false` once it is finalized or canceled. */
 function batchRefetchInterval(read: Batch | undefined): number | false {
   if (read === undefined || read.state === "finalized" || read.state === "canceled") {
@@ -72,10 +77,7 @@ function batchRefetchInterval(read: Batch | undefined): number | false {
   if (read.nextChangeAt === null) {
     return KEEPER_POLL_MS;
   }
-  const untilEdge = Math.min(
-    Number(read.nextChangeAt - read.observedAt) * 1000 + 1000,
-    MAX_REFETCH_MS,
-  );
+  const untilEdge = refetchAt(read.nextChangeAt, read.observedAt);
   // A dispatched batch waits for a settlement from the start, so it polls before its deadline too.
   return read.state === "dispatched" ? Math.min(untilEdge, KEEPER_POLL_MS) : untilEdge;
 }
@@ -117,18 +119,16 @@ export type OpenBatchesQueryConfig = VaultSelection & {
 };
 
 /**
- * How long to wait before reading the open batches again: until a batch is due within the join
- * margin, when joins move to another batch, then while a keeper dispatches it. `false` while
- * every vault is paused.
+ * Reads again one second after the soonest batch comes within {@link JOIN_MARGIN_SECONDS} of its
+ * due time, when joins may move on, then every {@link KEEPER_POLL_MS} until a keeper dispatches it.
+ * `false` while every vault is paused.
  */
 function openBatchesRefetchInterval(read: readonly OpenBatch[] | undefined): number | false {
   const waits = (read ?? [])
     .filter((batch) => !batch.paused)
     .map((batch) => {
-      const untilMargin = batch.dispatchableAt - JOIN_MARGIN_SECONDS - batch.observedAt;
-      return untilMargin > 0n
-        ? Math.min(Number(untilMargin) * 1000 + 1000, MAX_REFETCH_MS)
-        : KEEPER_POLL_MS;
+      const movesAt = batch.dispatchableAt - JOIN_MARGIN_SECONDS;
+      return movesAt > batch.observedAt ? refetchAt(movesAt, batch.observedAt) : KEEPER_POLL_MS;
     });
   return waits.length === 0 ? false : Math.min(...waits);
 }

@@ -16,7 +16,7 @@ export interface BatcherEntry {
   readonly lastBatchId?: bigint;
 }
 
-/** A join or read throws on an empty list. */
+/** The batchers of one vault direction: an address, or a list of addresses and {@link BatcherEntry} objects. A join or read throws on an empty list. */
 export type Batchers = Address | readonly (Address | BatcherEntry)[];
 
 /**
@@ -188,6 +188,9 @@ function listOf(
   }
   if (isArray(declared)) {
     return declared;
+  }
+  if (!("latest" in declared)) {
+    throw new ConfigurationError(`${where} must be an address or a list`);
   }
   // Without its lastBatchId, a retired batcher would read as live and keep taking joins.
   const unbounded = declared.retired.find((entry) => entry.lastBatchId === undefined);
