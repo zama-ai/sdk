@@ -6,5 +6,6 @@ export default {
     "ast-grep scan --config sgconfig.yml",
   ],
   "*.{ts,tsx,mts,cts,js,mjs,cjs,json,yaml,yml,md}": "oxfmt --no-error-on-unmatched-pattern",
+  "docs/gitbook/src/reference/**/*.md": "node scripts/lint/error-doc-links.mjs",
   "*": "node scripts/lint/no-em-dash.mjs",
 };

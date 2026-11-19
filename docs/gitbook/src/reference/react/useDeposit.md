@@ -103,10 +103,10 @@ Called once the wallet has sent the join, before the SDK waits for the receipt. 
 
 As [`VaultClient.deposit`](../sdk/VaultClient.md#deposit). The ones a UI handles most:
 
-- `VaultBatcherPausedError`: a batcher of the group is paused.
-- `InsufficientConfidentialBalanceError`: the balance is below `amount`.
-- `ChainMismatchError`: the wallet is not on the group's chain.
-- `VaultJoinUnconfirmedError`: the join was mined, but the SDK could not read every batch from the receipt.
+- [`VaultBatcherPausedError`](../sdk/errors.md#vaultbatcherpausederror): a batcher of the group is paused.
+- [`InsufficientConfidentialBalanceError`](../sdk/errors.md#insufficientconfidentialbalanceerror): the balance is below `amount`.
+- [`ChainMismatchError`](../sdk/errors.md#chainmismatcherror): the wallet is not on the group's chain.
+- [`VaultJoinUnconfirmedError`](../sdk/errors.md#vaultjoinunconfirmederror): the join was mined, but the SDK could not read every batch from the receipt.
 
 ## Return Type
 

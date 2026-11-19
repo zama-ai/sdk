@@ -108,11 +108,11 @@ const prepared = await vaults.prepareDeposit(STABLE, {
 
 **Throws:**
 
-- `ChainMismatchError` when a wallet is connected and the provider is not on the target's chain.
-- `ConfigurationError` when the provider is not on the target's chain with no wallet connected, the vault is not in the group, the group is invalid (see [`VaultGroup`](#vaultgroup)), or the join uses the router and the chain has none.
-- `VaultBatcherPausedError` when a batcher the join reaches is paused. This check always runs.
-- `InsufficientConfidentialBalanceError` when the balance is below `amount`.
-- `BalanceCheckUnavailableError` when the balance cannot be decrypted: no signer is connected, or `account` is not the signer. Pass `skipBalanceCheck: true`.
+- [`ChainMismatchError`](errors.md#chainmismatcherror) when a wallet is connected and the provider is not on the target's chain.
+- [`ConfigurationError`](errors.md#configurationerror) when the provider is not on the target's chain with no wallet connected, the vault is not in the group, the group is invalid (see [`VaultGroup`](#vaultgroup)), or the join uses the router and the chain has none.
+- [`VaultBatcherPausedError`](errors.md#vaultbatcherpausederror) when a batcher the join reaches is paused. This check always runs.
+- [`InsufficientConfidentialBalanceError`](errors.md#insufficientconfidentialbalanceerror) when the balance is below `amount`.
+- [`BalanceCheckUnavailableError`](errors.md#balancecheckunavailableerror) when the balance cannot be decrypted: no signer is connected, or `account` is not the signer. Pass `skipBalanceCheck: true`.
 
 ### prepareRedeem
 
@@ -183,18 +183,18 @@ const { call } = await vaults.prepareFinalize(batchRef);
 
 **Throws:**
 
-- `VaultBatchNotDispatchedError` when the batch is not dispatched. The error carries the batch's `state`.
-- `ChainMismatchError` when a wallet is connected and the provider is not on the batch's chain.
-- `ConfigurationError` when the provider is not on the batch's chain with no wallet connected, or the batcher reports an unknown batch state.
-- `DecryptionFailedError` when the public decryption returns no value.
+- [`VaultBatchNotDispatchedError`](errors.md#vaultbatchnotdispatchederror) when the batch is not dispatched. The error carries the batch's `state`.
+- [`ChainMismatchError`](errors.md#chainmismatcherror) when a wallet is connected and the provider is not on the batch's chain.
+- [`ConfigurationError`](errors.md#configurationerror) when the provider is not on the batch's chain with no wallet connected, or the batcher reports an unknown batch state.
+- [`DecryptionFailedError`](errors.md#decryptionfailederror) when the public decryption returns no value.
 
 ## Send methods
 
 Each send method prepares the same calls as its `prepare*` counterpart, signs them with the SDK's signer, and waits for each receipt. Every send method throws:
 
-- `SignerNotConfiguredError` when the SDK has no signer.
-- `ChainMismatchError` when the wallet is not on the target's or batch's chain.
-- `TransactionRevertedError` when a transaction reverts or fails to send.
+- [`SignerNotConfiguredError`](errors.md#signernotconfigurederror) when the SDK has no signer.
+- [`ChainMismatchError`](errors.md#chainmismatcherror) when the wallet is not on the target's or batch's chain.
+- [`TransactionRevertedError`](errors.md#transactionrevertederror) when a transaction reverts or fails to send.
 
 ### deposit
 

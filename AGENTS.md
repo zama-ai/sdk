@@ -32,14 +32,15 @@ If the snippet you're about to generate composes the underlying contract calls f
 
 Each rule here has a check that fails when it's broken. Add a row only together with its check.
 
-| Rule                                                                                                                                                     | Enforced by                                                                             |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| No new em dashes (U+2014)                                                                                                                                | `scripts/lint/no-em-dash.mjs`, run by lint-staged, the agent post-edit hook, and CI     |
-| A workflow condition on the PR branch name also checks `github.event.pull_request.head.repo.full_name == github.repository`                              | `tools/ast-grep/rules/workflow-head-ref-same-repo.yml`, run by `pnpm lint` and CI       |
-| A script `catch` binds the error, handles only the code it expects, and rethrows the rest                                                                | `tools/ast-grep/rules/no-bare-catch-in-scripts.yml`, run by `pnpm lint` and CI          |
-| A Claude hook finds the repo root from the edited file, not from `CLAUDE_PROJECT_DIR` or the working directory                                           | `tools/ast-grep/rules/hook-root-from-edited-file.yml`, run by `pnpm lint` and CI        |
-| A `>=X` override in `pnpm-workspace.yaml` and every `package.json` that declares the package use the same floor, and `eslint-config-next` matches `next` | `scripts/lint/dep-floors.mjs`, run by `pnpm lint` and CI                                |
-| Package code decrypts one uint publicly with `decryptPublicUint`, not by reading `clearValues` and checking the type                                     | `tools/ast-grep/rules/no-public-decrypt-result-indexing.yml`, run by `pnpm lint` and CI |
+| Rule                                                                                                                                                     | Enforced by                                                                                           |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| No new em dashes (U+2014)                                                                                                                                | `scripts/lint/no-em-dash.mjs`, run by lint-staged, the agent post-edit hook, and CI                   |
+| A workflow condition on the PR branch name also checks `github.event.pull_request.head.repo.full_name == github.repository`                              | `tools/ast-grep/rules/workflow-head-ref-same-repo.yml`, run by `pnpm lint` and CI                     |
+| A script `catch` binds the error, handles only the code it expects, and rethrows the rest                                                                | `tools/ast-grep/rules/no-bare-catch-in-scripts.yml`, run by `pnpm lint` and CI                        |
+| A Claude hook finds the repo root from the edited file, not from `CLAUDE_PROJECT_DIR` or the working directory                                           | `tools/ast-grep/rules/hook-root-from-edited-file.yml`, run by `pnpm lint` and CI                      |
+| A `>=X` override in `pnpm-workspace.yaml` and every `package.json` that declares the package use the same floor, and `eslint-config-next` matches `next` | `scripts/lint/dep-floors.mjs`, run by `pnpm lint` and CI                                              |
+| Package code decrypts one uint publicly with `decryptPublicUint`, not by reading `clearValues` and checking the type                                     | `tools/ast-grep/rules/no-public-decrypt-result-indexing.yml`, run by `pnpm lint` and CI               |
+| A reference-page bullet that names an SDK error links to its section in `reference/sdk/errors.md`                                                        | `scripts/lint/error-doc-links.mjs`, run by `pnpm lint`, lint-staged, the agent post-edit hook, and CI |
 
 ## Further reading
 

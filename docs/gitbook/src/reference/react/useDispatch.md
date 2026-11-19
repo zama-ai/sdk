@@ -74,8 +74,8 @@ dispatch.mutate({ chainId: batchRef.chainId, batcher: batchRef.batcher });
 
 **Throws:**
 
-- `ChainMismatchError`: the wallet is not on the batcher's chain.
-- `TransactionRevertedError`: the dispatch reverted, for example because the batch is too young, the batcher is paused, or a keeper dispatched it first.
+- [`ChainMismatchError`](../sdk/errors.md#chainmismatcherror): the wallet is not on the batcher's chain.
+- [`TransactionRevertedError`](../sdk/errors.md#transactionrevertederror): the dispatch reverted, for example because the batch is too young, the batcher is paused, or a keeper dispatched it first.
 
 ## Return Type
 

@@ -11866,11 +11866,11 @@ await sdk.permits.registerPermit(prepared, signature);
 
 **Throws:**
 
-- `ConfigurationError` - `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a process boundary and was corrupted)
-- `PreparedPermitChainMismatchError` - the chain embedded in `prepared.eip712` doesn't match the currently active chain
-- `PreparedPermitExpiredError` - the permit's validity window has already elapsed
-- `TransportKeyPairChangedError` - no transport key pair is stored for `prepared.signerAddress`, or it no longer matches the public key `prepared.eip712` was built against (e.g. a TTL expiry or eviction in between); call `preparePermit` again
-- `SigningFailedError` - the signature is invalid or malformed
+- [`ConfigurationError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#configurationerror) - `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a process boundary and was corrupted)
+- [`PreparedPermitChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#preparedpermitchainmismatcherror) - the chain embedded in `prepared.eip712` doesn't match the currently active chain
+- [`PreparedPermitExpiredError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#preparedpermitexpirederror) - the permit's validity window has already elapsed
+- [`TransportKeyPairChangedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#transportkeypairchangederror) - no transport key pair is stored for `prepared.signerAddress`, or it no longer matches the public key `prepared.eip712` was built against (e.g. a TTL expiry or eviction in between); call `preparePermit` again
+- [`SigningFailedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#signingfailederror) - the signature is invalid or malformed
 
 See the [Offline reference](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/Offline.md#preparepermit) for `preparePermit`'s request/response shape and the [Offline signing guide](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/offline.md#offline-permits) for the full workflow.
 
@@ -12219,8 +12219,8 @@ await token.confidentialTransfer("0xRecipient", 500n, { skipBalanceCheck: true }
 
 **Throws:**
 
-- `InsufficientConfidentialBalanceError` — if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
-- `BalanceCheckUnavailableError` — if balance validation is required but decryption is not possible (no stored permits). Call `sdk.permits.grantPermit([token.address])` first or use `skipBalanceCheck: true`
+- [`InsufficientConfidentialBalanceError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#insufficientconfidentialbalanceerror): if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
+- [`BalanceCheckUnavailableError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#balancecheckunavailableerror): if balance validation is required but decryption is not possible (no stored permits). Call `sdk.permits.grantPermit([token.address])` first or use `skipBalanceCheck: true`
 
 ### confidentialTransferFrom
 
@@ -12937,11 +12937,11 @@ const prepared = await vaults.prepareDeposit(STABLE, {
 
 **Throws:**
 
-- `ChainMismatchError` when a wallet is connected and the provider is not on the target's chain.
-- `ConfigurationError` when the provider is not on the target's chain with no wallet connected, the vault is not in the group, the group is invalid (see [`VaultGroup`](#vaultgroup)), or the join uses the router and the chain has none.
-- `VaultBatcherPausedError` when a batcher the join reaches is paused. This check always runs.
-- `InsufficientConfidentialBalanceError` when the balance is below `amount`.
-- `BalanceCheckUnavailableError` when the balance cannot be decrypted: no signer is connected, or `account` is not the signer. Pass `skipBalanceCheck: true`.
+- [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) when a wallet is connected and the provider is not on the target's chain.
+- [`ConfigurationError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#configurationerror) when the provider is not on the target's chain with no wallet connected, the vault is not in the group, the group is invalid (see [`VaultGroup`](#vaultgroup)), or the join uses the router and the chain has none.
+- [`VaultBatcherPausedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultbatcherpausederror) when a batcher the join reaches is paused. This check always runs.
+- [`InsufficientConfidentialBalanceError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#insufficientconfidentialbalanceerror) when the balance is below `amount`.
+- [`BalanceCheckUnavailableError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#balancecheckunavailableerror) when the balance cannot be decrypted: no signer is connected, or `account` is not the signer. Pass `skipBalanceCheck: true`.
 
 ### prepareRedeem
 
@@ -13012,18 +13012,18 @@ const { call } = await vaults.prepareFinalize(batchRef);
 
 **Throws:**
 
-- `VaultBatchNotDispatchedError` when the batch is not dispatched. The error carries the batch's `state`.
-- `ChainMismatchError` when a wallet is connected and the provider is not on the batch's chain.
-- `ConfigurationError` when the provider is not on the batch's chain with no wallet connected, or the batcher reports an unknown batch state.
-- `DecryptionFailedError` when the public decryption returns no value.
+- [`VaultBatchNotDispatchedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultbatchnotdispatchederror) when the batch is not dispatched. The error carries the batch's `state`.
+- [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) when a wallet is connected and the provider is not on the batch's chain.
+- [`ConfigurationError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#configurationerror) when the provider is not on the batch's chain with no wallet connected, or the batcher reports an unknown batch state.
+- [`DecryptionFailedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#decryptionfailederror) when the public decryption returns no value.
 
 ## Send methods
 
 Each send method prepares the same calls as its `prepare*` counterpart, signs them with the SDK's signer, and waits for each receipt. Every send method throws:
 
-- `SignerNotConfiguredError` when the SDK has no signer.
-- `ChainMismatchError` when the wallet is not on the target's or batch's chain.
-- `TransactionRevertedError` when a transaction reverts or fails to send.
+- [`SignerNotConfiguredError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#signernotconfigurederror) when the SDK has no signer.
+- [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror) when the wallet is not on the target's or batch's chain.
+- [`TransactionRevertedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#transactionrevertederror) when a transaction reverts or fails to send.
 
 ### deposit
 
@@ -14521,6 +14521,14 @@ Thrown when a signer adapter is configured but does not currently have a connect
 
 **How to handle:** Prompt the user to connect or unlock their wallet.
 
+### WalletAccountNotReadyError
+
+**Code:** `WALLET_ACCOUNT_NOT_READY`
+
+Thrown when an async signer adapter has not resolved its wallet account yet. The error carries the `operation` name that was attempted.
+
+**How to handle:** Retry once the account resolves. The error is retryable, so `isRetryable(error)` is `true`.
+
 ### ChainMismatchError
 
 **Code:** `CHAIN_MISMATCH`
@@ -15730,18 +15738,18 @@ When no `expirationDate` is provided, the SDK uses `MAX_UINT64` (`2^64 - 1`, eff
 
 **Throws:**
 
-- `SignerNotConfiguredError` — no signer configured
-- `ChainMismatchError` — signer and provider are on different chains
-- `WalletNotConnectedError` — wallet is not connected
-- `WalletAccountNotReadyError` — wallet account is not ready
-- `DelegationExpirationTooSoonError` — expiration date less than 1 hour in the future
-- `DelegationSelfNotAllowedError` — delegate address equals the connected wallet
-- `DelegationDelegateEqualsContractError` — delegate address equals the contract address
-- `DelegationDelegateCannotBeWildcardError` — delegate address is the wildcard address
-- `DelegationExpiryUnchangedError` — new expiry matches the current on-chain expiry
-- `DelegationCooldownError` — only one delegate/revoke per `(delegator, delegate, contract)` per block
-- `AclPausedError` — the ACL contract is paused
-- `TransactionRevertedError` — on-chain revert for an unmapped reason
+- [`SignerNotConfiguredError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#signernotconfigurederror): no signer configured
+- [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror): signer and provider are on different chains
+- [`WalletNotConnectedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#walletnotconnectederror): wallet is not connected
+- [`WalletAccountNotReadyError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#walletaccountnotreadyerror): wallet account is not ready
+- [`DelegationExpirationTooSoonError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#delegationexpirationtoosoonerror): expiration date less than 1 hour in the future
+- [`DelegationSelfNotAllowedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#delegationselfnotallowederror): delegate address equals the connected wallet
+- [`DelegationDelegateEqualsContractError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#delegationdelegateequalscontracterror): delegate address equals the contract address
+- [`DelegationDelegateCannotBeWildcardError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#delegationdelegatecannotbewildcarderror): delegate address is the wildcard address
+- [`DelegationExpiryUnchangedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#delegationexpiryunchangederror): new expiry matches the current on-chain expiry
+- [`DelegationCooldownError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#delegationcooldownerror): only one delegate/revoke per `(delegator, delegate, contract)` per block
+- [`AclPausedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#aclpausederror): the ACL contract is paused
+- [`TransactionRevertedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#transactionrevertederror): on-chain revert for an unmapped reason
 
 ### revokeDelegation
 
@@ -15760,14 +15768,14 @@ Returns `{ txHash: Hex; receipt: TransactionReceipt }`.
 
 **Throws:**
 
-- `SignerNotConfiguredError` — no signer configured
-- `ChainMismatchError` — signer and provider are on different chains
-- `WalletNotConnectedError` — wallet is not connected
-- `WalletAccountNotReadyError` — wallet account is not ready
-- `DelegationNotFoundError` — no delegation exists for this `(delegator, delegate, contract)` tuple
-- `DelegationCooldownError` — only one delegate/revoke per tuple per block
-- `AclPausedError` — the ACL contract is paused
-- `TransactionRevertedError` — on-chain revert for an unmapped reason
+- [`SignerNotConfiguredError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#signernotconfigurederror): no signer configured
+- [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror): signer and provider are on different chains
+- [`WalletNotConnectedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#walletnotconnectederror): wallet is not connected
+- [`WalletAccountNotReadyError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#walletaccountnotreadyerror): wallet account is not ready
+- [`DelegationNotFoundError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#delegationnotfounderror): no delegation exists for this `(delegator, delegate, contract)` tuple
+- [`DelegationCooldownError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#delegationcooldownerror): only one delegate/revoke per tuple per block
+- [`AclPausedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#aclpausederror): the ACL contract is paused
+- [`TransactionRevertedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#transactionrevertederror): on-chain revert for an unmapped reason
 
 ### isActive
 
@@ -15982,12 +15990,12 @@ Returns a `PreparedTransaction`. All three fields are JSON-safe, so the object c
 
 **Throws:**
 
-- `ConfigurationError` - invalid request, or the provider's chain differs from the configured chain
-- `EncryptionFailedError` - encryption produced no result (encrypting kinds)
-- `DecryptionFailedError` - fallback for an unclassified public-decryption failure (`FinalizeUnwrap`); classified failures preserve their specific [SDK error](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md)
-- `DelegationExpirationTooSoonError` / `DelegationSelfNotAllowedError` / `DelegationDelegateEqualsContractError` - delegation guards (`DelegateDecryption`)
-- `TransactionRevertedError` - gas estimation reverted, for example when `Wrap` is prepared before its approval mines
-- `HcuBlockLimitExceededError` / `HcuTransactionLimitExceededError` - gas estimation hit the protocol's FHE compute (HCU) limits; see [Errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#hcublocklimitexceedederror)
+- [`ConfigurationError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#configurationerror) - invalid request, or the provider's chain differs from the configured chain
+- [`EncryptionFailedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#encryptionfailederror) - encryption produced no result (encrypting kinds)
+- [`DecryptionFailedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#decryptionfailederror) - fallback for an unclassified public-decryption failure (`FinalizeUnwrap`); classified failures preserve their specific [SDK error](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md)
+- [`DelegationExpirationTooSoonError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#delegationexpirationtoosoonerror) / `DelegationSelfNotAllowedError` / `DelegationDelegateEqualsContractError` - delegation guards (`DelegateDecryption`)
+- [`TransactionRevertedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#transactionrevertederror) - gas estimation reverted, for example when `Wrap` is prepared before its approval mines
+- [`HcuBlockLimitExceededError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#hcublocklimitexceedederror) / `HcuTransactionLimitExceededError` - gas estimation hit the protocol's FHE compute (HCU) limits; see [Errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#hcublocklimitexceedederror)
 
 ### preparePermit
 
@@ -16027,9 +16035,9 @@ Returns a `PreparedPermit`. Every field is JSON-safe, so the object crosses a pr
 
 **Throws:**
 
-- `ConfigurationError` - `request.contracts` is empty or exceeds 10 addresses, `request.delegator` equals `request.signer` (self-delegation), or `request.durationDays` exceeds the V1 permit maximum of 365 days
-- `KeyWrappingError` - the transport key pair could not be wrapped or unwrapped
-- `TransportKeyPairChangedError` - a concurrent `permits.revokeTransportKeyPair()` rotated the transport key pair while this call was generating one
+- [`ConfigurationError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#configurationerror) - `request.contracts` is empty or exceeds 10 addresses, `request.delegator` equals `request.signer` (self-delegation), or `request.durationDays` exceeds the V1 permit maximum of 365 days
+- [`KeyWrappingError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#keywrappingerror) - the transport key pair could not be wrapped or unwrapped
+- [`TransportKeyPairChangedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#transportkeypairchangederror) - a concurrent `permits.revokeTransportKeyPair()` rotated the transport key pair while this call was generating one
 
 See [`permits.registerPermit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/ZamaSDK.md#permits-registerpermit) for the second phase and its typed errors, and the [Offline signing guide](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/offline.md#offline-permits) for the full workflow.
 
@@ -17060,8 +17068,8 @@ await transfer({
 
 **Throws:**
 
-- `InsufficientConfidentialBalanceError` -- if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
-- `BalanceCheckUnavailableError` -- if balance validation is required but decryption is not possible (no stored permits). Grant a permit first with `useGrantPermit`, or use `skipBalanceCheck: true`
+- [`InsufficientConfidentialBalanceError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#insufficientconfidentialbalanceerror) -- if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
+- [`BalanceCheckUnavailableError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#balancecheckunavailableerror) -- if balance validation is required but decryption is not possible (no stored permits). Grant a permit first with `useGrantPermit`, or use `skipBalanceCheck: true`
 
 ## Return Type
 
@@ -17493,9 +17501,9 @@ await transferFromAndCall({
 
 **Throws:**
 
-- `SigningRejectedError` -- if the user rejects the wallet prompt
-- `EncryptionFailedError` -- if FHE encryption of the transfer amount fails
-- `TransactionRevertedError` -- if the on-chain transaction reverts
+- [`SigningRejectedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#signingrejectederror) -- if the user rejects the wallet prompt
+- [`EncryptionFailedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#encryptionfailederror) -- if FHE encryption of the transfer amount fails
+- [`TransactionRevertedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#transactionrevertederror) -- if the on-chain transaction reverts
 
 ## Return Type
 
@@ -17736,7 +17744,7 @@ await shield({
 
 **Throws:**
 
-- `InsufficientERC20BalanceError` -- if the ERC-20 balance is less than `amount` (exposes `requested`, `available`, `token`)
+- [`InsufficientERC20BalanceError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#insufficienterc20balanceerror) -- if the ERC-20 balance is less than `amount` (exposes `requested`, `available`, `token`)
 
 ## Return Type
 
@@ -17937,8 +17945,8 @@ await approve({ amount: 1000n }); // exact amount
 
 **Throws:**
 
-- `SigningRejectedError` -- if the user rejects the wallet prompt
-- `TransactionRevertedError` -- if the approval transaction reverts
+- [`SigningRejectedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#signingrejectederror) -- if the user rejects the wallet prompt
+- [`TransactionRevertedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#transactionrevertederror) -- if the approval transaction reverts
 
 ## Return Type
 
@@ -18151,10 +18159,10 @@ await wrap({ amount: 1000n, onWrapSubmitted: (txHash) => updateUI(`Wrap: ${txHas
 
 **Throws:**
 
-- `SigningRejectedError` -- if the user rejects the wallet prompt
-- `InsufficientERC20BalanceError` -- if the ERC-20 balance is less than the amount
-- `InsufficientAllowanceError` -- if the allowance is less than the amount (approve first)
-- `TransactionRevertedError` -- if the wrap transaction reverts
+- [`SigningRejectedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#signingrejectederror) -- if the user rejects the wallet prompt
+- [`InsufficientERC20BalanceError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#insufficienterc20balanceerror) -- if the ERC-20 balance is less than the amount
+- [`InsufficientAllowanceError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#insufficientallowanceerror) -- if the allowance is less than the amount (approve first)
+- [`TransactionRevertedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#transactionrevertederror) -- if the wrap transaction reverts
 
 ## Return Type
 
@@ -18386,8 +18394,8 @@ await unshield({
 
 **Throws:**
 
-- `InsufficientConfidentialBalanceError` -- if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
-- `BalanceCheckUnavailableError` -- if balance validation is required but decryption is not possible (no stored permits). Grant a permit first with `useGrantPermit`, or use `skipBalanceCheck: true`
+- [`InsufficientConfidentialBalanceError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#insufficientconfidentialbalanceerror) -- if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
+- [`BalanceCheckUnavailableError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#balancecheckunavailableerror) -- if balance validation is required but decryption is not possible (no stored permits). Grant a permit first with `useGrantPermit`, or use `skipBalanceCheck: true`
 
 ## Return Type
 
@@ -19673,8 +19681,8 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 **Throws:**
 
-- `ConfigurationError` - `request.contracts` is empty or exceeds 10 addresses, `request.delegator` equals `request.signer`, or `request.durationDays` exceeds the V1 permit maximum of 365 days
-- `TransportKeyPairChangedError` - a concurrent `permits.revokeTransportKeyPair()` rotated the transport key pair while this call was generating one
+- [`ConfigurationError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#configurationerror) - `request.contracts` is empty or exceeds 10 addresses, `request.delegator` equals `request.signer`, or `request.durationDays` exceeds the V1 permit maximum of 365 days
+- [`TransportKeyPairChangedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#transportkeypairchangederror) - a concurrent `permits.revokeTransportKeyPair()` rotated the transport key pair while this call was generating one
 
 ## Related
 
@@ -19798,8 +19806,8 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 **Throws:**
 
-- `ConfigurationError` - `request.contracts` is empty, `request.delegator` equals `request.signer`, or `request.durationDays` exceeds the V1 permit maximum of 365 days
-- `TransportKeyPairChangedError` - a concurrent `permits.revokeTransportKeyPair()` rotated the transport key pair while this call was generating one
+- [`ConfigurationError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#configurationerror) - `request.contracts` is empty, `request.delegator` equals `request.signer`, or `request.durationDays` exceeds the V1 permit maximum of 365 days
+- [`TransportKeyPairChangedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#transportkeypairchangederror) - a concurrent `permits.revokeTransportKeyPair()` rotated the transport key pair while this call was generating one
 
 ## Related
 
@@ -19928,11 +19936,11 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 **Throws:**
 
-- `ConfigurationError` - `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a process boundary and was corrupted)
-- `PreparedPermitChainMismatchError` - the chain embedded in `prepared.eip712` doesn't match the currently active chain
-- `PreparedPermitExpiredError` - the permit's validity window has already elapsed
-- `TransportKeyPairChangedError` - no transport key pair is stored for `prepared.signerAddress`, or it no longer matches the public key `prepared.eip712` was built against; call `preparePermit` again
-- `SigningFailedError` - the signature is invalid or malformed
+- [`ConfigurationError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#configurationerror) - `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a process boundary and was corrupted)
+- [`PreparedPermitChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#preparedpermitchainmismatcherror) - the chain embedded in `prepared.eip712` doesn't match the currently active chain
+- [`PreparedPermitExpiredError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#preparedpermitexpirederror) - the permit's validity window has already elapsed
+- [`TransportKeyPairChangedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#transportkeypairchangederror) - no transport key pair is stored for `prepared.signerAddress`, or it no longer matches the public key `prepared.eip712` was built against; call `preparePermit` again
+- [`SigningFailedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#signingfailederror) - the signature is invalid or malformed
 
 ## Related
 
@@ -24522,10 +24530,10 @@ Called once the wallet has sent the join, before the SDK waits for the receipt. 
 
 As [`VaultClient.deposit`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#deposit). The ones a UI handles most:
 
-- `VaultBatcherPausedError`: a batcher of the group is paused.
-- `InsufficientConfidentialBalanceError`: the balance is below `amount`.
-- `ChainMismatchError`: the wallet is not on the group's chain.
-- `VaultJoinUnconfirmedError`: the join was mined, but the SDK could not read every batch from the receipt.
+- [`VaultBatcherPausedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultbatcherpausederror): a batcher of the group is paused.
+- [`InsufficientConfidentialBalanceError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#insufficientconfidentialbalanceerror): the balance is below `amount`.
+- [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror): the wallet is not on the group's chain.
+- [`VaultJoinUnconfirmedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultjoinunconfirmederror): the join was mined, but the SDK could not read every batch from the receipt.
 
 ## Return Type
 
@@ -25225,8 +25233,8 @@ The account to claim for. Defaults to the signer.
 
 **Throws:**
 
-- `ChainMismatchError`: the wallet is not on the batch's chain.
-- `TransactionRevertedError`: the claim reverted, for example because the batch is not finalized yet.
+- [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror): the wallet is not on the batch's chain.
+- [`TransactionRevertedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#transactionrevertederror): the claim reverted, for example because the batch is not finalized yet.
 
 ## Return Type
 
@@ -25394,8 +25402,8 @@ The batch to quit.
 
 **Throws:**
 
-- `ChainMismatchError`: the wallet is not on the batch's chain.
-- `TransactionRevertedError`: the quit reverted, for example because the batch was dispatched in the meantime.
+- [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror): the wallet is not on the batch's chain.
+- [`TransactionRevertedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#transactionrevertederror): the quit reverted, for example because the batch was dispatched in the meantime.
 
 ## Return Type
 
@@ -25556,8 +25564,8 @@ dispatch.mutate({ chainId: batchRef.chainId, batcher: batchRef.batcher });
 
 **Throws:**
 
-- `ChainMismatchError`: the wallet is not on the batcher's chain.
-- `TransactionRevertedError`: the dispatch reverted, for example because the batch is too young, the batcher is paused, or a keeper dispatched it first.
+- [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror): the wallet is not on the batcher's chain.
+- [`TransactionRevertedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#transactionrevertederror): the dispatch reverted, for example because the batch is too young, the batcher is paused, or a keeper dispatched it first.
 
 ## Return Type
 
@@ -25723,8 +25731,8 @@ finalize.mutate({ chainId: 1, batcher: "0xAlphaDeposit", batchId: 7n });
 
 **Throws:**
 
-- `VaultBatchNotDispatchedError`: the batch is not dispatched, for example because a keeper already finalized it. The error's `state` says which state it is in.
-- `ChainMismatchError`: the wallet is not on the batch's chain.
+- [`VaultBatchNotDispatchedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultbatchnotdispatchederror): the batch is not dispatched, for example because a keeper already finalized it. The error's `state` says which state it is in.
+- [`ChainMismatchError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#chainmismatcherror): the wallet is not on the batch's chain.
 
 ## Return Type
 

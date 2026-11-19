@@ -80,8 +80,8 @@ The account to claim for. Defaults to the signer.
 
 **Throws:**
 
-- `ChainMismatchError`: the wallet is not on the batch's chain.
-- `TransactionRevertedError`: the claim reverted, for example because the batch is not finalized yet.
+- [`ChainMismatchError`](../sdk/errors.md#chainmismatcherror): the wallet is not on the batch's chain.
+- [`TransactionRevertedError`](../sdk/errors.md#transactionrevertederror): the claim reverted, for example because the batch is not finalized yet.
 
 ## Return Type
 

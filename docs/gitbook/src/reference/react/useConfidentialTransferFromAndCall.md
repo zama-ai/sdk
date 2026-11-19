@@ -139,9 +139,9 @@ await transferFromAndCall({
 
 **Throws:**
 
-- `SigningRejectedError` -- if the user rejects the wallet prompt
-- `EncryptionFailedError` -- if FHE encryption of the transfer amount fails
-- `TransactionRevertedError` -- if the on-chain transaction reverts
+- [`SigningRejectedError`](../sdk/errors.md#signingrejectederror) -- if the user rejects the wallet prompt
+- [`EncryptionFailedError`](../sdk/errors.md#encryptionfailederror) -- if FHE encryption of the transfer amount fails
+- [`TransactionRevertedError`](../sdk/errors.md#transactionrevertederror) -- if the on-chain transaction reverts
 
 ## Return Type
 

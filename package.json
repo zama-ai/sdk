@@ -28,7 +28,7 @@
     "test:coverage": "vitest --coverage",
     "test:integration": "vitest run --reporter=verbose --config vitest.integration.config.ts",
     "typecheck": "turbo run typecheck",
-    "lint": "oxlint && pnpm ast-grep:scan && pnpm lint:dep-floors",
+    "lint": "oxlint && pnpm ast-grep:scan && pnpm lint:dep-floors && node scripts/lint/error-doc-links.mjs",
     "ast-grep:scan": "ast-grep scan --config sgconfig.yml . .github",
     "lint:em-dash": "node scripts/lint/no-em-dash.mjs",
     "lint:dep-floors": "node scripts/lint/dep-floors.mjs",
