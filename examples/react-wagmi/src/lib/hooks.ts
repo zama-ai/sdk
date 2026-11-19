@@ -10,14 +10,15 @@ import { parseAbi, parseUnits } from "viem";
 import { useConnection } from "wagmi";
 
 // Networks the server can serve (see /api/networks): cleartext rows always, relayer rows
-// only when the server has a relayer URL for them. Fetched once per page load.
+// only when the server has a relayer URL for them. `custom` lists the ones it also serves in
+// the custom environment. Fetched once per page load.
 export function useEnabledNetworks() {
   return useQuery({
     queryKey: ["enabled-networks"],
     queryFn: async () => {
       const res = await fetch("/api/networks");
       if (!res.ok) throw new Error(`Failed to load networks (${res.status})`);
-      return ((await res.json()) as { enabled: NetworkKey[] }).enabled;
+      return (await res.json()) as { enabled: NetworkKey[]; custom: NetworkKey[] };
     },
     staleTime: Infinity,
   });

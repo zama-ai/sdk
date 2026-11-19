@@ -7,27 +7,28 @@ A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using wagm
 ## Architecture at a glance
 
 ```
-page.tsx                         — wallet connect, network picker, token selector
-├── lib/networks.ts              — the network table: one row per chain (viem chain, FHE preset, flags)
-├── lib/relayers.ts              — server-side: upstream relayer URL + API key per network
-├── lib/wallet.tsx               — wallet stack: Dynamic connect dialog or wagmi injected connector, built from the table
-├── lib/dynamic.ts               — Dynamic headless client: wallet catalogue and connect step
-├── lib/dynamicConnector.ts      — wagmi connector over a Dynamic-authorized wallet
-├── lib/zodJitless.ts            — turns off zod's eval probe, which the page CSP blocks
-├── ConnectWalletDialog.tsx      — wallet picker and WalletConnect pairing
-├── providers.tsx                — wallet providers + ZamaProvider config, built from the network table
-│   ├── /api/networks            — which networks the server can serve (drives the picker)
-│   └── /api/relayer/[network]/[...path] — Next.js proxy (keeps API keys server-side)
-├── PageChrome.tsx               — connect screen, header, network picker, token selector
-├── SelectedTokenPanel.tsx       — composes the cards below for the selected token
-├── BalancesCard.tsx             — native / ERC-20 / confidential balance display
-├── ShieldCard.tsx               — ERC-20 → confidential via `useShield`
-├── TransferCard.tsx             — confidential → confidential
-├── UnshieldCard.tsx             — confidential → ERC-20 (2-phase)
-├── PendingUnshieldCard.tsx      — recover an interrupted unshield from IndexedDB
-├── DelegateDecryptionCard.tsx   — grant another wallet the right to decrypt your balance
-├── RevokeDelegationCard.tsx     — revoke that right
-└── DecryptAsCard.tsx            — decrypt another wallet's balance (as a delegate)
+page.tsx                         # wallet connect, network picker, token selector
+├── lib/networks.ts              # the network table: one row per chain (viem chain, FHE preset, flags)
+├── lib/relayers.ts              # server-side: upstream relayer URL + API key per network
+├── lib/environment.ts           # optional custom Zama environment: its Sepolia config, network ids and labels
+├── lib/wallet.tsx               # wallet stack: Dynamic connect dialog or wagmi injected connector, built from the table
+├── lib/dynamic.ts               # Dynamic headless client: wallet catalogue and connect step
+├── lib/dynamicConnector.ts      # wagmi connector over a Dynamic-authorized wallet
+├── lib/zodJitless.ts            # turns off zod's eval probe, which the page CSP blocks
+├── ConnectWalletDialog.tsx      # wallet picker and WalletConnect pairing
+├── providers.tsx                # wallet providers + one ZamaProvider config per environment
+│   ├── /api/networks            # which networks the server can serve (drives the picker)
+│   └── /api/relayer/[network]/[...path] # Next.js proxy (keeps API keys server-side)
+├── PageChrome.tsx               # connect screen, header, network picker, token selector
+├── SelectedTokenPanel.tsx       # composes the cards below for the selected token
+├── BalancesCard.tsx             # native / ERC-20 / confidential balance display
+├── ShieldCard.tsx               # ERC-20 → confidential via `useShield`
+├── TransferCard.tsx             # confidential → confidential
+├── UnshieldCard.tsx             # confidential → ERC-20 (2-phase)
+├── PendingUnshieldCard.tsx      # recover an interrupted unshield from IndexedDB
+├── DelegateDecryptionCard.tsx   # grant another wallet the right to decrypt your balance
+├── RevokeDelegationCard.tsx     # revoke that right
+└── DecryptAsCard.tsx            # decrypt another wallet's balance (as a delegate)
 ```
 
 ---
@@ -37,7 +38,9 @@ page.tsx                         — wallet connect, network picker, token selec
 SDK 3.x uses a single Zama config object. The wagmi adapter creates the SDK signer
 and provider from the app's `wagmiConfig`. Both configs are built from the network table in
 `src/lib/networks.ts`, so every row is registered once: `web()` networks get the same-origin
-proxy as their relayer URL, cleartext networks get `cleartext()` and no relayer at all.
+proxy as their relayer URL, cleartext networks get `cleartext()` and no relayer at all. The
+app builds one Zama config per environment (see "Custom environment" below); without
+`NEXT_PUBLIC_ZAMA_ENV=custom` only the default one is ever used.
 
 ```ts
 // src/lib/networks.ts — one row per chain
@@ -74,11 +77,6 @@ export const wagmiConfig = createConfig({
 // The SSR placeholder never issues requests.
 const origin = typeof window === "undefined" ? "http://localhost" : window.location.origin;
 
-const fheChains = NETWORK_KEYS.map((key) => {
-  const { fhe, transport } = networks[key];
-  return transport === "relayer" ? { ...fhe, relayerUrl: `${origin}/api/relayer/${key}` } : fhe;
-});
-
 const relayers = Object.fromEntries(
   NETWORK_KEYS.map((key) => [
     networks[key].chain.id,
@@ -86,25 +84,54 @@ const relayers = Object.fromEntries(
   ]),
 );
 
-const zamaConfig = createZamaConfig({
-  wagmiConfig,
-  chains: fheChains,
-  relayers,
-  storage: indexedDBStorage,
-  permitStorage: indexedDBStorage,
-});
+function createConfig(env: Environment, storage: GenericStorage) {
+  const fheChains = NETWORK_KEYS.map((key) => {
+    const fhe = fheFor(key, env);
+    return networks[key].transport === "relayer"
+      ? { ...fhe, relayerUrl: `${origin}/api/relayer/${networkId(key, env)}` }
+      : fhe;
+  });
+  return createZamaConfig({
+    wagmiConfig,
+    chains: fheChains,
+    relayers,
+    storage,
+    permitStorage: storage,
+  });
+}
+
+const defaultConfig = createConfig("default", indexedDBStorage);
+const configs = {
+  default: defaultConfig,
+  custom: NETWORK_KEYS.some(isCustomized)
+    ? createConfig("custom", new IndexedDBStorage("CredentialStore-custom"))
+    : defaultConfig,
+};
 ```
 
-`ZamaProvider` receives the resolved config, nested inside the wallet providers:
+`ZamaProvider` receives the config of the current environment, nested inside the wallet
+providers. `useEnvironment()` exposes that environment to the page:
 
 ```tsx
 <WalletProviders>
-  <ZamaProvider config={zamaConfig}>{children}</ZamaProvider>
+  <EnvironmentProvider>
+    {/* inside: <ZamaProvider config={configs[env]}>{children}</ZamaProvider> */}
+    {children}
+  </EnvironmentProvider>
 </WalletProviders>
 ```
 
-`storage` and `permitStorage` use the same IndexedDB-backed storage in this browser app so
-the transport key pair and signed permits survive page reloads during local development.
+Each config passes one IndexedDB database as both `storage` and `permitStorage`, so the
+transport key pair and signed permits survive page reloads during local development.
+
+**Custom environment.** With `NEXT_PUBLIC_ZAMA_ENV=custom`, `src/lib/environment.ts` builds a
+second version of Sepolia from the `NEXT_PUBLIC_ZAMA_*` variables: the same chain, other
+protocol contracts, gateway and registry. `fheFor(key, env)` returns it in the custom
+environment and the table's preset everywhere else, and `networkId(key, env)` names it
+`sepolia-custom` for the relayer proxy and the picker. The custom config stores keys and
+permits in its own database (`CredentialStore-custom`): the SDK keys permits by signer and
+chain ID, which both environments share, so a permit signed for one environment never
+reaches the other's relayer.
 
 ### 1a. Wallet stack (`lib/wallet.tsx`)
 
@@ -186,7 +213,9 @@ the network table:
 
 Which rows are _enabled_ comes from `GET /api/networks`: cleartext rows always, `relayer` rows
 only when the server has an upstream relayer URL for them. That is how mainnet stays hidden
-until a deployment configures `MAINNET_RELAYER_URL`.
+until a deployment configures `MAINNET_RELAYER_URL`. Its `custom` list names the networks also
+served in the custom environment (Sepolia, once `SEPOLIA_CUSTOM_RELAYER_URL` is set); each gets
+a second picker option.
 
 Because wagmi does not auto-connect without stored connector state, the connect flow is
 explicit. `page.tsx` never talks to a connector directly: it goes through the
@@ -200,9 +229,13 @@ const { switchChain, isPending: isSwitching } = useSwitchChain();
 // Screen 1: !isConnected — opens the Dynamic dialog or prompts the injected wallet
 connect();
 
-// Screen 2 (and the picker on screen 3): the user picked a row of the table
-switchChain({ chainId: networks[key].chain.id });
+// Screen 2 (and the picker on screen 3): the user picked a network option
+switchChain({ chainId: networks[option.key].chain.id }, { onError: () => setEnv(previous) });
 ```
+
+Picking a Sepolia option also sets the environment, just before the switch: wagmi reports the
+new chain before the switch resolves. A switch the wallet rejects puts the previous environment
+back.
 
 `wagmi` handles `wallet_switchEthereumChain` internally, and falls back to
 `wallet_addEthereumChain` with the viem chain definition when the wallet does not know the
@@ -373,10 +406,12 @@ transaction(s), shield transaction, and cache invalidation.
 ## 8. Relayer proxy
 
 The proxy route `src/app/api/relayer/[network]/[...path]/route.ts` keeps API keys server-side.
-The `[network]` segment is a key of the network table; the route looks it up in
+The `[network]` segment is a network id: a key of the network table, or `sepolia-custom` for
+Sepolia in the custom environment (`networkId()` in `src/lib/environment.ts`). The route looks it up in
 `src/lib/relayers.ts`, which maps each `relayer` network to an upstream from env
-(`SEPOLIA_RELAYER_URL`, `MAINNET_RELAYER_URL`, … — bare hosts, no `/v2` suffix). Testnets
-default to the public testnet relayer; mainnets have no default and are hidden until set.
+(`SEPOLIA_RELAYER_URL`, `SEPOLIA_CUSTOM_RELAYER_URL`, `MAINNET_RELAYER_URL`, …; bare hosts, no
+`/v2` suffix). Sepolia defaults to the public testnet relayer; custom Sepolia and mainnets have
+no default and are hidden until set.
 
 The proxy fails closed and is deliberately narrow:
 
@@ -389,7 +424,8 @@ The proxy fails closed and is deliberately narrow:
 avoid rate limiting with a private node.
 
 `ENABLED_NETWORKS` (comma-separated table keys) narrows what the server offers; a network
-outside the list is neither listed by `/api/networks` nor proxied.
+outside the list is neither listed by `/api/networks` nor proxied. `sepolia` also covers
+Sepolia in the custom environment.
 
 ---
 
