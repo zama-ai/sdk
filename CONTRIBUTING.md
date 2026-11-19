@@ -69,7 +69,7 @@ Use descriptive branch names:
 
 ```bash
 pnpm typecheck    # Type checking
-pnpm lint         # oxlint + ast-grep rules
+pnpm lint         # every lint check (the lint script in package.json)
 pnpm format:check # oxfmt formatting
 pnpm test:run     # Unit tests
 pnpm build        # Build output

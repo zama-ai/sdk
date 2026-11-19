@@ -130,7 +130,7 @@ This repository includes an opt-in [Claude Code](https://docs.anthropic.com/en/d
 - **Auto-allowed commands** — `pnpm build`, `pnpm test`, `pnpm lint`, `pnpm typecheck`, `pnpm format`, and git diff variants run without prompting.
 - **Denied reads** — `.env` files and `.next/` are blocked to prevent accidental secret exposure.
 - **Ask-before-running** — destructive commands (`rm`), remote pushes (`git push`), and release commands require explicit approval.
-- **Hooks**: after each write or edit, the edited file goes through the same checks as the pre-commit hook (`lint-staged.config.mjs`): `oxlint --fix` and `ast-grep` for JS/TS, then `oxfmt`, then the em dash check. Before Claude ends a turn with TypeScript changes, `pnpm typecheck` runs. Errors go back to Claude to fix.
+- **Hooks**: after each write or edit, the edited file goes through the same checks as the pre-commit hook, in the order `lint-staged.config.mjs` lists them. Before Claude ends a turn with TypeScript changes, `pnpm typecheck` runs. Errors go back to Claude to fix.
 - **Custom skills** — custom skills required for good development practices to contribute to this repo.
 
 To use it, install [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and run `pnpm setup:claude`. Re-run it after pulling changes to `claude-setup/`. It replaces the `hooks` block, so put personal hooks in `.claude/settings.local.json`.

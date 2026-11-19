@@ -1040,6 +1040,12 @@ const { clearValues } = await sdk.decryption.decryptPublicValues(["0xEncryptedVa
 
 `decryptPublicValues` also returns `decryptionProof` and `abiEncodedClearValues` alongside `clearValues`, so you can submit on-chain finalization transactions that verify the decryption.
 
+To decrypt one uint, such as an unwrap amount, use `decryptPublicUint`. It returns the value as a `bigint`, and throws `DecryptionFailedError` when the relayer returns no uint:
+
+```ts
+const { value, decryptionProof } = await sdk.decryption.decryptPublicUint("0xEncryptedValue...");
+```
+
 {% endtab %}
 {% tab title="React SDK" %}
 

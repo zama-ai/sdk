@@ -396,11 +396,11 @@ await sdk.permits.registerPermit(prepared, signature);
 
 **Throws:**
 
-- `ConfigurationError` - `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a process boundary and was corrupted)
-- `PreparedPermitChainMismatchError` - the chain embedded in `prepared.eip712` doesn't match the currently active chain
-- `PreparedPermitExpiredError` - the permit's validity window has already elapsed
-- `TransportKeyPairChangedError` - no transport key pair is stored for `prepared.signerAddress`, or it no longer matches the public key `prepared.eip712` was built against (e.g. a TTL expiry or eviction in between); call `preparePermit` again
-- `SigningFailedError` - the signature is invalid or malformed
+- [`ConfigurationError`](errors.md#configurationerror) - `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a process boundary and was corrupted)
+- [`PreparedPermitChainMismatchError`](errors.md#preparedpermitchainmismatcherror) - the chain embedded in `prepared.eip712` doesn't match the currently active chain
+- [`PreparedPermitExpiredError`](errors.md#preparedpermitexpirederror) - the permit's validity window has already elapsed
+- [`TransportKeyPairChangedError`](errors.md#transportkeypairchangederror) - no transport key pair is stored for `prepared.signerAddress`, or it no longer matches the public key `prepared.eip712` was built against (e.g. a TTL expiry or eviction in between); call `preparePermit` again
+- [`SigningFailedError`](errors.md#signingfailederror) - the signature is invalid or malformed
 
 See the [Offline reference](./Offline.md#preparepermit) for `preparePermit`'s request/response shape and the [Offline signing guide](../../guides/offline.md#offline-permits) for the full workflow.
 
@@ -536,6 +536,20 @@ emitter.on(
 {% hint style="info" %}
 This is the SDK-level entry point for user decryption — a single method that takes a list of value/contract **pairs** and decrypts them with the connected wallet's credentials (the Zama glossary splits this into `decryptValue`/`decryptValues`/`decryptValuesFromPairs`; the SDK intentionally exposes just one). It is distinct from `decryptPublicValues` (gateway-level decryption that happens on-chain without user authentication). In React, use [`useDecryptValues`](../react/useDecryptValues.md) which wraps `sdk.decryption.decryptValues` with TanStack Query semantics.
 {% endhint %}
+
+### decryption.decryptPublicUint
+
+`(encryptedValue: EncryptedValue, options?: RelayerRequestOptions) => Promise<DecryptPublicUintResult>`
+
+Publicly decrypt one uint, such as an unwrap amount. Works without a configured signer. Returns `value` (a `bigint`), `abiEncodedClearValues` and `decryptionProof`, which an on-chain finalization call needs.
+
+```ts
+const { value, decryptionProof } = await sdk.decryption.decryptPublicUint(encryptedAmount);
+```
+
+**Throws:**
+
+- [`DecryptionFailedError`](errors.md#decryptionfailederror) when the relayer returns no value, or a value that is not a uint.
 
 ### onWalletAccountChange
 

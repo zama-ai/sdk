@@ -8,6 +8,7 @@ import type {
   EncryptedValue,
   RelayerRequestOptions,
 } from "../relayer/types";
+import { decryptPublicUint, type DecryptPublicUintResult } from "../relayer/public-decrypt";
 import type {
   BatchDecryptResult,
   DecryptionService,
@@ -195,6 +196,33 @@ export class Decryption {
     } catch (error) {
       throw wrapDecryptError(error, "Public decryption failed");
     }
+  }
+
+  /**
+   * Publicly decrypt one uint, such as an unwrap amount, and return it as a
+   * `bigint` with its decryption proof.
+   *
+   * Signer-independent: works without a configured signer.
+   *
+   * @param encryptedValue - The FHE encrypted uint to decrypt publicly.
+   * @param options - Per-call `signal` and `timeout` forwarded to the relayer round-trip.
+   * @returns The clear-text uint as a `bigint`, its ABI encoding, and the decryption proof.
+   * @throws if the relayer returns no value, or a value that is not a uint. {@link DecryptionFailedError}
+   *
+   * @example
+   * ```ts
+   * const { value, decryptionProof } = await sdk.decryption.decryptPublicUint(encryptedAmount);
+   * ```
+   */
+  async decryptPublicUint(
+    encryptedValue: EncryptedValue,
+    options?: RelayerRequestOptions,
+  ): Promise<DecryptPublicUintResult> {
+    return decryptPublicUint(
+      this.#router.relayer,
+      encryptedValue,
+      withOperation(options, "decrypt-public-values"),
+    );
   }
 
   /**

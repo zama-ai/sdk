@@ -1,0 +1,15 @@
+id: hook-root-from-edited-file
+language: JavaScript
+severity: error
+message: >-
+  Hooks also run in .claude/worktrees/*, where CLAUDE_PROJECT_DIR and the
+  working directory point at another checkout. Find the repo root from the
+  edited file with `git -C <dir> rev-parse --show-toplevel`, as
+  claude-setup/hooks/post-edit.mjs does.
+files:
+  - claude-setup/hooks/**/*.mjs
+rule:
+  any:
+    - pattern: process.env.CLAUDE_PROJECT_DIR
+    - pattern: process.env["CLAUDE_PROJECT_DIR"]
+    - pattern: process.cwd()

@@ -36,7 +36,8 @@ if (/\.[cm]?tsx?$/.test(name)) {
 const { default: tasks } = await import(pathToFileURL(config).href);
 const failures = [];
 for (const [glob, commands] of Object.entries(tasks)) {
-  if (!path.matchesGlob(name, glob)) {
+  // Like lint-staged: a glob with a slash matches the repo-relative path, others the file name.
+  if (!path.matchesGlob(glob.includes("/") ? path.relative(root, file) : name, glob)) {
     continue;
   }
   for (const command of [commands].flat()) {

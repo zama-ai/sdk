@@ -122,10 +122,10 @@ await wrap({ amount: 1000n, onWrapSubmitted: (txHash) => updateUI(`Wrap: ${txHas
 
 **Throws:**
 
-- `SigningRejectedError` -- if the user rejects the wallet prompt
-- `InsufficientERC20BalanceError` -- if the ERC-20 balance is less than the amount
-- `InsufficientAllowanceError` -- if the allowance is less than the amount (approve first)
-- `TransactionRevertedError` -- if the wrap transaction reverts
+- [`SigningRejectedError`](../sdk/errors.md#signingrejectederror) -- if the user rejects the wallet prompt
+- [`InsufficientERC20BalanceError`](../sdk/errors.md#insufficienterc20balanceerror) -- if the ERC-20 balance is less than the amount
+- [`InsufficientAllowanceError`](../sdk/errors.md#insufficientallowanceerror) -- if the allowance is less than the amount (approve first)
+- [`TransactionRevertedError`](../sdk/errors.md#transactionrevertederror) -- if the wrap transaction reverts
 
 ## Return Type
 
