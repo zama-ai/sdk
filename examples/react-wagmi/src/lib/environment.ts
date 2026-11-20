@@ -69,6 +69,13 @@ function customSepolia(): FheChain {
       "NEXT_PUBLIC_ZAMA_INPUT_VERIFICATION_ADDRESS",
       process.env.NEXT_PUBLIC_ZAMA_INPUT_VERIFICATION_ADDRESS,
     ),
+    // Encryption checks the FHE public key and CRS from the relayer against this contract.
+    keyVerification: {
+      contract: customEnvAddress(
+        "NEXT_PUBLIC_ZAMA_KMS_GENERATION_ADDRESS",
+        process.env.NEXT_PUBLIC_ZAMA_KMS_GENERATION_ADDRESS,
+      ),
+    },
     // Required: left unset, Sepolia's preset registry would list its tokens against this
     // environment's contracts.
     registryAddress: customEnvAddress(
