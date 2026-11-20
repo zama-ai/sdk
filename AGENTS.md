@@ -30,11 +30,10 @@ If the snippet you're about to generate composes the underlying contract calls f
 
 ## Rules and what enforces them
 
-| Rule                                                                                                                                                         | Enforced by                                                                                                |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| Check a saved tx hash with `lookUpReceipt` (`utils/receipt-lookup.ts`). Wait for a receipt only on a hash you just submitted.                                | ast-grep rule `no-receipt-wait-on-saved-hash` (`pnpm lint`)                                                |
-| When the SDK saves a pending unshield is stated only in `docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields`. Other pages link there. | `scripts/lint/single-source-facts.mjs` (`pnpm lint`)                                                       |
-| Reading pending unshields never writes storage.                                                                                                              | `loadPendingUnshields` in `packages/sdk/src/token/pending-unshield.ts` takes `Pick<GenericStorage, "get">` |
+| Rule                                                                                                                          | Enforced by                                                                                                |
+| ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Check a saved tx hash with `lookUpReceipt` (`utils/receipt-lookup.ts`). Wait for a receipt only on a hash you just submitted. | ast-grep rule `no-receipt-wait-on-saved-hash` (`pnpm lint`)                                                |
+| Reading pending unshields never writes storage.                                                                               | `loadPendingUnshields` in `packages/sdk/src/token/pending-unshield.ts` takes `Pick<GenericStorage, "get">` |
 
 ## Further reading
 
