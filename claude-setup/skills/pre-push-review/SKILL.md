@@ -1,6 +1,6 @@
 ---
 name: pre-push-review
-description: Review the current branch before it is pushed, the way a teammate would review the PR, then fix what the review finds and record a report that unlocks `git push` and `gh pr create`. Fans out one subagent per review lane (correctness, code quality, comments, docs), verifies each finding, fixes it, and commits. Use before any push or PR, when the pre-push gate blocks a push, or when the user types /pre-push-review.
+description: Review the current branch before it is pushed, the way a teammate would review the PR, then fix what the review finds and stamp `HEAD` with a `Pre-push-review` trailer that unlocks `git push` and `gh pr create`. Fans out one subagent per review lane (correctness, code quality, comments, docs), verifies each finding, fixes it, and commits. Use before any push or PR, when the pre-push gate blocks a push, or when the user types /pre-push-review.
 ---
 
 # Pre-push review
@@ -25,14 +25,12 @@ Collect the conventions files: root `AGENTS.md`, every `AGENTS.md` under a chang
 
 Send the lanes in one message as parallel `Agent` calls. Each prompt gives the repo path, the range `$base..HEAD`, the changed files, the conventions files, the skills the lane must load with the `Skill` tool, and this rule: _read-only; read changed files in full, not only the diff; finding nothing is a fine answer._ Each lane returns findings as `file:line`, problem, evidence, exact fix, confidence, and the skills it loaded. Skip a lane that has no files to review.
 
-| Lane         | Skills to load                                                                              | Looks for                                                                                                               |
-| ------------ | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Correctness  | `zama-protocol:zama-typescript` for SDK code, `tanstack-best-practices` for react-sdk hooks | Wrong results, crashes, races, swallowed errors, broken conventions, tests that pass when the behavior breaks           |
-| Code quality | `thermo-nuclear-code-quality-review`                                                        | Missed simplifications, spaghetti branches, wrong layer, files pushed past 1000 lines                                   |
-| Comments     | `jsdoc`; spawn the `pstack:comment-sicko` agent for this lane when pstack is installed      | Added or changed comments that restate the code, explain a workaround, or break the JSDoc rules                         |
-| Docs         | `zama-developer:sdk-documentation`, `zama-developer:docs`                                   | Changed public behavior with no docs update, docs that now contradict the code, missing `llms*.txt` or API report regen |
-
-The comment-sicko agent (from the public `pstack` plugin in `cursor/plugins`) edits comments instead of reporting them. Treat its diff as its findings and verify it in step 3 like any other lane.
+| Lane         | Skills to load                                            | Looks for                                                                                                               |
+| ------------ | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Correctness  | `tanstack-best-practices` for react-sdk hooks             | Wrong results, crashes, races, swallowed errors, broken conventions, tests that pass when the behavior breaks           |
+| Code quality | `thermo-nuclear-code-quality-review`                      | Missed simplifications, spaghetti branches, wrong layer, files pushed past 1000 lines                                   |
+| Comments     | `jsdoc`                                                   | Added or changed comments that restate the code, explain a workaround, or break the JSDoc rules                         |
+| Docs         | `zama-developer:sdk-documentation`, `zama-developer:docs` | Changed public behavior with no docs update, docs that now contradict the code, missing `llms*.txt` or API report regen |
 
 Split the correctness lane by package when the diff is large. Keep the total at five agents or fewer.
 
@@ -49,15 +47,15 @@ Apply each verified finding. Ask the user only when a fix needs a product or API
 
 If the fixes changed more than a few lines, run steps 2 to 4 once more on the new range. Stop after two rounds and list what is left.
 
-## 5. Record the report
+## 5. Record the review
 
-Write the report to the scratchpad, then save it for the current tree:
+After the last commit and after any rebase, stamp `HEAD`:
 
 ```bash
-node scripts/review/stamp.mjs write <report.md>
+node scripts/review/stamp.mjs write
 ```
 
-Do this after the last commit and after any rebase: the stamp is keyed to the tree of `HEAD`, and the push gate checks it.
+It amends `HEAD` with a `Pre-push-review: <tree>` trailer. The push gate and the CI job both check that trailer against the tree of `HEAD`, so any later commit, rebase or merge needs a new review.
 
 Report shape (it goes in the PR body under "Pre-push review"):
 
@@ -75,4 +73,4 @@ Left for the reviewer:
 Dropped in verification: <count>
 ```
 
-**Reply:** the report path, the counts per lane, and the commits you made.
+**Reply:** the report, the counts per lane, and the commits you made.

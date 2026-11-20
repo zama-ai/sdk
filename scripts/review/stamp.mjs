@@ -1,75 +1,88 @@
 #!/usr/bin/env node
-// The pre-push review saves its report as .git/zama-review/<tree of HEAD>.md.
-// A commit counts as reviewed when a report exists for its tree.
-//
-//   node scripts/review/stamp.mjs write <report.md>   # last step of the pre-push-review skill
-//   node scripts/review/stamp.mjs check               # husky pre-push: warns, never blocks
-//   node scripts/review/stamp.mjs gate                # Claude Code PreToolUse hook: blocks the push
 
 import { execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
-import path from "node:path";
+import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
-/** True when a shell command pushes commits or opens a pull request. */
-export function isPushCommand(command) {
-  return /(?:^|[\s;&|(])(?:git(?:\s+-C\s+\S+)?\s+push|gh\s+pr\s+create)(?=[\s;&|)]|$)/.test(
-    command,
+const REVIEWED_TREE_TRAILER = "Pre-push-review";
+const HOW_TO_FIX =
+  "Run the pre-push-review skill in Claude Code; it reviews the branch, fixes findings and adds the trailer.";
+
+export function isPushOrPrCreate(command) {
+  const unquoted = command.replace(/'[^']*'|"(?:\\.|[^"\\])*"/g, "''");
+  return /(?:^|[\s;&|(])(?:\S*\/)?(?:git(?:\s+(?:-[Cc]\s+\S+|--?[\w-]+(?:=\S+)?))*\s+push|gh\s+pr(?:\s+(?:-R|--repo)(?:=|\s+)\S+)?\s+create)(?=[\s;&|)]|$)/.test(
+    unquoted,
   );
 }
 
-function reportPath(cwd) {
-  const git = (...args) =>
-    execFileSync("git", args, {
-      cwd,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
-  const dir = path.resolve(cwd, git("rev-parse", "--git-common-dir"), "zama-review");
-  return path.join(dir, `${git("rev-parse", "HEAD^{tree}")}.md`);
+function git(cwd, ...args) {
+  return execFileSync("git", args, {
+    cwd,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  }).trim();
 }
 
-function main([mode, file]) {
+function headIsReviewed(cwd) {
+  const tree = git(cwd, "rev-parse", "HEAD^{tree}");
+  return (
+    git(cwd, "log", "-1", `--format=%(trailers:key=${REVIEWED_TREE_TRAILER},valueonly)`) === tree
+  );
+}
+
+function main([mode, flag]) {
   if (mode === "write") {
-    const target = reportPath(process.cwd());
-    mkdirSync(path.dirname(target), { recursive: true });
-    copyFileSync(file, target);
-    console.log(target);
+    const tree = git(process.cwd(), "rev-parse", "HEAD^{tree}");
+    execFileSync(
+      "git",
+      [
+        "-c",
+        "trailer.ifexists=replace",
+        "commit",
+        "--amend",
+        "--only",
+        "--no-edit",
+        "--trailer",
+        `${REVIEWED_TREE_TRAILER}: ${tree}`,
+      ],
+      { stdio: "inherit" },
+    );
     return 0;
   }
 
   if (mode === "check") {
-    if (!existsSync(reportPath(process.cwd()))) {
-      console.warn(
-        "⚠️  No pre-push review for HEAD. Run /pre-push-review in Claude Code before you open the PR.",
-      );
+    if (headIsReviewed(process.cwd())) {
+      return 0;
     }
+    if (flag === "--strict") {
+      console.error(`HEAD has no ${REVIEWED_TREE_TRAILER} trailer for its tree. ${HOW_TO_FIX}`);
+      return 1;
+    }
+    console.warn(`⚠️  HEAD has no pre-push review. ${HOW_TO_FIX}`);
     return 0;
   }
 
   if (mode === "gate") {
     const input = JSON.parse(readFileSync(0, "utf8"));
-    if (!isPushCommand(input.tool_input?.command ?? "")) {
+    if (!isPushOrPrCreate(input.tool_input?.command ?? "")) {
       return 0;
     }
-    let target;
+    // No repository or no commits yet: there is nothing to review, and CI still checks the PR.
     try {
-      target = reportPath(input.cwd);
+      if (headIsReviewed(input.cwd)) {
+        return 0;
+      }
     } catch {
       return 0;
     }
-    if (existsSync(target)) {
-      return 0;
-    }
     process.stderr.write(
-      "No pre-push review for this commit. Run the pre-push-review skill, commit its fixes, then push again. " +
-        "A report is needed for every new tree, so rebase or amend before you review, not after. " +
-        "If the user wants to push without a review, they can run `! git push` themselves.\n",
+      `No pre-push review for this commit. ${HOW_TO_FIX} Rebase before you review, not after.` +
+        " If the user wants to push without a review, they can run `! git push` themselves.\n",
     );
     return 2;
   }
 
-  console.error("usage: stamp.mjs write <report.md> | check | gate");
+  console.error("usage: stamp.mjs write | check [--strict] | gate");
   return 1;
 }
 

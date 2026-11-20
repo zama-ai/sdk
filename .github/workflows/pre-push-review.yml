@@ -1,0 +1,31 @@
+name: Pre-push review
+
+on:
+  pull_request:
+    branches: [main, beta, alpha]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  stamp:
+    # Promotions and backmerges (beta → main, main → beta, beta → alpha) have release and merge heads with no review.
+    if: >-
+      github.event.pull_request.user.type != 'Bot' &&
+      !contains(fromJSON('["main","beta","alpha"]'), github.event.pull_request.head.ref)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          submodules: false
+
+      - name: Check the head commit has a pre-push review
+        run: node scripts/review/stamp.mjs check --strict

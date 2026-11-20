@@ -44,7 +44,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR\"/scripts/review/stamp.mjs gate"
+            "command": "[ -f \"$CLAUDE_PROJECT_DIR\"/scripts/review/stamp.mjs ] || exit 0; node \"$CLAUDE_PROJECT_DIR\"/scripts/review/stamp.mjs gate"
           }
         ]
       }

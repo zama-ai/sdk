@@ -9,3 +9,8 @@
 /.github/workflows/daemon.yml @zama-ai/infosec
 /.github/workflows/release.yml @zama-ai/infosec
 /.github/workflows/daemon-image-scan.yml @zama-ai/infosec
+
+# Agent config and git hooks run on contributors' machines, so changes to them need a security review.
+/claude-setup/ @zama-ai/infosec
+/.githooks/ @zama-ai/infosec
+/scripts/setup-claude.mjs @zama-ai/infosec

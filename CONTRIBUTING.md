@@ -192,7 +192,7 @@ On `beta` and `alpha`, examples can use API newer than their pins. The bump PR (
 ### Code Style
 
 - **ESM-only**: all packages use `"type": "module"`
-- **oxfmt + oxlint**: enforced via pre-commit hooks (Husky + lint-staged); ast-grep adds custom AST lint rules
+- **oxfmt + oxlint**: enforced by the pre-commit hook in `.githooks/` (lint-staged), which `pnpm install` enables via `core.hooksPath`; ast-grep adds custom AST lint rules
 - **No new em dashes**: pre-commit and CI fail when a change adds an em dash (U+2014). Rephrase using commas, colons, parentheses, or separate sentences. Run `pnpm lint:em-dash` to check staged changes, or `pnpm lint:em-dash --base <rev>` to check against a base.
   - An edited line counts as added, so replace any em dash on a line you touch. That includes Markdown table rows that oxfmt realigns.
   - A moved file keeps its em dashes only while git still pairs it with the old path (at least 50% similar). A copied file counts as new.
@@ -207,7 +207,7 @@ On `beta` and `alpha`, examples can use API newer than their pins. The bump PR (
 3. **Update types** — if you change public APIs, update TypeScript types accordingly
 4. **Run all checks** — ensure `pnpm typecheck && pnpm lint && pnpm test:run && pnpm build` passes; if you changed public APIs or docs/corpus sources, also run `pnpm api-report:check` and `pnpm llm:check`
 5. **Use a Conventional Commit PR title** — examples: `fix: handle signer timeout`, `feat(react-sdk): add cached token balance hook`
-6. **Run `/pre-push-review` in Claude Code before you push** and paste its report into the PR. Reviewers review the report; for what it missed, they run `/review-retro <pr>` so the next review catches it.
+6. **Run `/pre-push-review` in Claude Code before you push** and paste its report into the PR. It ends by adding a `Pre-push-review: <tree>` trailer to `HEAD`; the "Pre-push review" CI check fails when the head commit has no trailer for its own tree, so review again after a new commit, rebase or merge. Reviewers review the report; for what it missed, they run `/review-retro <pr>` so the next review catches it.
 
 ### Release Automation
 
