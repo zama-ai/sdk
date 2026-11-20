@@ -1,3 +1,2 @@
 #!/bin/sh
-[ "$(git config --bool zama.claudeSetup)" = "true" ] || exit 0
-node scripts/setup-claude.mjs --sync
+node scripts/setup-claude.mjs --hook
