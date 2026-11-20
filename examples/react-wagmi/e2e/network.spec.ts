@@ -118,12 +118,9 @@ test.describe("mainnet", () => {
     await expect(page.getByText(/move real funds/)).toBeVisible();
   });
 
-  test("hides the mint button and the vault demo", async ({ page }) => {
-    // The registry mock returns the same two pairs on every network, so cUSDC (the token
-    // the Sepolia vault is bound to) is selected here too — and must not show the vault.
+  test("hides the mint button", async ({ page }) => {
     await expect(page.getByRole("combobox", { name: "Confidential token" })).not.toHaveValue("");
     await expect(page.getByRole("button", { name: /Mint/ })).toHaveCount(0);
-    await expect(page.getByText("Reacting contract — ConfidentialVault")).toHaveCount(0);
     await expect(page.getByText("Shield — ERC-20 → Confidential")).toBeVisible();
   });
 });
@@ -183,7 +180,6 @@ test.describe("cleartext network", () => {
       MOCK_CTOKEN1_ADDRESS,
     );
     await expect(page.getByRole("button", { name: /Mint/ })).toBeVisible();
-    await expect(page.getByText("Reacting contract — ConfidentialVault")).toHaveCount(0);
   });
 });
 

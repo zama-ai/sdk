@@ -32,14 +32,20 @@ export default defineConfig({
       NEXT_PUBLIC_ZAMA_ENV: "",
       NEXT_PUBLIC_REGISTRY_ADDRESS: "",
       // Enable the mainnet row so the picker and the mainnet feature flags are testable, and pin
-      // Polygon off. Nothing listens on port 9, so a forwarded proxy call fails fast with 503.
+      // Polygon off. Nothing listens on port 9, so a forwarded proxy call fails fast with 503,
+      // and so does the server's keyurl read: no run waits on a live relayer.
+      SEPOLIA_RELAYER_URL: "http://127.0.0.1:9",
+      SEPOLIA_RELAYER_API_KEY: "",
       MAINNET_RELAYER_URL: "http://127.0.0.1:9",
       POLYGON_RELAYER_URL: "",
       ENABLED_NETWORKS: "",
-      // Bind the vault demo to the mocked cUSDC pair (MOCK_CTOKEN1_ADDRESS) so the
-      // ConfidentialVault cards render when that token is selected on Sepolia.
-      NEXT_PUBLIC_VAULT_ADDRESS: "0x5555555555555555555555555555555555555555",
-      NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN: "0x2222222222222222222222222222222222222222",
+      // No vaults, so the Vaults tab shows its setup hint whatever a dev's .env.local says.
+      NEXT_PUBLIC_SEPOLIA_VAULTS: "",
+      NEXT_PUBLIC_BNB_TESTNET_VAULTS: "",
+      NEXT_PUBLIC_HOODI_VAULTS: "",
+      NEXT_PUBLIC_ZENITH_VAULTS: "",
+      NEXT_PUBLIC_MAINNET_VAULTS: "",
+      NEXT_PUBLIC_POLYGON_VAULTS: "",
       // Pin a commit so the footer test can check the commit link.
       NEXT_PUBLIC_COMMIT_SHA: "0123456789abcdef0123456789abcdef01234567",
       NEXT_PUBLIC_SOURCE_REPO_URL: "",
