@@ -28,6 +28,14 @@ The daemon system spans `packages/sdk-daemon`, `clients/go`, `clients/rust`, and
 
 If the snippet you're about to generate composes the underlying contract calls for one of these flows, drop down to the `Token` method instead. The `examples/` apps are the ground truth and use the `Token` API throughout.
 
+## Rules and what enforces them
+
+| Rule                                                                                                                                                         | Enforced by                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| Check a saved tx hash with `lookUpReceipt` (`utils/receipt-lookup.ts`). Wait for a receipt only on a hash you just submitted.                                | ast-grep rule `no-receipt-wait-on-saved-hash` (`pnpm lint`)                                                |
+| When the SDK saves a pending unshield is stated only in `docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields`. Other pages link there. | `scripts/lint/single-source-facts.mjs` (`pnpm lint`)                                                       |
+| Reading pending unshields never writes storage.                                                                                                              | `loadPendingUnshields` in `packages/sdk/src/token/pending-unshield.ts` takes `Pick<GenericStorage, "get">` |
+
 ## Further reading
 
 Load these on demand during planning — they are not preloaded:
