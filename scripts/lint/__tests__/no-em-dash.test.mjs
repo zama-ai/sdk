@@ -19,6 +19,20 @@ describe("findAddedEmDashes", () => {
     ]);
   });
 
+  it("drops the tab git appends to a path with a space", () => {
+    const diff = [
+      "diff --git a/docs/my file.md b/docs/my file.md",
+      "--- a/docs/my file.md\t",
+      "+++ b/docs/my file.md\t",
+      "@@ -1,0 +2,1 @@",
+      `+bad ${EM_DASH} here`,
+    ].join("\n");
+
+    expect(findAddedEmDashes(diff)).toEqual([
+      { file: "docs/my file.md", line: 2, text: `bad ${EM_DASH} here` },
+    ]);
+  });
+
   it("ignores removed lines", () => {
     const diff = [
       "diff --git a/docs/x.md b/docs/x.md",
