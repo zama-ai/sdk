@@ -30,6 +30,10 @@ import { dirname, join } from "node:path";
 const TRUSTED_REF = "origin/beta";
 const SOURCE = "claude-setup";
 const MODE_KEY = "zama.claudeSetup";
+const PLUGINS = [
+  ["zama-ai/zama-marketplace", "zama-developer@zama-marketplace"],
+  ["zama-ai/skills", "zama-protocol@zama-skills"],
+];
 const git = (...args) => execFileSync("git", args, { maxBuffer: 64 * 1024 * 1024 });
 const ROOT = git("rev-parse", "--show-toplevel").toString().trim();
 const TARGET = join(ROOT, ".claude");
@@ -191,18 +195,23 @@ function installPlugins() {
     execFileSync("claude", ["--version"], { stdio: "ignore" });
   } catch {
     console.log("⚠️  Claude Code CLI not found. Install it first, then run:");
-    console.log("  claude plugin marketplace add zama-ai/zama-marketplace");
-    console.log("  claude plugin install zama-developer@zama-marketplace --scope project");
+    for (const [marketplace, plugin] of PLUGINS) {
+      console.log(`  claude plugin marketplace add ${marketplace}`);
+      console.log(`  claude plugin install ${plugin} --scope project`);
+    }
     return;
   }
-  execFileSync("claude", ["plugin", "marketplace", "add", "zama-ai/zama-marketplace"], {
-    stdio: "inherit",
-  });
-  execFileSync(
-    "claude",
-    ["plugin", "install", "zama-developer@zama-marketplace", "--scope", "project"],
-    { stdio: "inherit" },
-  );
+  for (const [marketplace, plugin] of PLUGINS) {
+    try {
+      execFileSync("claude", ["plugin", "marketplace", "add", marketplace], { stdio: "inherit" });
+      execFileSync("claude", ["plugin", "install", plugin, "--scope", "project"], {
+        stdio: "inherit",
+      });
+    } catch {
+      // zama-ai/zama-marketplace is internal, so external contributors can't install from it.
+      console.log(`⚠️  Could not install ${plugin}; skills from it won't be available.`);
+    }
+  }
   // The install rewrites settings.json; record it so automatic updates don't take it for a user edit.
   const manifest = readManifest();
   manifest.files["settings.json"] = sha(readFileSync(join(TARGET, "settings.json")));

@@ -7,7 +7,7 @@ description: Review the current branch before it is pushed, the way a teammate w
 
 The review a teammate would run on the PR, run by the author before the PR exists. Findings are fixed here, not posted. The human reviewer later reviews this report and what it missed (see the `review-retro` skill).
 
-Use only shared inputs: the repo files, `AGENTS.md`, `docs/agents/*`, and the skills in `.claude/skills/` and the zama-developer plugin. Do not use personal memory or personal skills to decide what is a finding. Every author must get the same review for the same diff.
+Use only shared inputs: the repo files, `AGENTS.md`, `docs/agents/*`, and the skills in `.claude/skills/` and the zama-developer and zama-protocol plugins. Do not use personal memory or personal skills to decide what is a finding. Every author must get the same review for the same diff.
 
 ## 1. Scope
 
@@ -25,12 +25,14 @@ Collect the conventions files: root `AGENTS.md`, every `AGENTS.md` under a chang
 
 Send the lanes in one message as parallel `Agent` calls. Each prompt gives the repo path, the range `$base..HEAD`, the changed files, the conventions files, the skills the lane must load with the `Skill` tool, and this rule: _read-only; read changed files in full, not only the diff; finding nothing is a fine answer._ Each lane returns findings as `file:line`, problem, evidence, exact fix, confidence, and the skills it loaded. Skip a lane that has no files to review.
 
-| Lane         | Skills to load                                            | Looks for                                                                                                               |
-| ------------ | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Correctness  | `tanstack-best-practices` for react-sdk hooks             | Wrong results, crashes, races, swallowed errors, broken conventions, tests that pass when the behavior breaks           |
-| Code quality | `thermo-nuclear-code-quality-review`                      | Missed simplifications, spaghetti branches, wrong layer, files pushed past 1000 lines                                   |
-| Comments     | `jsdoc`                                                   | Added or changed comments that restate the code, explain a workaround, or break the JSDoc rules                         |
-| Docs         | `zama-developer:sdk-documentation`, `zama-developer:docs` | Changed public behavior with no docs update, docs that now contradict the code, missing `llms*.txt` or API report regen |
+| Lane         | Skills to load                                                                                                                 | Looks for                                                                                                               |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| Correctness  | `zama-protocol:zama-protocol` then `zama-protocol:zama-typescript` for SDK code, `tanstack-best-practices` for react-sdk hooks | Wrong results, crashes, races, swallowed errors, broken conventions, tests that pass when the behavior breaks           |
+| Code quality | `thermo-nuclear-code-quality-review`                                                                                           | Missed simplifications, spaghetti branches, wrong layer, files pushed past 1000 lines                                   |
+| Comments     | `jsdoc`                                                                                                                        | Added or changed comments that restate the code, explain a workaround, or break the JSDoc rules                         |
+| Docs         | `zama-developer:sdk-documentation`, `zama-developer:docs`                                                                      | Changed public behavior with no docs update, docs that now contradict the code, missing `llms*.txt` or API report regen |
+
+If a lane's skill can't be loaded (the zama-developer plugin is internal, so external contributors don't have it), the lane applies `AGENTS.md` and `docs/agents/*` instead and reports the missing skill.
 
 Split the correctness lane by package when the diff is large. Keep the total at five agents or fewer.
 

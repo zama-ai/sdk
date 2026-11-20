@@ -14,9 +14,11 @@ permissions:
 
 jobs:
   stamp:
-    # Promotions and backmerges (beta → main, main → beta, beta → alpha) have release and merge heads with no review.
+    # Promotions and backmerges (beta → main, main → beta, beta → alpha) have release and merge heads with no review,
+    # and external contributors on forks may not use Claude Code.
     if: >-
       github.event.pull_request.user.type != 'Bot' &&
+      !github.event.pull_request.head.repo.fork &&
       !contains(fromJSON('["main","beta","alpha"]'), github.event.pull_request.head.ref)
     runs-on: ubuntu-latest
     timeout-minutes: 5
