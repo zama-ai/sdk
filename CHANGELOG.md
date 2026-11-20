@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.9.0-beta.5](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.4...v3.9.0-beta.5) (2026-11-20)
+
+### Bug Fixes
+
+- **sdk:** keep interrupted unshields recoverable, checked under every interleaving ([#967](https://github.com/zama-ai/sdk/issues/967)) ([03c80c6]()), closes [unshield#1]() [#956]()
+
 ## [3.9.0-beta.4](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.3...v3.9.0-beta.4) (2026-11-19)
 
 ### Features
