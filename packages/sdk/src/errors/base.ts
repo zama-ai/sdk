@@ -98,6 +98,8 @@ export const ZamaErrorCode = {
   PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED",
   /** The unwrap request was already finalized on-chain; there is nothing left to resume. */
   UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED",
+  /** The unwrap behind a resumed unshield is not mined yet; its entry is kept. */
+  UnwrapNotMined: "UNWRAP_NOT_MINED",
   /** No batcher of a vault is open: each one is paused or closed. */
   VaultBatcherPaused: "VAULT_BATCHER_PAUSED",
   /** A batcher of a vault could not be read, so the batch a join reaches is unknown. */
@@ -166,7 +168,8 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.TransportKeyPairChanged]: false, // caller must prepare the permit again against the current key pair
   [ZamaErrorCode.PreparedPermitChainMismatch]: false, // caller must register against the chain the permit was prepared for
   [ZamaErrorCode.PreparedPermitExpired]: false, // caller must prepare the permit again for a fresh validity window
-  [ZamaErrorCode.UnshieldAlreadyFinalized]: false, // the funds already arrived; the stale pointer is cleared
+  [ZamaErrorCode.UnshieldAlreadyFinalized]: false, // the funds already arrived; the stale entry is cleared
+  [ZamaErrorCode.UnwrapNotMined]: true, // a pending unwrap may still be mined
   [ZamaErrorCode.VaultBatcherPaused]: false, // stays paused until the batcher is unpaused, not on retry
   [ZamaErrorCode.VaultBatcherReadFailed]: false, // conditional: see doc above
   [ZamaErrorCode.VaultBatchNotDispatched]: false, // a settled batch stays settled; a pending one waits for its dispatch

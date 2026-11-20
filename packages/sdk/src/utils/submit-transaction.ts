@@ -16,8 +16,8 @@ import { swallow } from "./swallow";
  * Shared write-transaction pipeline for SDK calls that submit a transaction.
  *
  * On success: writes the tx, emits the per-operation submitted event from
- * {@link transactionOperationMetadata}, fires `onSubmitted`, waits for the
- * receipt, and returns `{ txHash, receipt }`.
+ * {@link transactionOperationMetadata}, fires `onSubmitted`, awaits
+ * `beforeReceipt`, waits for the receipt, and returns `{ txHash, receipt }`.
  *
  * On failure, including a mined receipt that reports a revert: emits a
  * {@link ZamaSDKEvents.TransactionError} event with the transaction-level error
@@ -32,16 +32,20 @@ export async function submitTransaction(params: {
   provider: GenericProvider;
   config: WriteContractConfig;
   emit: (input: ZamaSDKEventInput) => void;
+  /** Not awaited. Use `beforeReceipt` for work that must finish before the receipt wait. */
   onSubmitted?: (txHash: Hex) => void;
+  /** Awaited before the receipt wait; errors are logged, not thrown. */
+  beforeReceipt?: (txHash: Hex) => Promise<void>;
   logger: GenericLogger;
 }): Promise<TransactionResult> {
-  const { operation, signer, provider, config, emit, onSubmitted, logger } = params;
+  const { operation, signer, provider, config, emit, onSubmitted, beforeReceipt, logger } = params;
   const metadata = transactionOperationMetadata[operation];
 
   try {
     const txHash = await signer.writeContract(config);
     emit(metadata.submittedEvent(txHash));
     void swallow(`${operation}: onSubmitted`, () => onSubmitted?.(txHash), logger);
+    await swallow(`${operation}: beforeReceipt`, () => beforeReceipt?.(txHash), logger);
     const receipt = await provider.waitForTransactionReceipt(txHash);
     if (receipt.status === "reverted") {
       throw new TransactionRevertedError(`Transaction ${txHash} reverted during ${operation}`);

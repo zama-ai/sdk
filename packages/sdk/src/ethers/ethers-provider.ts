@@ -162,16 +162,13 @@ export class EthersProvider implements GenericProvider {
           "The transaction may have been dropped from the mempool, or the RPC's wait timeout elapsed.",
       );
     }
-    const status =
-      receipt.status === null ? undefined : receipt.status === 1 ? "success" : "reverted";
-    return {
-      logs: receipt.logs.map((log) => ({
-        address: log.address as Hex,
-        topics: log.topics.filter((t): t is Hex => t !== null),
-        data: log.data as Hex,
-      })),
-      ...(status && { status }),
-    };
+    return toReceipt(receipt);
+  }
+
+  /** Return the receipt of a mined transaction, or `null` when it is not mined. */
+  async getTransactionReceipt(hash: Hex): Promise<TransactionReceipt | null> {
+    const receipt = await this.#readProvider.getTransactionReceipt(hash);
+    return receipt && toReceipt(receipt);
   }
 
   /** Build a fully-populated, RLP-encoded unsigned transaction ready to be signed offline. */
@@ -259,4 +256,17 @@ export class EthersProvider implements GenericProvider {
     });
     return tx.unsignedSerialized as Hex;
   }
+}
+
+function toReceipt(receipt: ethers.TransactionReceipt): TransactionReceipt {
+  const status =
+    receipt.status === null ? undefined : receipt.status === 1 ? "success" : "reverted";
+  return {
+    logs: receipt.logs.map((log) => ({
+      address: log.address as Hex,
+      topics: log.topics.filter((t): t is Hex => t !== null),
+      data: log.data as Hex,
+    })),
+    ...(status && { status }),
+  };
 }

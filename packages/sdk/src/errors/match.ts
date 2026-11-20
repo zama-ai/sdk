@@ -50,7 +50,7 @@ import type {
   HcuTransactionLimitExceededError,
   TransactionRevertedError,
 } from "./transaction";
-import type { UnshieldAlreadyFinalizedError } from "./unshield";
+import type { UnshieldAlreadyFinalizedError, UnwrapNotMinedError } from "./unshield";
 import type {
   VaultBatcherPausedError,
   VaultBatcherReadFailedError,
@@ -146,6 +146,8 @@ export interface ErrorForCode {
   [ZamaErrorCode.PreparedPermitExpired]: PreparedPermitExpiredError;
   /** Thrown for {@link ZamaErrorCode.UnshieldAlreadyFinalized}. */
   [ZamaErrorCode.UnshieldAlreadyFinalized]: UnshieldAlreadyFinalizedError;
+  /** Thrown for {@link ZamaErrorCode.UnwrapNotMined}. */
+  [ZamaErrorCode.UnwrapNotMined]: UnwrapNotMinedError;
   /** Thrown for {@link ZamaErrorCode.VaultBatcherPaused}. */
   [ZamaErrorCode.VaultBatcherPaused]: VaultBatcherPausedError;
   /** Thrown for {@link ZamaErrorCode.VaultBatcherReadFailed}. */

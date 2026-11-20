@@ -8151,6 +8151,7 @@ export interface ErrorForCode {
     [ZamaErrorCode.TransactionReverted]: TransactionRevertedError;
     [ZamaErrorCode.TransportKeyPairChanged]: TransportKeyPairChangedError;
     [ZamaErrorCode.UnshieldAlreadyFinalized]: UnshieldAlreadyFinalizedError;
+    [ZamaErrorCode.UnwrapNotMined]: UnwrapNotMinedError;
     [ZamaErrorCode.VaultBatchNotDispatched]: VaultBatchNotDispatchedError;
     [ZamaErrorCode.VaultBatcherPaused]: VaultBatcherPausedError;
     [ZamaErrorCode.VaultBatcherReadFailed]: VaultBatcherReadFailedError;
@@ -9381,6 +9382,7 @@ export interface GenericLogger {
 export interface GenericProvider {
     getBlockTimestamp(chainId?: number): Promise<bigint>;
     getChainId(): Promise<number>;
+    getTransactionReceipt?(hash: Hex): Promise<TransactionReceipt | null>;
     multicall?<const TCalls extends readonly ReadContractConfig[]>(params: {
         readonly calls: TCalls;
         readonly chainId?: number;
@@ -21772,6 +21774,12 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
 };
 
 // @public
+export class UnwrapNotMinedError extends ZamaError {
+    constructor(message: string, unwrapTxHash: Hex, options?: ErrorOptions);
+    readonly unwrapTxHash: Hex;
+}
+
+// @public
 export interface UnwrapRequest {
     amount: bigint;
     from: Address;
@@ -24388,6 +24396,7 @@ export const ZamaErrorCode: {
     readonly PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH";
     readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
     readonly UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED";
+    readonly UnwrapNotMined: "UNWRAP_NOT_MINED";
     readonly VaultBatcherPaused: "VAULT_BATCHER_PAUSED";
     readonly VaultBatcherReadFailed: "VAULT_BATCHER_READ_FAILED";
     readonly VaultBatchNotDispatched: "VAULT_BATCH_NOT_DISPATCHED";

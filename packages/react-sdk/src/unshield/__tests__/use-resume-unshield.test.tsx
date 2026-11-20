@@ -111,6 +111,28 @@ describe("useResumeUnshield", () => {
     expect(queryClient).toHaveCacheUntouched(balanceKey, 3000n);
   });
 
+  test("cache: refreshes the pending unshield after any other error", async ({
+    renderWithProviders,
+    provider,
+    tokenAddress,
+  }) => {
+    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+      logs: [],
+      status: "reverted",
+    });
+
+    const { result, queryClient } = renderWithProviders(() => useResumeUnshield(tokenAddress));
+
+    const pendingKey = zamaQueryKeys.pendingUnshield.token(tokenAddress);
+    queryClient.setQueryData(pendingKey, "0xtxhash");
+
+    await act(async () => {
+      await expect(result.current.mutateAsync({ unwrapTxHash: "0xtxhash" })).rejects.toThrow();
+    });
+
+    expect(queryClient).toHaveInvalidatedQueries([pendingKey]);
+  });
+
   test("behavior: forwards onSuccess callback", async ({
     renderWithProviders,
     provider,

@@ -1,5 +1,10 @@
 /* eslint-disable no-empty-pattern */
-import { encodeFunctionData, getAddress, parseTransaction } from "viem";
+import {
+  encodeFunctionData,
+  getAddress,
+  parseTransaction,
+  TransactionReceiptNotFoundError,
+} from "viem";
 import type { PublicClient, WalletClient, Address, Hex } from "viem";
 import type { EIP712TypedData } from "../../relayer/types";
 import { test as base, describe, expect, vi } from "../../test-fixtures";
@@ -396,6 +401,26 @@ describe("ViemProvider", () => {
       expect(receipt).toEqual({ logs: [] });
       expect(publicClient.waitForTransactionReceipt).toHaveBeenCalledWith({ hash: TX_HASH });
     });
+  });
+
+  describe("getTransactionReceipt", () => {
+    vit(
+      "returns the receipt, or null when the transaction is not mined",
+      async ({ publicClient }) => {
+        const viemProvider = new ViemProvider({ publicClient });
+        publicClient.getTransactionReceipt = vi
+          .fn()
+          .mockResolvedValueOnce({ logs: [], status: "success" })
+          .mockRejectedValueOnce(new TransactionReceiptNotFoundError({ hash: TX_HASH }))
+          .mockRejectedValueOnce(new Error("RPC down"));
+        expect(await viemProvider.getTransactionReceipt(TX_HASH)).toEqual({
+          logs: [],
+          status: "success",
+        });
+        expect(await viemProvider.getTransactionReceipt(TX_HASH)).toBeNull();
+        await expect(viemProvider.getTransactionReceipt(TX_HASH)).rejects.toThrow("RPC down");
+      },
+    );
   });
 
   describe("getBlockTimestamp", () => {
