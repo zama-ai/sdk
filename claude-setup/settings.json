@@ -38,6 +38,17 @@
     "deny": ["Read(./.env)", "Read(./.env.*)", "Read(.next/**)"]
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/scripts/review/stamp.mjs gate"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit",

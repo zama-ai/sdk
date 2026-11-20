@@ -207,6 +207,7 @@ On `beta` and `alpha`, examples can use API newer than their pins. The bump PR (
 3. **Update types** — if you change public APIs, update TypeScript types accordingly
 4. **Run all checks** — ensure `pnpm typecheck && pnpm lint && pnpm test:run && pnpm build` passes; if you changed public APIs or docs/corpus sources, also run `pnpm api-report:check` and `pnpm llm:check`
 5. **Use a Conventional Commit PR title** — examples: `fix: handle signer timeout`, `feat(react-sdk): add cached token balance hook`
+6. **Run `/pre-push-review` in Claude Code before you push** and paste its report into the PR. Reviewers review the report; for what it missed, they run `/review-retro <pr>` so the next review catches it.
 
 ### Release Automation
 

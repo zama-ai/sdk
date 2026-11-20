@@ -18,6 +18,10 @@
 <!-- What did you run/check before opening this PR? -->
 <!-- Example: pnpm typecheck, pnpm lint, pnpm test:coverage, pnpm e2e:test -->
 
+## Pre-push review
+
+<!-- Paste the report from /pre-push-review. Reviewers: check what it missed and run /review-retro on this PR. -->
+
 ## Related
 
 <!-- Link issue(s) / related PR(s), if any. -->
