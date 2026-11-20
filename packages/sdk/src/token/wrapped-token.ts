@@ -21,6 +21,7 @@ import {
   SignerNotConfiguredError,
   TransactionRevertedError,
   UnshieldAlreadyFinalizedError,
+  UnwrapNotMinedError,
   ZamaError,
 } from "../errors";
 import { isInvalidUnwrapRequestRevert } from "../errors/unshield";
@@ -42,25 +43,16 @@ import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
 import { assertBigint, assertNonNullable } from "../utils/assertions";
 import { isEncryptedValueZero } from "../utils/handles";
+import { lookUpReceipt } from "../utils/receipt-lookup";
 import type { TelemetryOperation } from "../telemetry";
 import { swallow } from "../utils/swallow";
 import {
   clearPendingUnshield,
-  judgeUnwrapReceipt,
   loadPendingUnshields,
   savePendingUnshield,
-  unwrapRequestIn,
 } from "./pending-unshield";
 import { Token } from "./token";
-
-/**
- * Where an unwrap request stands on chain. "settled": it was finalized, or the
- * unwrap never opened one. "unknown": a read failed or the unwrap is not mined.
- */
-type UnwrapRequestState = "open" | "settled" | "unknown";
-
-/** How long to wait for a receipt when the provider cannot look one up without waiting. */
-const RECEIPT_LOOKUP_TIMEOUT_MS = 5_000;
+import { judgeUnwrapReceipt, unwrapRequestIn, type UnwrapRequestState } from "./unwrap-receipt";
 
 /**
  * Confidential ERC-20 wrapper (ERC-7984 ERC20Wrapper).
@@ -394,7 +386,7 @@ export class WrappedToken extends Token {
     const callbacks: UnshieldCallbacks = { onFinalizing, onFinalizeSubmitted };
     const operationId = crypto.randomUUID();
     const unwrapResult = await this.#unwrap(amount, "unshield", (txHash) =>
-      savePendingUnshield(this.sdk.storage, this.address, txHash, this.sdk.logger),
+      this.#savePendingUnshield(txHash),
     );
     void swallow(
       "unshield: onUnwrapSubmitted",
@@ -426,9 +418,7 @@ export class WrappedToken extends Token {
    */
   async unshieldAll(callbacks?: UnshieldCallbacks): Promise<TransactionResult> {
     const operationId = crypto.randomUUID();
-    const unwrapResult = await this.#unwrapAll((txHash) =>
-      savePendingUnshield(this.sdk.storage, this.address, txHash, this.sdk.logger),
-    );
+    const unwrapResult = await this.#unwrapAll((txHash) => this.#savePendingUnshield(txHash));
     void swallow(
       "unshieldAll: onUnwrapSubmitted",
       () => callbacks?.onUnwrapSubmitted?.(unwrapResult.txHash),
@@ -456,6 +446,8 @@ export class WrappedToken extends Token {
    *   entry is cleared first. {@link UnshieldAlreadyFinalizedError}
    * @throws if the unwrap reverted or opened no unwrap request from this
    *   wrapper; its saved entry is cleared first. {@link TransactionRevertedError}
+   * @throws if the unwrap has no receipt: it is still pending, or it was
+   *   dropped or replaced. Its saved entry is kept. {@link UnwrapNotMinedError}
    *
    * @example
    * ```ts
@@ -466,30 +458,30 @@ export class WrappedToken extends Token {
     unwrapTxHash: Hex,
     callbacks?: UnshieldCallbacks,
   ): Promise<TransactionResult> {
-    // The only entry point that starts from a bare hash, so it's the only one
-    // that has to fetch the receipt and decode the id from chain.
-    let receipt;
+    // A dropped unwrap is never mined, so look the receipt up instead of waiting for it.
+    let receipt: TransactionReceipt | null;
     try {
-      receipt = await this.sdk.provider.waitForTransactionReceipt(unwrapTxHash);
+      receipt = await lookUpReceipt(this.sdk.provider, unwrapTxHash);
     } catch (error) {
       if (error instanceof ZamaError) {
         throw error;
       }
       throw new TransactionRevertedError("Failed to get unwrap receipt", { cause: error });
     }
-    if (receipt.status === "reverted") {
-      await this.#clearStoredPendingUnshield("resumeUnshield", unwrapTxHash);
-      throw new TransactionRevertedError(
-        `Unwrap transaction ${unwrapTxHash} reverted, so there is nothing to resume`,
+    const verdict = judgeUnwrapReceipt(receipt, this.address);
+    if (verdict === "unknown") {
+      throw new UnwrapNotMinedError(
+        `Unwrap transaction ${unwrapTxHash} is not mined, so there is nothing to resume yet`,
+        unwrapTxHash,
       );
     }
-    let unwrapRequestId: EncryptedValue;
-    try {
-      unwrapRequestId = this.#extractUnwrapRequestId(receipt.logs);
-    } catch (error) {
+    if (verdict === "settled") {
       await this.#clearStoredPendingUnshield("resumeUnshield", unwrapTxHash);
-      throw error;
+      throw new TransactionRevertedError(
+        `Unwrap transaction ${unwrapTxHash} reverted or opened no unwrap request from this wrapper, so there is nothing to resume`,
+      );
     }
+    const { unwrapRequestId } = verdict;
     if ((await this.#unwrapRequestState(unwrapRequestId)) === "settled") {
       await this.#clearStoredPendingUnshield("resumeUnshield", unwrapTxHash);
       throw new UnshieldAlreadyFinalizedError(
@@ -500,7 +492,7 @@ export class WrappedToken extends Token {
     // The hash may come from elsewhere: save it, so an interrupted resume can be found again.
     await swallow(
       "resumeUnshield: savePendingUnshield",
-      () => savePendingUnshield(this.sdk.storage, this.address, unwrapTxHash, this.sdk.logger),
+      () => this.#savePendingUnshield(unwrapTxHash),
       this.sdk.logger,
     );
     return this.#finalizeUnshield(
@@ -516,20 +508,15 @@ export class WrappedToken extends Token {
    * Return the unwrap tx hash of an unshield that was interrupted between its
    * two phases, or `null` if none is pending for this wrapper.
    *
-   * The SDK persists this automatically when {@link unshield}/{@link unshieldAll}
-   * submit phase 1, and clears it once phase 2 finalizes. When several unshields
-   * are pending, this returns the oldest one; after resuming it, call again for
-   * the next. Use the returned hash to surface a "resume" affordance, then pass
-   * it to {@link resumeUnshield}.
-   * Resuming is intentionally caller-driven — auto-resuming on load would fire a
-   * wallet transaction unprompted.
+   * {@link unshield}/{@link unshieldAll} save an entry automatically. Pass the
+   * returned hash to {@link resumeUnshield}; the SDK never resumes on its own,
+   * since that would open a wallet prompt unasked.
    *
-   * Each saved entry is verified on-chain before it is reported: an entry whose
-   * unwrap request was already finalized (e.g. the tab closed before the SDK
-   * could clear storage), or whose unwrap reverted or opened no request, is
-   * cleared and the next one is checked. An entry that cannot be verified (a
-   * read failed, or its unwrap is not mined) is kept, and reported only if no
-   * other entry is verified open: a network error never deletes recovery state.
+   * Returns the oldest entry that is verified open on chain; after resuming it,
+   * call again for the next. Entries already finalized, reverted, or that opened
+   * no request are cleared. An entry that cannot be verified (a read failed, or
+   * its unwrap is not mined) is kept, and returned only when no entry is
+   * verified open.
    *
    * @returns The pending unwrap tx hash, or `null`.
    *
@@ -720,11 +707,15 @@ export class WrappedToken extends Token {
     }
   }
 
+  #savePendingUnshield(unwrapTxHash: Hex): Promise<void> {
+    return savePendingUnshield(this.sdk.storage, this.address, unwrapTxHash, this.sdk.logger);
+  }
+
   /** Where the request of a saved unwrap tx stands. Looks the receipt up without waiting for it. */
   async #pendingUnshieldState(unwrapTxHash: Hex): Promise<UnwrapRequestState> {
     let receipt: TransactionReceipt | null;
     try {
-      receipt = await this.#lookUpReceipt(unwrapTxHash);
+      receipt = await lookUpReceipt(this.sdk.provider, unwrapTxHash);
     } catch {
       return "unknown";
     }
@@ -732,23 +723,6 @@ export class WrappedToken extends Token {
     return typeof verdict === "string"
       ? verdict
       : this.#unwrapRequestState(verdict.unwrapRequestId);
-  }
-
-  /** The receipt, or `null` when the transaction is not mined (or not within a short wait). */
-  async #lookUpReceipt(hash: Hex): Promise<TransactionReceipt | null> {
-    const { provider } = this.sdk;
-    if (provider.getTransactionReceipt) {
-      return provider.getTransactionReceipt(hash);
-    }
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const timeout = new Promise<null>((resolve) => {
-      timer = setTimeout(() => resolve(null), RECEIPT_LOOKUP_TIMEOUT_MS);
-    });
-    try {
-      return await Promise.race([provider.waitForTransactionReceipt(hash), timeout]);
-    } finally {
-      clearTimeout(timer);
-    }
   }
 
   async #clearStoredPendingUnshield(operation: string, unwrapTxHash: Hex): Promise<void> {

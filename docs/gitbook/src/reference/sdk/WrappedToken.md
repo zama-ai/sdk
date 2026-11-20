@@ -184,7 +184,9 @@ Resumes an interrupted unshield after the unwrap transaction has already been su
 
 If the unwrap request was already finalized on-chain, it clears the persisted pending state and throws [`UnshieldAlreadyFinalizedError`](errors.md#unshieldalreadyfinalizederror) instead of submitting a transaction that would revert. The funds already arrived; treat the error as completion.
 
-If the unwrap reverted, or was replaced or cancelled in the wallet so it opened no unwrap request, it clears that entry and throws [`TransactionRevertedError`](errors.md#transactionrevertederror). `getPendingUnshield()` then returns the next pending unshield, if any.
+If the unwrap reverted, or was mined without opening an unwrap request from this wrapper, it clears that entry and throws [`TransactionRevertedError`](errors.md#transactionrevertederror). `getPendingUnshield()` then returns the next pending unshield, if any.
+
+If the unwrap has no receipt (still pending, or dropped or replaced so this hash is never mined), it throws [`UnwrapNotMinedError`](errors.md#unwrapnotminederror) at once and keeps the entry. Retry later.
 
 ```ts
 const pending = await wrappedToken.getPendingUnshield();
@@ -197,7 +199,7 @@ if (pending) {
 
 `() => Promise<Hex | null>`
 
-Returns the unwrap transaction hash of an unshield that was interrupted between its two phases, or `null` if none is pending for this wrapper. The SDK saves it automatically as soon as the wallet returns the `unshield()` / `unshieldAll()` unwrap hash, and clears it once phase 2 finalizes. If several unshields on this wrapper were interrupted, it returns the oldest; after resuming it, call it again for the next.
+Returns the unwrap transaction hash of an unshield that was interrupted between its two phases, or `null` if none is pending for this wrapper. `unshield()` and `unshieldAll()` save it automatically (see [Handle interrupted unshields](../../guides/unshield-tokens.md#4-handle-interrupted-unshields)). If several unshields on this wrapper were interrupted, it returns the oldest; after resuming it, call it again for the next.
 
 The SDK verifies each saved hash on-chain before reporting it, without waiting for a receipt: an entry whose unwrap request was already finalized, or whose unwrap reverted or opened no request (replaced or cancelled in the wallet), is cleared and the next one is checked. An entry it cannot verify (a read failed, or the unwrap is not mined yet) is kept, and returned only when no other entry is verified open; a network error never deletes recovery state.
 

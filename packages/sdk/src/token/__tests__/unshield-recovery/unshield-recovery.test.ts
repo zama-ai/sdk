@@ -1,10 +1,5 @@
 // Checks, under every interleaving of SDK calls and wallet, RPC, storage, relayer
 // and chain events, that an interrupted unshield can always be found and resumed.
-//
-// Rules: `Rule` in explore.ts. A break fails the test unless it falls in one of
-// the BOUNDS there. Model: one account, each actor its own tab on one shared
-// storage, HARNESS_CALLS in sdk-call.ts. self-test.test.ts proves the check
-// still fails when a known bug is put back.
 import { describe, expect, test } from "vitest";
 import { explore } from "./explore";
 import { SCENARIOS } from "./scenarios";

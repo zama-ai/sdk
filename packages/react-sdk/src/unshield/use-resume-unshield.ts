@@ -25,6 +25,8 @@ import { useWrappedToken } from "../token/use-wrapped-token";
  * - {@link TransactionRevertedError}: an on-chain transaction reverted. When the
  *   unwrap itself reverted, the SDK cleared its pending state and this hook
  *   refreshed {@link usePendingUnshield}, which then returns the next one
+ * - {@link UnwrapNotMinedError}: the unwrap is not mined yet. The SDK kept its
+ *   pending state; retry later
  *
  * @param address - Address of the confidential wrapper contract.
  * @param options - React Query mutation options.

@@ -22,6 +22,7 @@ import {
   HcuBlockLimitExceededError,
   HcuTransactionLimitExceededError,
   UnshieldAlreadyFinalizedError,
+  UnwrapNotMinedError,
   VaultBatcherPausedError,
   VaultBatcherReadFailedError,
   VaultBatchNotDispatchedError,
@@ -112,7 +113,7 @@ try {
 | `isRetryable`       | `(error: unknown) => error is ZamaError & { retryable: true }` | `true` only for a `ZamaError` instance whose `.retryable` is `true`; `false` for anything else, including non-SDK errors.                                                                                                                            |
 | `retryAfterSeconds` | `(error: unknown) => number \| undefined`                      | Reads the error's own `retryAfter` field when the error is retryable and carries one. Only `RelayerRequestFailedError` and `RpcRateLimitError` currently carry `retryAfter` — treat `undefined` as "retry with your own backoff," not "don't retry." |
 
-Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequestFailedError` (only on an HTTP 429 or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, `WalletAccountNotReadyError`, and `HcuBlockLimitExceededError`. `VaultBatcherReadFailedError` is retryable for some instances: see [VaultBatcherReadFailedError](#vaultbatcherreadfailederror). See [Retry transient failures](../../guides/handle-errors.md#8-retry-transient-failures) for the full guide, including React Query integration.
+Exactly seven error classes are retryable today: `RpcRateLimitError`, `RelayerRequestFailedError` (only on an HTTP 429 or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, `WalletAccountNotReadyError`, `HcuBlockLimitExceededError`, and `UnwrapNotMinedError`. `VaultBatcherReadFailedError` is retryable for some instances: see [VaultBatcherReadFailedError](#vaultbatcherreadfailederror). See [Retry transient failures](../../guides/handle-errors.md#8-retry-transient-failures) for the full guide, including React Query integration.
 
 ## Error summary
 
@@ -127,6 +128,7 @@ Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequ
 | `HcuBlockLimitExceededError`              | `HCU_BLOCK_LIMIT_EXCEEDED`               | Gas estimation found too little FHE compute (HCU) left in the block; retry in the next block (retryable)                          |
 | `HcuTransactionLimitExceededError`        | `HCU_TRANSACTION_LIMIT_EXCEEDED`         | The transaction needs more FHE compute (HCU), in total or in one sequential chain, than one transaction may use                   |
 | `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
+| `UnwrapNotMinedError`                     | `UNWRAP_NOT_MINED`                       | The unwrap behind a resumed unshield is not mined yet; its entry is kept (retryable)                                              |
 | `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | Every batcher of a vault in the join is paused or closed, so the whole join would revert                                          |
 | `VaultBatcherReadFailedError`             | `VAULT_BATCHER_READ_FAILED`              | A batcher of a vault could not be read, so the SDK cannot tell which batch a join reaches                                         |
 | `VaultBatchNotDispatchedError`            | `VAULT_BATCH_NOT_DISPATCHED`             | A vault batch cannot be finalized because it is not dispatched: it is still pending, or it was already finalized or canceled      |
@@ -334,6 +336,14 @@ matchZamaError(error, {
 ```
 
 **How to handle:** Treat it as completion, not a failure: dismiss the "resume unshield" prompt and refresh balances. `useResumeUnshield` invalidates the affected queries automatically. Do not retry; nothing is left to finalize.
+
+### UnwrapNotMinedError
+
+**Code:** `UNWRAP_NOT_MINED`
+
+Thrown by `resumeUnshield()` when the unwrap has no receipt: it is still pending, or it was dropped or replaced so this hash is never mined. The SDK does not wait for it and keeps the matching entry. The error carries `unwrapTxHash`.
+
+**How to handle:** Retryable. Tell the user the unwrap is not confirmed yet and offer the resume again later. A dropped unwrap is never mined, so its entry stays, and `getPendingUnshield()` returns it whenever no other entry is verified open. If the same `unwrapTxHash` keeps failing, show it as unconfirmed with a link to a block explorer instead of offering the resume again.
 
 ### VaultBatcherPausedError
 

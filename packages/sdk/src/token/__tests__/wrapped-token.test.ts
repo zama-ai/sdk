@@ -828,8 +828,27 @@ describe("WrappedToken", () => {
       );
 
       await expect(wrappedToken.resumeUnshield(UNWRAP_TX)).rejects.toThrow(
-        "No UnwrapRequested event from this wrapper found in the unwrap receipt",
+        "opened no unwrap request from this wrapper",
       );
+    });
+
+    test("resumeUnshield throws UNWRAP_NOT_MINED at once and keeps the entry when the unwrap is not mined", async ({
+      signer,
+      wrappedToken,
+      wrapperAddress,
+      storage,
+      provider,
+    }) => {
+      await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX);
+      provider.getTransactionReceipt = vi.fn().mockResolvedValue(null);
+
+      await expect(wrappedToken.resumeUnshield(UNWRAP_TX)).rejects.toMatchObject({
+        code: ZamaErrorCode.UnwrapNotMined,
+        unwrapTxHash: UNWRAP_TX,
+      });
+      expect(provider.waitForTransactionReceipt).not.toHaveBeenCalled();
+      expect(signer.writeContract).not.toHaveBeenCalled();
+      expect(await loadPendingUnshields(storage, wrapperAddress)).toEqual([UNWRAP_TX]);
     });
 
     test("unshield saves the unwrap tx hash before waiting for its receipt", async ({

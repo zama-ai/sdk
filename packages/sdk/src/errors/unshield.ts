@@ -31,6 +31,21 @@ export class UnshieldAlreadyFinalizedError extends ZamaError {
   }
 }
 
+/**
+ * `resumeUnshield()` found no receipt for the unwrap: it is still pending, or
+ * it was dropped or replaced. Its pending-unshield entry is kept; retry later.
+ */
+export class UnwrapNotMinedError extends ZamaError {
+  /** Transaction hash of the unwrap that is not mined. */
+  readonly unwrapTxHash: Hex;
+
+  constructor(message: string, unwrapTxHash: Hex, options?: ErrorOptions) {
+    super(ZamaErrorCode.UnwrapNotMined, message, options);
+    this.name = "UnwrapNotMinedError";
+    this.unwrapTxHash = unwrapTxHash;
+  }
+}
+
 const INVALID_UNWRAP_REQUEST = "InvalidUnwrapRequest";
 const INVALID_UNWRAP_REQUEST_SELECTOR = keccak256(
   toBytes(`${INVALID_UNWRAP_REQUEST}(bytes32)`),

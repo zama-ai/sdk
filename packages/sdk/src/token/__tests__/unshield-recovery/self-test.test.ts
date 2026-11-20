@@ -7,8 +7,10 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import type { GenericStorage } from "../../../types";
 import type * as SubmitTransactionModule from "../../../utils/submit-transaction";
 import type * as PendingUnshieldModule from "../../pending-unshield";
+import type * as UnwrapReceiptModule from "../../unwrap-receipt";
 
 type PendingUnshield = typeof PendingUnshieldModule;
+type UnwrapReceipt = typeof UnwrapReceiptModule;
 type SubmitTransaction = typeof SubmitTransactionModule;
 
 const CASES: { bug: string; inject: () => void }[] = [
@@ -66,11 +68,11 @@ const CASES: { bug: string; inject: () => void }[] = [
   {
     bug: "a mined receipt that opened no request counts as unknown, so it is kept and reported",
     inject: () =>
-      vi.doMock("../../pending-unshield", async (importOriginal) => {
-        const real = await importOriginal<PendingUnshield>();
+      vi.doMock("../../unwrap-receipt", async (importOriginal) => {
+        const real = await importOriginal<UnwrapReceipt>();
         return {
           ...real,
-          judgeUnwrapReceipt: (...args: Parameters<PendingUnshield["judgeUnwrapReceipt"]>) => {
+          judgeUnwrapReceipt: (...args: Parameters<UnwrapReceipt["judgeUnwrapReceipt"]>) => {
             const [receipt] = args;
             const verdict = real.judgeUnwrapReceipt(...args);
             return verdict === "settled" && receipt?.status !== "reverted" ? "unknown" : verdict;
@@ -83,6 +85,7 @@ const CASES: { bug: string; inject: () => void }[] = [
 afterEach(() => {
   vi.doUnmock("../../../utils/submit-transaction");
   vi.doUnmock("../../pending-unshield");
+  vi.doUnmock("../../unwrap-receipt");
   vi.resetModules();
 });
 

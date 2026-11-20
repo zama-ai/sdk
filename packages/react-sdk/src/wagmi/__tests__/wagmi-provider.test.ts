@@ -180,7 +180,7 @@ describe("WagmiProvider.waitForTransactionReceipt", () => {
       makeConnectorClient(walletAnswering({ eth_getTransactionReceipt: () => REVERTED_RECEIPT })),
     );
     await expect(provider.getTransactionReceipt(HASH)).resolves.toEqual({
-      logs: [],
+      logs: WALLET_RECEIPT.logs,
       status: "reverted",
     });
 
@@ -192,6 +192,25 @@ describe("WagmiProvider.waitForTransactionReceipt", () => {
     mockGetConnectorClient.mockRejectedValue(new Error("Connector not connected."));
     await expect(provider.getTransactionReceipt(HASH)).resolves.toBeNull();
     expect(mockWaitForReceipt).not.toHaveBeenCalled();
+  });
+
+  test("getTransactionReceipt reads wallet_getCallsStatus: failed is reverted, confirmed without receipts is null", async () => {
+    mockGetReceipt.mockRejectedValue(new TransactionReceiptNotFoundError({ hash: HASH }));
+    const statuses = [{ status: 500 }, { status: 200 }];
+    mockGetConnectorClient.mockResolvedValue(
+      makeConnectorClient(
+        walletAnswering({
+          eth_getTransactionReceipt: () => null,
+          wallet_getCallsStatus: () => statuses.shift(),
+        }),
+      ),
+    );
+
+    await expect(provider.getTransactionReceipt(HASH)).resolves.toEqual({
+      logs: [],
+      status: "reverted",
+    });
+    await expect(provider.getTransactionReceipt(HASH)).resolves.toBeNull();
   });
 
   test("returns the public-transport receipt when the chain knows the hash", async () => {
@@ -273,7 +292,7 @@ describe("WagmiProvider.waitForTransactionReceipt", () => {
 
       const err = await provider.waitForTransactionReceipt(HASH).catch((e: unknown) => e);
       expect(err).toBeInstanceOf(TransactionRevertedError);
-      expect((err as Error).message).toContain(String(status));
+      expect((err as Error).message).toContain("reverted");
     },
   );
 

@@ -124,6 +124,7 @@ export {
   TransportKeyPairChangedError,
   TransportKeyPairExpiredError,
   UnshieldAlreadyFinalizedError,
+  UnwrapNotMinedError,
   VaultBatcherPausedError,
   VaultBatcherReadFailedError,
   VaultBatchNotDispatchedError,

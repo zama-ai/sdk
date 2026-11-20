@@ -73,17 +73,28 @@ describe("pending-unshield persistence", () => {
     expect(await storage.get(legacyKey(wrapperAddress))).toBeNull();
   });
 
-  test("moves a bare tx hash saved by older SDK versions into the list", async ({
+  test("reads a bare tx hash saved by older SDK versions, and the next write moves it into the list", async ({
     storage,
     wrapperAddress,
   }) => {
+    const TX_C = `0x${"c3".repeat(32)}` as Hex;
     await savePendingUnshield(storage, wrapperAddress, TX_B);
     await storage.set(legacyKey(wrapperAddress), TX_A);
     expect(await loadPendingUnshields(storage, wrapperAddress)).toEqual([TX_A, TX_B]);
+    expect(await storage.get(legacyKey(wrapperAddress))).toBe(TX_A);
+
+    await savePendingUnshield(storage, wrapperAddress, TX_C);
     expect(await storage.get(legacyKey(wrapperAddress))).toBeNull();
     expect(await storage.get(pendingUnshieldsKey(wrapperAddress))).toEqual(
-      encodePendingUnshields([TX_A, TX_B]),
+      encodePendingUnshields([TX_A, TX_B, TX_C]),
     );
+  });
+
+  test("clearing the legacy entry removes it for good", async ({ storage, wrapperAddress }) => {
+    await storage.set(legacyKey(wrapperAddress), TX_A);
+    await clearPendingUnshield(storage, wrapperAddress, TX_A);
+    expect(await storage.get(legacyKey(wrapperAddress))).toBeNull();
+    expect(await loadPendingUnshields(storage, wrapperAddress)).toEqual([]);
   });
 
   test("moves a version 1 entry saved by older SDK versions into the list", async ({
@@ -119,6 +130,21 @@ describe("pending-unshield persistence", () => {
     });
     expect(await loadPendingUnshields(storage, wrapperAddress, logger)).toEqual([TX_A, TX_B]);
     expect(logger.warn).toHaveBeenCalledOnce();
+  });
+
+  test("loading never writes, so storage that rejects writes still returns every entry", async ({
+    storage,
+    wrapperAddress,
+  }) => {
+    await savePendingUnshield(storage, wrapperAddress, TX_B);
+    await storage.set(legacyKey(wrapperAddress), TX_A);
+    const readOnly = {
+      get: storage.get.bind(storage),
+      set: () => Promise.reject(new Error("quota exceeded")),
+      delete: () => Promise.reject(new Error("read-only storage")),
+    };
+
+    expect(await loadPendingUnshields(readOnly, wrapperAddress)).toEqual([TX_A, TX_B]);
   });
 
   test("leaves a list saved by an unknown SDK version as is", async ({

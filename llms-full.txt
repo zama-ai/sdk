@@ -2542,7 +2542,7 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 
 ### Unshield
 
-**Interrupted unshields stay recoverable.** The SDK now saves the unwrap transaction hash as soon as the wallet returns it, instead of after the receipt, and keeps one entry per unshield, so a second unshield on the same token no longer overwrites the first. `getPendingUnshield()` / `usePendingUnshield` return the oldest pending one; after resuming it, the next one is returned. An entry whose unwrap reverted, or was replaced or cancelled in the wallet, is cleared instead of being reported, and an unwrap that is not mined yet no longer stalls `getPendingUnshield()`. Entries move to a new storage key, so an older SDK still open in another tab cannot delete them. See [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields).
+**Interrupted unshields stay recoverable.** The SDK now saves the unwrap transaction hash as soon as the wallet returns it, instead of after the receipt, and keeps one entry per unshield, so a second unshield on the same token no longer overwrites the first. `getPendingUnshield()` / `usePendingUnshield` return the oldest pending one; after resuming it, the next one is returned. An entry whose unwrap reverted, or was replaced or cancelled in the wallet, is cleared instead of being reported, and an unwrap that is not mined yet no longer stalls `getPendingUnshield()`. `resumeUnshield()` no longer waits for such an unwrap: it throws the new `UnwrapNotMinedError` (`UNWRAP_NOT_MINED`) at once and keeps the entry. Entries move to a new storage key, so an older SDK still open in another tab cannot delete them. See [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields).
 
 **`GenericProvider.getTransactionReceipt`.** An optional method that returns a mined receipt, or `null`, without waiting. `ViemProvider`, `EthersProvider` and `WagmiProvider` implement it. See [GenericProvider](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/GenericProvider.md#gettransactionreceipt).
 
@@ -5512,7 +5512,7 @@ await unshieldAll();
 
 ### 4. Handle interrupted unshields
 
-If the user closes their browser between the unwrap and finalize steps, the unwrap is on-chain but the finalize has not happened yet. The SDK persists the unwrap transaction hash automatically when phase 1 is submitted and clears it once finalization confirms, so you only need to detect and resume the pending state on the next page load.
+If the user closes their browser between the unwrap and finalize steps, the unwrap is on-chain but the finalize has not happened yet. The SDK persists the unwrap transaction hash as soon as the wallet returns it and clears it once finalization confirms, so you only need to detect and resume the pending state on the next page load.
 
 Resuming is intentionally caller-driven: surface a "resume" prompt rather than finalizing on load, so you never trigger a wallet transaction the user did not initiate.
 
@@ -5555,6 +5555,8 @@ The flow is:
 
 > [!WARNING]
 > **A resume can lose the race.** Another tab, a double click, or a third party can finalize the same request first. `resumeUnshield` then clears the persisted state and throws `UnshieldAlreadyFinalizedError` instead of broadcasting a transaction that would revert. Treat the error as completion: the funds already arrived, so dismiss the prompt and refresh balances. `useResumeUnshield` refreshes the affected queries automatically. See [UnshieldAlreadyFinalizedError](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror).
+>
+> **An unwrap may not be mined yet.** If the unwrap has no receipt (still pending, or dropped or replaced so this hash is never mined), `resumeUnshield` throws `UnwrapNotMinedError` at once and keeps the entry. Show the unshield as not confirmed and offer the resume again later. See [UnwrapNotMinedError](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unwrapnotminederror).
 
 
 
@@ -6306,6 +6308,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `HCU_BLOCK_LIMIT_EXCEEDED`               | `HcuBlockLimitExceededError`              | Gas estimation found too little FHE compute (HCU) left in the block (retryable)                                  |
 | `HCU_TRANSACTION_LIMIT_EXCEEDED`         | `HcuTransactionLimitExceededError`        | The transaction needs more FHE compute (HCU) than one transaction may use                                        |
 | `UNSHIELD_ALREADY_FINALIZED`             | `UnshieldAlreadyFinalizedError`           | `resumeUnshield()` called for an unwrap that was already finalized -- funds already arrived, nothing to resume   |
+| `UNWRAP_NOT_MINED`                       | `UnwrapNotMinedError`                     | `resumeUnshield()` called for an unwrap that is not mined yet -- the entry is kept, retry later (retryable)      |
 | `INVALID_KEYPAIR`                        | `InvalidTransportKeyPairError`            | Relayer rejected transport key pair (stale or malformed)                                                         |
 | `KEYPAIR_EXPIRED`                        | `TransportKeyPairExpiredError`            | Transport key pair expired -- user needs to re-sign                                                              |
 | `REVOKED_KMS_CONTEXT`                    | `RevokedKmsContextError`                  | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                  |
@@ -6576,13 +6579,14 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 | `EncryptionFailedError` (`ENCRYPTION_FAILED`)                            | FHE encryption failed during an operation                    | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`.                                                                                                                                                   |
 | `DecryptionFailedError` (`DECRYPTION_FAILED`) after page reload          | Unshield was interrupted                                     | Use `getPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.                                                                                                                                  |
 | `UnshieldAlreadyFinalizedError` (`UNSHIELD_ALREADY_FINALIZED`) on resume | Unwrap was already finalized before the resume attempt       | Funds already arrived -- treat as completion, not failure. `useResumeUnshield` refreshes balances automatically; if calling `resumeUnshield()` directly, catch this error and dismiss the prompt instead of retrying. |
+| `UnwrapNotMinedError` (`UNWRAP_NOT_MINED`) on resume                     | The unwrap has no receipt yet: still pending, or dropped     | The entry is kept. Show the unshield as not confirmed and offer the resume again later.                                                                                                                               |
 | `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`)                   | Relayer URL wrong or auth missing                            | Verify `relayerUrl` in your transport config. If using API key auth, check the `auth` option.                                                                                                                         |
 | Go or Rust error with no SDK code                                        | The daemon connection or a callback channel failed           | Follow [Monitor and troubleshoot](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md) and [Recover from disconnections](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/recover-from-disconnections.md).                                               |
 | Go or Rust error with a daemon code, such as `CONTEXT_NOT_FOUND`         | The daemon rejected the request or closed a callback channel | Look up the code in [Daemon error codes](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/error-codes.md).                                                                                                                                         |
 
 ### 8. Retry transient failures
 
-Six causes are transient, so the operation can simply be retried, ideally with backoff: `RpcRateLimitError` (`RPC_RATE_LIMITED`), `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`, only on a 429, or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`), `DelegationCooldownError` (`DELEGATION_COOLDOWN`), `WalletAccountNotReadyError` (`WALLET_ACCOUNT_NOT_READY`), and `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`). `VaultBatcherReadFailedError` (`VAULT_BATCHER_READ_FAILED`) is transient when the RPC returned reads from different blocks, or when its cause is an RPC rate limit or another retryable SDK error. Rather than hardcoding that set of codes, use `isRetryable(error)` and `retryAfterSeconds(error)`: they stay correct as the taxonomy grows, since every `ZamaError` declares its own `.retryable`.
+Seven causes are transient, so the operation can simply be retried, ideally with backoff: `RpcRateLimitError` (`RPC_RATE_LIMITED`), `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`, only on a 429, or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError` (`DELEGATION_NOT_PROPAGATED`), `DelegationCooldownError` (`DELEGATION_COOLDOWN`), `WalletAccountNotReadyError` (`WALLET_ACCOUNT_NOT_READY`), `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`), and `UnwrapNotMinedError` (`UNWRAP_NOT_MINED`). `VaultBatcherReadFailedError` (`VAULT_BATCHER_READ_FAILED`) is transient when the RPC returned reads from different blocks, or when its cause is an RPC rate limit or another retryable SDK error. Rather than hardcoding that set of codes, use `isRetryable(error)` and `retryAfterSeconds(error)`: they stay correct as the taxonomy grows, since every `ZamaError` declares its own `.retryable`.
 
 | Cause                                                        | `retryAfterSeconds`                               | Notes                                                                                                   |
 | ------------------------------------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -6592,6 +6596,7 @@ Six causes are transient, so the operation can simply be retried, ideally with b
 | `DelegationCooldownError` (`DELEGATION_COOLDOWN`)            | `undefined`                                       | Per-block timing gate; resolves on the next block.                                                      |
 | `WalletAccountNotReadyError` (`WALLET_ACCOUNT_NOT_READY`)    | `undefined`                                       | Async signer adapters (e.g. `EthersSigner`) refresh once internally; only surfaces if still unresolved. |
 | `HcuBlockLimitExceededError` (`HCU_BLOCK_LIMIT_EXCEEDED`)    | `undefined`                                       | Too little FHE compute left in the block at estimation; resolves on the next block.                     |
+| `UnwrapNotMinedError` (`UNWRAP_NOT_MINED`)                   | `undefined`                                       | The unwrap of a resumed unshield is not mined yet. A dropped unwrap never succeeds.                     |
 
 
 ### Tab: Core SDK
@@ -12493,7 +12498,9 @@ Resumes an interrupted unshield after the unwrap transaction has already been su
 
 If the unwrap request was already finalized on-chain, it clears the persisted pending state and throws [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror) instead of submitting a transaction that would revert. The funds already arrived; treat the error as completion.
 
-If the unwrap reverted, or was replaced or cancelled in the wallet so it opened no unwrap request, it clears that entry and throws [`TransactionRevertedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#transactionrevertederror). `getPendingUnshield()` then returns the next pending unshield, if any.
+If the unwrap reverted, or was mined without opening an unwrap request from this wrapper, it clears that entry and throws [`TransactionRevertedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#transactionrevertederror). `getPendingUnshield()` then returns the next pending unshield, if any.
+
+If the unwrap has no receipt (still pending, or dropped or replaced so this hash is never mined), it throws [`UnwrapNotMinedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unwrapnotminederror) at once and keeps the entry. Retry later.
 
 ```ts
 const pending = await wrappedToken.getPendingUnshield();
@@ -12506,7 +12513,7 @@ if (pending) {
 
 `() => Promise<Hex | null>`
 
-Returns the unwrap transaction hash of an unshield that was interrupted between its two phases, or `null` if none is pending for this wrapper. The SDK saves it automatically as soon as the wallet returns the `unshield()` / `unshieldAll()` unwrap hash, and clears it once phase 2 finalizes. If several unshields on this wrapper were interrupted, it returns the oldest; after resuming it, call it again for the next.
+Returns the unwrap transaction hash of an unshield that was interrupted between its two phases, or `null` if none is pending for this wrapper. `unshield()` and `unshieldAll()` save it automatically (see [Handle interrupted unshields](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields)). If several unshields on this wrapper were interrupted, it returns the oldest; after resuming it, call it again for the next.
 
 The SDK verifies each saved hash on-chain before reporting it, without waiting for a receipt: an entry whose unwrap request was already finalized, or whose unwrap reverted or opened no request (replaced or cancelled in the wallet), is cleared and the next one is checked. An entry it cannot verify (a read failed, or the unwrap is not mined yet) is kept, and returned only when no other entry is verified open; a network error never deletes recovery state.
 
@@ -13680,7 +13687,7 @@ Poll for a transaction receipt by hash.
 getTransactionReceipt?(hash: Hex): Promise<TransactionReceipt | null>
 ```
 
-Optional. Return the receipt of a mined transaction, or `null` when it is not mined, without waiting. `ViemProvider`, `EthersProvider` and `WagmiProvider` implement it; `WagmiProvider` also asks the connected wallet. `getPendingUnshield()` uses it to check saved unshields. Leave it out of a custom provider and the SDK waits for the receipt for at most 5 seconds instead.
+Optional. Return the receipt of a mined transaction, or `null` when it is not mined, without waiting. `ViemProvider`, `EthersProvider` and `WagmiProvider` implement it; `WagmiProvider` also asks the connected wallet. `getPendingUnshield()` and `resumeUnshield()` use it to check saved unshields. Leave it out of a custom provider and the SDK waits for the receipt for at most 5 seconds instead; `resumeUnshield()` then throws `UnwrapNotMinedError`.
 
 ### getBlockTimestamp
 
@@ -14387,6 +14394,7 @@ import {
   HcuBlockLimitExceededError,
   HcuTransactionLimitExceededError,
   UnshieldAlreadyFinalizedError,
+  UnwrapNotMinedError,
   VaultBatcherPausedError,
   VaultBatcherReadFailedError,
   VaultBatchNotDispatchedError,
@@ -14477,7 +14485,7 @@ try {
 | `isRetryable`       | `(error: unknown) => error is ZamaError & { retryable: true }` | `true` only for a `ZamaError` instance whose `.retryable` is `true`; `false` for anything else, including non-SDK errors.                                                                                                                            |
 | `retryAfterSeconds` | `(error: unknown) => number \| undefined`                      | Reads the error's own `retryAfter` field when the error is retryable and carries one. Only `RelayerRequestFailedError` and `RpcRateLimitError` currently carry `retryAfter` — treat `undefined` as "retry with your own backoff," not "don't retry." |
 
-Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequestFailedError` (only on an HTTP 429 or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, `WalletAccountNotReadyError`, and `HcuBlockLimitExceededError`. `VaultBatcherReadFailedError` is retryable for some instances: see [VaultBatcherReadFailedError](#vaultbatcherreadfailederror). See [Retry transient failures](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/handle-errors.md#8-retry-transient-failures) for the full guide, including React Query integration.
+Exactly seven error classes are retryable today: `RpcRateLimitError`, `RelayerRequestFailedError` (only on an HTTP 429 or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, `WalletAccountNotReadyError`, `HcuBlockLimitExceededError`, and `UnwrapNotMinedError`. `VaultBatcherReadFailedError` is retryable for some instances: see [VaultBatcherReadFailedError](#vaultbatcherreadfailederror). See [Retry transient failures](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/handle-errors.md#8-retry-transient-failures) for the full guide, including React Query integration.
 
 ## Error summary
 
@@ -14492,6 +14500,7 @@ Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequ
 | `HcuBlockLimitExceededError`              | `HCU_BLOCK_LIMIT_EXCEEDED`               | Gas estimation found too little FHE compute (HCU) left in the block; retry in the next block (retryable)                          |
 | `HcuTransactionLimitExceededError`        | `HCU_TRANSACTION_LIMIT_EXCEEDED`         | The transaction needs more FHE compute (HCU), in total or in one sequential chain, than one transaction may use                   |
 | `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
+| `UnwrapNotMinedError`                     | `UNWRAP_NOT_MINED`                       | The unwrap behind a resumed unshield is not mined yet; its entry is kept (retryable)                                              |
 | `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | Every batcher of a vault in the join is paused or closed, so the whole join would revert                                          |
 | `VaultBatcherReadFailedError`             | `VAULT_BATCHER_READ_FAILED`              | A batcher of a vault could not be read, so the SDK cannot tell which batch a join reaches                                         |
 | `VaultBatchNotDispatchedError`            | `VAULT_BATCH_NOT_DISPATCHED`             | A vault batch cannot be finalized because it is not dispatched: it is still pending, or it was already finalized or canceled      |
@@ -14699,6 +14708,14 @@ matchZamaError(error, {
 ```
 
 **How to handle:** Treat it as completion, not a failure: dismiss the "resume unshield" prompt and refresh balances. `useResumeUnshield` invalidates the affected queries automatically. Do not retry; nothing is left to finalize.
+
+### UnwrapNotMinedError
+
+**Code:** `UNWRAP_NOT_MINED`
+
+Thrown by `resumeUnshield()` when the unwrap has no receipt: it is still pending, or it was dropped or replaced so this hash is never mined. The SDK does not wait for it and keeps the matching entry. The error carries `unwrapTxHash`.
+
+**How to handle:** Retryable. Tell the user the unwrap is not confirmed yet and offer the resume again later. A dropped unwrap is never mined, so its entry stays, and `getPendingUnshield()` returns it whenever no other entry is verified open. If the same `unwrapTxHash` keeps failing, show it as unconfirmed with a link to a block explorer instead of offering the resume again.
 
 ### VaultBatcherPausedError
 
@@ -18742,8 +18759,7 @@ function ResumeUnshieldGuard({
   wrapperAddress: Address;
   children: React.ReactNode;
 }) {
-  // The SDK saved the unwrap tx hash when the wallet returned it and clears it
-  // once the resume finalizes; the query then refetches and shows the next one, if any.
+  // After a resume the query refetches and shows the next pending unshield, if any.
   const { data: unwrapTxHash } = usePendingUnshield(wrapperAddress);
   const { mutate: resumeUnshield } = useResumeUnshield(wrapperAddress);
 
@@ -18839,7 +18855,7 @@ await resumeUnshield({ unwrapTxHash: "0xabc..." });
 
 ## Recovery pattern
 
-The SDK persists the unwrap tx hash automatically when phase 1 is submitted and clears it once finalization confirms, so recovery is two steps:
+The SDK saves the unwrap tx hash for you (see [Handle interrupted unshields](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields)), so recovery is two steps:
 
 1. **[`usePendingUnshield(tokenAddress)`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/usePendingUnshield.md)**: returns the oldest stored unwrap tx hash (or `null` if none is pending); after a resume it refetches and returns the next one.
 2. **`resumeUnshield({ unwrapTxHash })`** — picks up from the finalize step using the unwrap receipt, then clears the persisted state on success (the query invalidates automatically).
@@ -18850,7 +18866,9 @@ Run this check on mount to handle any session that was interrupted. Resuming is 
 > [!WARNING]
 > **An already-finalized resume is not a failure.** If the unwrap request was already finalized (another tab, a double click, a third party), the mutation fails with [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror). The funds already arrived. The SDK clears the persisted state and the hook invalidates the pending-unshield and balance queries, so the resume prompt disappears on its own. Treat the error as completion; do not retry.
 >
-> If the unwrap reverted or opened no unwrap request, the mutation fails with [`TransactionRevertedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#transactionrevertederror). The SDK clears that entry and the hook invalidates the pending-unshield query, so the prompt moves on to the next pending unshield, if any.
+> If the unwrap reverted, or was mined without opening an unwrap request from this wrapper, the mutation fails with [`TransactionRevertedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#transactionrevertederror). The SDK clears that entry and the hook invalidates the pending-unshield query, so the prompt moves on to the next pending unshield, if any.
+>
+> If the unwrap has no receipt (still pending, or dropped or replaced so this hash is never mined), the mutation fails at once with [`UnwrapNotMinedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unwrapnotminederror). The SDK keeps the entry. Retry later.
 
 
 
@@ -18931,7 +18949,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 Read the unwrap transaction hash of an unshield that was interrupted between its two phases (returns `null` if none is pending for the wrapper).
 
-The SDK persists this automatically when [`useUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useUnshield.md) / [`useUnshieldAll`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useUnshieldAll.md) submit phase 1, and clears it once phase 2 finalizes — the unshield and unwrap mutations invalidate this query on success. Surface the returned hash as a "resume" prompt and pass it to [`useResumeUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useResumeUnshield.md); resuming is caller-driven so a wallet transaction is never triggered on load.
+[`useUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useUnshield.md) and [`useUnshieldAll`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useUnshieldAll.md) save this automatically (see [Handle interrupted unshields](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields)), and the unshield and unwrap mutations invalidate this query on success. Surface the returned hash as a "resume" prompt and pass it to [`useResumeUnshield`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useResumeUnshield.md); resuming is caller-driven so a wallet transaction is never triggered on load.
 
 If several unshields on this wrapper were interrupted, the hook returns the oldest; after it is resumed, the query refetches and returns the next.
 
@@ -27994,7 +28012,7 @@ Unshield is a 2-phase on-chain operation:
 - **Phase 1**: Submit the unwrap transaction. `onFinalizing` fires when Phase 1 is mined and Phase 2 is about to start.
 - **Phase 2**: Finalization transaction.
 
-The SDK persists the pending state automatically after Phase 1 is mined, so it survives a tab close between Phase 1 completion and Phase 2 completion. See §"Pending unshield" below.
+The SDK saves the pending state automatically, so it survives a tab close between the two phases (see [Handle interrupted unshields](../../docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields)). See §"Pending unshield" below.
 
 ---
 
@@ -28438,7 +28456,7 @@ Unshield is a 2-phase on-chain operation:
 - **Phase 1**: Submit the unwrap transaction. `onFinalizing` fires when Phase 1 is mined and Phase 2 is about to start.
 - **Phase 2**: Finalization transaction.
 
-The SDK persists the pending state automatically after Phase 1 is mined, so it survives a tab close between Phase 1 completion and Phase 2 completion. See §"Pending unshield" below.
+The SDK saves the pending state automatically, so it survives a tab close between the two phases (see [Handle interrupted unshields](../../docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields)). See §"Pending unshield" below.
 
 ---
 
@@ -29223,8 +29241,8 @@ Sepolia in the custom environment.
 Unshield is a two-phase operation: Phase 1 (unwrap tx) and Phase 2 (finalize tx).
 If the user closes the tab between phases, `PendingUnshieldCard` recovers the state:
 
-1. `WrappedToken` persists the unwrap tx hash automatically as soon as the wallet
-   returns it, so no app-level wiring is needed.
+1. `WrappedToken` saves the unwrap tx hash automatically, so no app-level
+   wiring is needed (see [Handle interrupted unshields](../../docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields)).
 2. On the next page load, `PendingUnshieldCard` reads the pending hash via
    `usePendingUnshield(tokenAddress)`.
 3. Clicking "Finalize" calls `useResumeUnshield` to complete Phase 2, which clears the

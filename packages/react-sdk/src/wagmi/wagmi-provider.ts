@@ -157,30 +157,27 @@ export class WagmiProvider implements GenericProvider {
     if (receipt) {
       return { logs: receipt.logs, status: receipt.status };
     }
-    const client = await getConnectorClient(this.#config).catch(() => undefined);
-    if (!client) {
-      return null;
-    }
-    try {
-      return (await walletReceipt(client, hash, this.#logger)) ?? null;
-    } catch (error) {
-      if (error instanceof TransactionRevertedError) {
-        return { logs: [], status: "reverted" };
-      }
-      throw error;
-    }
+    const client = await this.#walletClient();
+    return (client && (await walletReceipt(client, hash, this.#logger))) ?? null;
+  }
+
+  // Every failure means there is no wallet to ask, so it only logs at debug level.
+  #walletClient() {
+    return getConnectorClient(this.#config).catch((error: unknown) => {
+      this.#logger?.debug("no connected wallet to probe for receipts", { error });
+      return undefined;
+    });
   }
 
   /** Stays pending forever when no wallet is connected, so the public-transport wait alone decides. */
   async #pollWalletReceipt(hash: Hex, isSettled: () => boolean): Promise<TransactionReceipt> {
-    // Every failure here means there is no wallet to ask, so it is only worth a debug line.
-    const client = await getConnectorClient(this.#config).catch((error: unknown) => {
-      this.#logger?.debug("no connected wallet to probe for receipts", { error });
-      return undefined;
-    });
+    const client = await this.#walletClient();
     if (client) {
       while (!isSettled()) {
         const receipt = await walletReceipt(client, hash, this.#logger);
+        if (receipt?.status === "reverted") {
+          throw new TransactionRevertedError(`Transaction ${hash} reverted.`);
+        }
         if (receipt) {
           return receipt;
         }
@@ -275,20 +272,20 @@ async function walletReceipt(
     .request({ method: "eth_getTransactionReceipt", params: [hash] })
     .catch(ignoreUnsupported("eth_getTransactionReceipt", logger));
   if (receipt) {
-    if (receipt.status !== "0x1") {
-      throw new TransactionRevertedError(`Transaction ${hash} reverted.`);
-    }
-    return { logs: receipt.logs, status: "success" };
+    return { logs: receipt.logs, status: receipt.status === "0x1" ? "success" : "reverted" };
   }
   const calls = await client
     .request({ method: "wallet_getCallsStatus", params: [hash] })
     .catch(ignoreUnsupported("wallet_getCallsStatus", logger));
   // EIP-5792 status codes: 1xx pending, 2xx confirmed, 3xx–6xx failed.
-  if (calls && calls.status >= 300) {
-    throw new TransactionRevertedError(`Transaction ${hash} failed (status ${calls.status}).`);
+  if (!calls || calls.status < 200) {
+    return undefined;
   }
-  const callReceipt = calls && calls.status >= 200 ? calls.receipts?.[0] : undefined;
-  return callReceipt && { logs: callReceipt.logs, status: "success" };
+  const logs = calls.receipts?.[0]?.logs;
+  if (calls.status >= 300) {
+    return { logs: logs ?? [], status: "reverted" };
+  }
+  return logs && { logs, status: "success" };
 }
 
 function ignoreUnsupported(method: string, logger: GenericLogger | undefined) {

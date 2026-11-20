@@ -1,6 +1,6 @@
 // Runs one SDK call of the real WrappedToken against scripted answers.
 //
-// Every awaited call listed in EXPLORED goes through `yieldPoint`. The first
+// Every awaited call of a `Call` kind goes through `yieldPoint`. The first
 // `script.length` calls get the scripted answers. The next call stays pending
 // forever, and the run returns it. The harness assumes one call in flight at
 // a time per SDK call: two at once is a HarnessError.
@@ -27,30 +27,15 @@ import { WrappedToken } from "../../wrapped-token";
 export const STORAGE_KEY = pendingUnshieldsKey(WRAPPER);
 
 /**
- * What the harness models. A HarnessError "unexpected call" means the SDK
- * made a call that is in neither list: explore it (a `Call` kind here, its
- * answers in world.ts `options`) or allow it below.
+ * Mock methods answered at once with a fixed value, beyond the special cases in
+ * `runSdkCall`. The explorer answers each `Call` kind in every possible way. A
+ * HarnessError "unexpected call" means the SDK made a call that is in neither:
+ * add a `Call` kind (its answers in world.ts `options`) or allow it here.
  */
-export const HARNESS_CALLS = {
-  /** Awaited calls the explorer answers in every possible way. */
-  explored: [
-    "storage.get",
-    "storage.set",
-    "storage.delete",
-    "signer.writeContract",
-    "provider.waitForTransactionReceipt",
-    "provider.getTransactionReceipt",
-    "provider.readContract",
-    "relayer.decryptPublicValuesWithSignatures",
-  ],
-  /** Calls answered at once with a fixed value. */
-  allowed: {
-    signer: ["requireWalletAccount"],
-    provider: ["getChainId", "readContract(confidentialBalanceOf)"],
-    relayer: ["encryptValues"],
-    // The key SDK 3.8 and older wrote. No older SDK runs in the model, so it stays empty.
-    storage: ["get(legacy key) -> null"],
-  },
+const ALLOWED_CALLS = {
+  signer: ["requireWalletAccount"],
+  provider: ["getChainId"],
+  relayer: ["encryptValues"],
 } as const;
 
 /** One awaited call that the explorer schedules. */
@@ -141,19 +126,19 @@ function macrotask(): Promise<void> {
  * starts making later then fails the run instead of silently answering at once.
  */
 function strict<T extends object>(
-  name: keyof typeof HARNESS_CALLS.allowed,
+  name: keyof typeof ALLOWED_CALLS,
   mock: T,
   overrides: Partial<T>,
   problems: string[],
 ): T {
-  const allowed: readonly string[] = HARNESS_CALLS.allowed[name];
+  const allowed: readonly string[] = ALLOWED_CALLS[name];
   const out: T = { ...mock, ...overrides };
   for (const key of Object.keys(mock) as (keyof T)[]) {
     if (key in overrides || allowed.includes(String(key)) || typeof mock[key] !== "function") {
       continue;
     }
     out[key] = (() => {
-      problems.push(`unexpected call ${name}.${String(key)}: see HARNESS_CALLS`);
+      problems.push(`unexpected call ${name}.${String(key)}: see ALLOWED_CALLS`);
       return never();
     }) as T[keyof T];
   }
@@ -278,7 +263,7 @@ export async function runSdkCall(
 
   function checkKey(key: string): string {
     if (key !== STORAGE_KEY) {
-      problems.push(`unexpected storage key ${key}: see HARNESS_CALLS`);
+      problems.push(`unexpected storage key ${key}: see ALLOWED_CALLS`);
     }
     return key;
   }
@@ -325,7 +310,7 @@ export async function runSdkCall(
           return Promise.resolve(NONZERO_HANDLE);
         }
         if (config.functionName !== "unwrapRequester") {
-          problems.push(`unexpected chain read ${config.functionName}: see HARNESS_CALLS`);
+          problems.push(`unexpected chain read ${config.functionName}: see ALLOWED_CALLS`);
           return never();
         }
         return yieldPoint<"provider.readContract">({
@@ -339,6 +324,7 @@ export async function runSdkCall(
   );
   const storage: GenericStorage = {
     get: async <T>(key: string) => {
+      // The key SDK 3.8 and older wrote. No older SDK runs in the model, so it stays empty.
       if (key === legacyPendingUnshieldKey(WRAPPER)) {
         return null;
       }
@@ -403,8 +389,6 @@ export async function runSdkCall(
     problems.push("the SDK call is stuck on an await that the harness does not control");
   } else if (outcome !== undefined && pending !== undefined) {
     problems.push(`the SDK call ended without awaiting ${pending.kind}`);
-  } else if (calls.length > script.length + 1) {
-    problems.push("more than one call is pending at once");
   } else if (outcome !== undefined && calls.length < script.length) {
     problems.push("the SDK call ended before the script did");
   }

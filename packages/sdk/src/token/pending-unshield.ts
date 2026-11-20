@@ -1,10 +1,7 @@
-import { getAddress, type Address, type Hex } from "viem";
+import type { Address, Hex } from "viem";
 import { z } from "zod/mini";
-import { findUnwrapRequested } from "../events/onchain-events";
-import type { EncryptedValue } from "../relayer/types";
 import { checksum, hex } from "../schemas/primitives";
-import type { GenericLogger, GenericStorage, TransactionReceipt } from "../types";
-import type { RawLog } from "../types/transaction";
+import type { GenericLogger, GenericStorage } from "../types";
 
 const CURRENT_VERSION = 2;
 
@@ -45,32 +42,38 @@ const LegacySchema = z.union([
   ),
 ]);
 
+const StoredListSchema = z.object({ version: z.number(), unwrapTxHashes: z.optional(z.unknown()) });
+
 const sameTx = (a: Hex, b: Hex) => a.toLowerCase() === b.toLowerCase();
+
+type ReadOnlyStorage = Pick<GenericStorage, "get">;
 
 interface Loaded {
   readonly hashes: Hex[];
   /** False when the key holds a version this SDK does not know: it is left as is. */
   readonly writable: boolean;
+  /** A legacy entry was merged in memory; the next write moves it into the list. */
+  readonly hasLegacy: boolean;
 }
 
 async function readList(
-  storage: GenericStorage,
+  storage: ReadOnlyStorage,
   key: string,
   logger: GenericLogger | undefined,
-): Promise<Loaded> {
+): Promise<Omit<Loaded, "hasLegacy">> {
   const value = await storage.get(key);
   if (value === null || value === undefined) {
     return { hashes: [], writable: true };
   }
-  const { version, unwrapTxHashes } = (typeof value === "object" ? value : {}) as {
-    version?: unknown;
-    unwrapTxHashes?: unknown;
-  };
-  if (typeof version === "number" && version !== CURRENT_VERSION) {
-    logger?.warn("pending unshields saved by an unknown SDK version were left as is", { version });
+  const parsed = StoredListSchema.safeParse(value);
+  if (parsed.success && parsed.data.version !== CURRENT_VERSION) {
+    logger?.warn("pending unshields saved by an unknown SDK version were left as is", {
+      version: parsed.data.version,
+    });
     return { hashes: [], writable: false };
   }
-  if (version !== CURRENT_VERSION || !Array.isArray(unwrapTxHashes)) {
+  const unwrapTxHashes = parsed.success ? parsed.data.unwrapTxHashes : undefined;
+  if (!Array.isArray(unwrapTxHashes)) {
     logger?.warn("unreadable pending unshields were dropped", { value });
     return { hashes: [], writable: true };
   }
@@ -79,6 +82,25 @@ async function readList(
     logger?.warn("unreadable pending unshield entries were dropped", { unwrapTxHashes });
   }
   return { hashes, writable: true };
+}
+
+// Merges a hash an older SDK wrote under the legacy key, in memory only.
+async function read(
+  storage: ReadOnlyStorage,
+  wrapperAddress: Address,
+  logger: GenericLogger | undefined,
+): Promise<Loaded> {
+  const list = await readList(storage, pendingUnshieldsKey(wrapperAddress), logger);
+  const legacy = LegacySchema.safeParse(
+    await storage.get(legacyPendingUnshieldKey(wrapperAddress)),
+  );
+  if (!legacy.success || !list.writable) {
+    return { ...list, hasLegacy: false };
+  }
+  const hashes = list.hashes.some((h) => sameTx(h, legacy.data))
+    ? list.hashes
+    : [legacy.data, ...list.hashes];
+  return { hashes, writable: true, hasLegacy: true };
 }
 
 async function writeList(
@@ -95,10 +117,10 @@ async function writeList(
 // Read-modify-write on one storage runs one at a time, so two unshields in
 // the same tab cannot drop each other's entry. Tabs still race: GenericStorage
 // has no atomic update.
-const writeQueues = new WeakMap<GenericStorage, Promise<void>>();
+const writeQueues = new WeakMap<object, Promise<void>>();
 
-function serialized<T>(storage: GenericStorage, update: () => Promise<T>): Promise<T> {
-  const run = (writeQueues.get(storage) ?? Promise.resolve()).then(update);
+function serialized<T>(storage: object, task: () => Promise<T>): Promise<T> {
+  const run = (writeQueues.get(storage) ?? Promise.resolve()).then(task);
   writeQueues.set(
     storage,
     run.then(
@@ -109,39 +131,41 @@ function serialized<T>(storage: GenericStorage, update: () => Promise<T>): Promi
   return run;
 }
 
-// Moves a hash an older SDK wrote under the legacy key into the list.
-async function load(
+// The only writer. `change` only adds or only removes, so a changed list has a
+// new length. A merged legacy entry is written into the list, then deleted.
+function update(
   storage: GenericStorage,
   wrapperAddress: Address,
   logger: GenericLogger | undefined,
-): Promise<Loaded> {
-  const loaded = await readList(storage, pendingUnshieldsKey(wrapperAddress), logger);
-  const legacy = LegacySchema.safeParse(
-    await storage.get(legacyPendingUnshieldKey(wrapperAddress)),
-  );
-  if (!legacy.success || !loaded.writable) {
-    return loaded;
-  }
-  const hashes = loaded.hashes.some((h) => sameTx(h, legacy.data))
-    ? loaded.hashes
-    : [legacy.data, ...loaded.hashes];
-  await writeList(storage, wrapperAddress, hashes);
-  await storage.delete(legacyPendingUnshieldKey(wrapperAddress));
-  return { hashes, writable: true };
+  change: (hashes: Hex[]) => Hex[],
+): Promise<void> {
+  return serialized(storage, async () => {
+    const { hashes, writable, hasLegacy } = await read(storage, wrapperAddress, logger);
+    if (!writable) {
+      return;
+    }
+    const next = change(hashes);
+    if (hasLegacy || next.length !== hashes.length) {
+      await writeList(storage, wrapperAddress, next);
+    }
+    if (hasLegacy) {
+      await storage.delete(legacyPendingUnshieldKey(wrapperAddress));
+    }
+  });
 }
 
 /**
  * Load the unwrap tx hash of every saved pending unshield for this wrapper,
- * oldest first.
+ * oldest first. Never writes storage.
  *
  * @internal
  */
 export async function loadPendingUnshields(
-  storage: GenericStorage,
+  storage: ReadOnlyStorage,
   wrapperAddress: Address,
   logger?: GenericLogger,
 ): Promise<Hex[]> {
-  return (await serialized(storage, () => load(storage, wrapperAddress, logger))).hashes;
+  return (await serialized(storage, () => read(storage, wrapperAddress, logger))).hashes;
 }
 
 /**
@@ -156,12 +180,9 @@ export function savePendingUnshield(
   unwrapTxHash: Hex,
   logger?: GenericLogger,
 ): Promise<void> {
-  return serialized(storage, async () => {
-    const { hashes, writable } = await load(storage, wrapperAddress, logger);
-    if (writable && !hashes.some((h) => sameTx(h, unwrapTxHash))) {
-      await writeList(storage, wrapperAddress, [...hashes, unwrapTxHash]);
-    }
-  });
+  return update(storage, wrapperAddress, logger, (hashes) =>
+    hashes.some((h) => sameTx(h, unwrapTxHash)) ? hashes : [...hashes, unwrapTxHash],
+  );
 }
 
 /**
@@ -176,49 +197,7 @@ export function clearPendingUnshield(
   unwrapTxHash: Hex,
   logger?: GenericLogger,
 ): Promise<void> {
-  return serialized(storage, async () => {
-    const { hashes, writable } = await load(storage, wrapperAddress, logger);
-    const rest = hashes.filter((h) => !sameTx(h, unwrapTxHash));
-    if (writable && rest.length !== hashes.length) {
-      await writeList(storage, wrapperAddress, rest);
-    }
-  });
-}
-
-/**
- * The request id from this wrapper's `UnwrapRequested` event in an unwrap
- * receipt's logs. A tx hash from another wrapper must not decode a foreign
- * request id. Logs without an emitter address (older custom adapters) count.
- *
- * @internal
- */
-export function unwrapRequestIn(
-  logs: readonly RawLog[],
-  wrapperAddress: Address,
-): EncryptedValue | undefined {
-  const wrapper = getAddress(wrapperAddress);
-  const ownLogs = logs.filter(
-    (log) => log.address === undefined || getAddress(log.address) === wrapper,
+  return update(storage, wrapperAddress, logger, (hashes) =>
+    hashes.filter((h) => !sameTx(h, unwrapTxHash)),
   );
-  return findUnwrapRequested(ownLogs)?.unwrapRequestId;
-}
-
-/**
- * What the receipt of a saved unwrap says about its entry. Not mined
- * (`null`): "unknown". Reverted, or mined without opening a request (the
- * wallet replaced or cancelled it): "settled". Otherwise the request to
- * check on chain.
- *
- * @internal
- */
-export function judgeUnwrapReceipt(
-  receipt: TransactionReceipt | null,
-  wrapperAddress: Address,
-): "settled" | "unknown" | { unwrapRequestId: EncryptedValue } {
-  if (!receipt) {
-    return "unknown";
-  }
-  const unwrapRequestId =
-    receipt.status === "reverted" ? undefined : unwrapRequestIn(receipt.logs, wrapperAddress);
-  return unwrapRequestId === undefined ? "settled" : { unwrapRequestId };
 }

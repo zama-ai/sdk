@@ -434,8 +434,8 @@ Sepolia in the custom environment.
 Unshield is a two-phase operation: Phase 1 (unwrap tx) and Phase 2 (finalize tx).
 If the user closes the tab between phases, `PendingUnshieldCard` recovers the state:
 
-1. `WrappedToken` persists the unwrap tx hash automatically as soon as the wallet
-   returns it, so no app-level wiring is needed.
+1. `WrappedToken` saves the unwrap tx hash automatically, so no app-level
+   wiring is needed (see [Handle interrupted unshields](../../docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields)).
 2. On the next page load, `PendingUnshieldCard` reads the pending hash via
    `usePendingUnshield(tokenAddress)`.
 3. Clicking "Finalize" calls `useResumeUnshield` to complete Phase 2, which clears the

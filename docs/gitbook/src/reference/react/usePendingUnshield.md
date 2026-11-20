@@ -7,7 +7,7 @@ description: Read the unwrap tx hash of an unshield interrupted between its two 
 
 Read the unwrap transaction hash of an unshield that was interrupted between its two phases (returns `null` if none is pending for the wrapper).
 
-The SDK persists this automatically when [`useUnshield`](./useUnshield.md) / [`useUnshieldAll`](./useUnshieldAll.md) submit phase 1, and clears it once phase 2 finalizes — the unshield and unwrap mutations invalidate this query on success. Surface the returned hash as a "resume" prompt and pass it to [`useResumeUnshield`](./useResumeUnshield.md); resuming is caller-driven so a wallet transaction is never triggered on load.
+[`useUnshield`](./useUnshield.md) and [`useUnshieldAll`](./useUnshieldAll.md) save this automatically (see [Handle interrupted unshields](../../guides/unshield-tokens.md#4-handle-interrupted-unshields)), and the unshield and unwrap mutations invalidate this query on success. Surface the returned hash as a "resume" prompt and pass it to [`useResumeUnshield`](./useResumeUnshield.md); resuming is caller-driven so a wallet transaction is never triggered on load.
 
 If several unshields on this wrapper were interrupted, the hook returns the oldest; after it is resumed, the query refetches and returns the next.
 
