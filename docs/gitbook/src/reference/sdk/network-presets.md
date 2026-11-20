@@ -49,7 +49,7 @@ Each chain object implements the `FheChain` interface:
 | `kmsSignerPrivateKey`                       | `Hex \| undefined`                | KMS signer private key for EIP-712 verification (cleartext mode)                                                                                                                                                                                             |
 | `inputSignerPrivateKey`                     | `Hex \| undefined`                | Input signer private key for EIP-712 verification (cleartext mode)                                                                                                                                                                                           |
 
-A custom real-FHE chain needs `keyVerification`. Without it, encryption rejects with a `ConfigurationError`; reads and decryption still work. A chain with a preset's id and ACL takes the preset's value. A chain spread from a preset keeps the preset's value, so set your own deployment's when you change its contracts.
+A custom real-FHE chain needs `keyVerification`. Without it, `createConfig` throws a `ConfigurationError`. A chain with a preset's id and ACL takes the preset's value. A chain spread from a preset keeps the preset's value, so set your own deployment's when you change its contracts.
 
 ### Usage with `createConfig`
 

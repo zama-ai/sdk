@@ -44,8 +44,8 @@ export interface FheChain<TId extends number = number> {
    */
   readonly protocolConfigContractAddress?: Address | undefined;
   /**
-   * Required to encrypt on a non-cleartext chain; reads and decryption work
-   * without it. A chain with a built-in preset's id and ACL inherits the preset's.
+   * Required on a non-cleartext chain: without it, `createConfig` throws a
+   * `ConfigurationError`. A chain with a built-in preset's id and ACL inherits the preset's.
    */
   readonly keyVerification?: FheKeyVerification | undefined;
   /** EIP-712 verifying contract address for decryption requests. */
