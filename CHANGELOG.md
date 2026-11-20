@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.9.0-beta.6](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.5...v3.9.0-beta.6) (2026-11-20)
+
+### Build System
+
+- **sdk:** bump @fhevm/sdk from 0.13.2 to 0.13.7 ([#971](https://github.com/zama-ai/sdk/issues/971)) ([3985b7c]())
+
 ## [3.9.0-beta.5](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.4...v3.9.0-beta.5) (2026-11-20)
 
 ### Bug Fixes
