@@ -93,7 +93,7 @@ export class FhevmRelayer implements RelayerSDK {
   readonly #chain: FheChain;
   readonly #base: FhevmBaseClient;
   readonly #decrypt: FhevmDecryptClient;
-  readonly #encrypt: FhevmEncryptBackend | ConfigurationError;
+  readonly #encrypt: FhevmEncryptBackend;
   readonly #defaultOptions: Partial<FhevmRelayerOptions>;
   readonly #telemetry: RelayerTelemetry | undefined;
   #encryptInitPromise: Promise<void> | undefined;
@@ -149,15 +149,16 @@ export class FhevmRelayer implements RelayerSDK {
       this.#decrypt = createFhevmCleartextDecryptClient(params);
       this.#encrypt = withInlineInit(createFhevmCleartextEncryptClient(params));
     } else {
+      const problem = keyVerificationProblem(this.#chain);
+      if (problem !== undefined) {
+        throw problem;
+      }
       this.#base = createFhevmBaseClient(params);
       this.#decrypt = createFhevmDecryptClient(params);
-      // Deferred to encryption, so reads and decryption still work without a KMSGeneration contract.
-      this.#encrypt =
-        keyVerificationProblem(this.#chain) ??
-        this.#buildEncryptBackend(config, params, {
-          prefetchKey,
-          createInlineClient: () => withInlineInit(createFhevmEncryptClient(params)),
-        });
+      this.#encrypt = this.#buildEncryptBackend(config, params, {
+        prefetchKey,
+        createInlineClient: () => withInlineInit(createFhevmEncryptClient(params)),
+      });
     }
   }
 
@@ -249,21 +250,12 @@ export class FhevmRelayer implements RelayerSDK {
   // Only a fulfilled init is memoized: a rejection clears the memo so the next
   // encryption retries instead of inheriting a transient key-fetch failure.
   #initEncrypt = (): Promise<void> => {
-    this.#encryptInitPromise ??= this.#assertCanEncrypt()
-      .init()
-      .catch((error: unknown) => {
-        this.#encryptInitPromise = undefined;
-        throw error;
-      });
+    this.#encryptInitPromise ??= this.#encrypt.init().catch((error: unknown) => {
+      this.#encryptInitPromise = undefined;
+      throw error;
+    });
     return this.#encryptInitPromise;
   };
-
-  #assertCanEncrypt(): FhevmEncryptBackend {
-    if (this.#encrypt instanceof ConfigurationError) {
-      throw this.#encrypt;
-    }
-    return this.#encrypt;
-  }
 
   /**
    * Releases the encrypt worker once in-flight encryptions settle and drops the
@@ -271,9 +263,7 @@ export class FhevmRelayer implements RelayerSDK {
    */
   dispose = (): void => {
     this.#encryptInitPromise = undefined;
-    if (!(this.#encrypt instanceof ConfigurationError)) {
-      this.#encrypt.dispose?.();
-    }
+    this.#encrypt.dispose?.();
   };
 
   /**
@@ -355,7 +345,7 @@ export class FhevmRelayer implements RelayerSDK {
    */
   encryptValue: FhevmClient["encryptValue"] = async (parameters) => {
     await this.#initEncrypt();
-    return this.#assertCanEncrypt().encryptValue({
+    return this.#encrypt.encryptValue({
       ...parameters,
       options: this.#requestOptions(parameters.options),
     });
@@ -380,7 +370,7 @@ export class FhevmRelayer implements RelayerSDK {
    */
   encryptValues: FhevmClient["encryptValues"] = async (parameters) => {
     await this.#initEncrypt();
-    return this.#assertCanEncrypt().encryptValues({
+    return this.#encrypt.encryptValues({
       ...parameters,
       options: this.#requestOptions(parameters.options),
     });
@@ -471,7 +461,6 @@ export class FhevmRelayer implements RelayerSDK {
    * ```
    */
   fetchFheEncryptionKeyBytes: FhevmClient["fetchFheEncryptionKeyBytes"] = async (parameters) => {
-    this.#assertCanEncrypt();
     // Served from the base client, which shares the key cache with the encrypt
     // client: initializing encryption here would spawn the encrypt worker and
     // wait out its bring-up for a key this thread fetches itself.
