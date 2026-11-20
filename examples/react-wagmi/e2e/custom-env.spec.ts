@@ -12,6 +12,7 @@ const validEnv = {
   NEXT_PUBLIC_ZAMA_INPUT_VERIFIER_ADDRESS: "0x3333333333333333333333333333333333333333",
   NEXT_PUBLIC_ZAMA_DECRYPTION_ADDRESS: "0x4444444444444444444444444444444444444444",
   NEXT_PUBLIC_ZAMA_INPUT_VERIFICATION_ADDRESS: "0x5555555555555555555555555555555555555555",
+  NEXT_PUBLIC_ZAMA_KMS_GENERATION_ADDRESS: "0x8888888888888888888888888888888888888888",
   NEXT_PUBLIC_REGISTRY_ADDRESS: "0x7777777777777777777777777777777777777777",
 };
 
@@ -52,6 +53,9 @@ test.describe("NEXT_PUBLIC_ZAMA_ENV=custom", () => {
     expect(custom.gatewayChainId).toBe(10901);
     expect(custom.aclContractAddress).toBe(validEnv.NEXT_PUBLIC_ZAMA_ACL_ADDRESS);
     expect(custom.registryAddress).toBe(validEnv.NEXT_PUBLIC_REGISTRY_ADDRESS);
+    expect(custom.keyVerification).toEqual({
+      contract: validEnv.NEXT_PUBLIC_ZAMA_KMS_GENERATION_ADDRESS,
+    });
     // Every preset field is either set here or deliberately dropped: a field added to the
     // preset fails this until it is one or the other.
     const dropped = ["vaultRouterAddress"];

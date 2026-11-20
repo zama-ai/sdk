@@ -603,9 +603,42 @@ pub struct ChainConfig {
     pub executor_address: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
     #[prost(message, optional, tag = "12")]
     pub auth: ::core::option::Option<ChainAuth>,
+    /// Checks the relayer's FHE public key and CRS before encryption.
+    /// When omitted, a chain with the ID and ACL of a preset inherits the preset's.
+    #[prost(message, optional, tag = "13")]
+    pub key_verification: ::core::option::Option<KeyVerification>,
     /// Fields 100–119 are allocated to configuration and credential protection.
     #[prost(message, optional, tag = "100")]
     pub provider: ::core::option::Option<HttpProviderConfig>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct KeyVerification {
+    #[prost(oneof = "key_verification::Target", tags = "1, 2")]
+    pub target: ::core::option::Option<key_verification::Target>,
+}
+/// Nested message and enum types in `KeyVerification`.
+pub mod key_verification {
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Target {
+        /// KMSGeneration address, for an Ethereum host chain.
+        #[prost(bytes, tag = "1")]
+        Contract(::prost::alloc::vec::Vec<u8>),
+        /// For any other host chain: the Ethereum chain holding its KMSGeneration contract.
+        #[prost(message, tag = "2")]
+        Chain(super::KeyVerificationChain),
+    }
+}
+/// id must name an SDK preset. Omitted fields inherit it.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct KeyVerificationChain {
+    #[prost(uint64, tag = "1")]
+    pub id: u64,
+    #[prost(string, optional, tag = "2")]
+    pub network: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(bytes = "vec", optional, tag = "3")]
+    pub kms_generation_contract_address: ::core::option::Option<
+        ::prost::alloc::vec::Vec<u8>,
+    >,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ChainAuth {

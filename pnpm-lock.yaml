@@ -210,8 +210,8 @@ importers:
   packages/sdk:
     dependencies:
       '@fhevm/sdk':
-        specifier: 0.13.7
-        version: 0.13.7(ethers@6.17.0)(typescript@7.0.2)(viem@2.57.2(typescript@7.0.2)(zod@4.6.7))
+        specifier: 0.13.9
+        version: 0.13.9(ethers@6.17.0)(typescript@7.0.2)(viem@2.57.2(typescript@7.0.2)(zod@4.6.7))
       ethers:
         specifier: '>=6'
         version: 6.17.0
@@ -668,8 +668,8 @@ packages:
       typescript:
         optional: true
 
-  '@fhevm/sdk@0.13.7':
-    resolution: {integrity: sha512-K3Wy7iYd7RNranIopMsMlYaWTvbl16m9FTA8BpBHIjBLR5sIj877dg5CewnvQ2BzHCc6uWzGYeVHwV0CjTqQ2A==}
+  '@fhevm/sdk@0.13.9':
+    resolution: {integrity: sha512-Uzqa+avfadwmpfSBNTGBErolx8edqJPYq58Hl61StiINYR1tHbZa7iCukg7N85s5bX2EMelebK1hV20jCS4BLA==}
     engines: {node: '>=22.0'}
     peerDependencies:
       ethers: '>=6.8.0'
@@ -2181,7 +2181,6 @@ packages:
   '@zama-fhe/relayer-sdk@0.4.1':
     resolution: {integrity: sha512-bS7tVQbXnsPFgiqm5R4pJ8hbPMYZuRh/Pv89S+jxO60y0mD296F4qIKEO7dgiHjC87V5GFM9DqCLNejjCNVw2Q==}
     engines: {node: '>=22'}
-    deprecated: This package is deprecated, use @zama-fhe/sdk instead
     hasBin: true
 
   abitype@1.2.3:
@@ -4772,7 +4771,7 @@ snapshots:
     optionalDependencies:
       typescript: 7.0.2
 
-  '@fhevm/sdk@0.13.7(ethers@6.17.0)(typescript@7.0.2)(viem@2.57.2(typescript@7.0.2)(zod@4.6.7))':
+  '@fhevm/sdk@0.13.9(ethers@6.17.0)(typescript@7.0.2)(viem@2.57.2(typescript@7.0.2)(zod@4.6.7))':
     dependencies:
       '@noble/curves': 2.0.1
       '@noble/hashes': 2.0.1

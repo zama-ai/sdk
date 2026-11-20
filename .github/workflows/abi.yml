@@ -24,6 +24,10 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_HOURS: "72"
+  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@fhevm/sdk,@zama-fhe/sdk,@zama-fhe/react-sdk"
+
 jobs:
   abi-check:
     runs-on: ubuntu-latest

@@ -60,9 +60,24 @@ function liveScenario(liveChain: LiveChainName, offload: OffloadOptions): Scenar
   };
 }
 
-/** Local anvil plus a same-origin relayer base Playwright fulfills; no real key. */
+/**
+ * Local anvil plus a same-origin relayer base Playwright fulfills; no real key.
+ * Its `kms-rpc` path answers the `KMSGeneration` reads for the stub key.
+ */
 function stubScenario(rpcUrl: string, relayerUrl: string, offload: OffloadOptions): Scenario {
-  const chain: FheChain = { ...anvilFheChain, network: rpcUrl, relayerUrl };
+  const chain: FheChain = {
+    ...anvilFheChain,
+    network: rpcUrl,
+    relayerUrl,
+    keyVerification: {
+      chain: {
+        ...anvilFheChain,
+        id: 1,
+        network: `${relayerUrl}kms-rpc`,
+        keyVerification: { contract: "0x0000000000000000000000000000000000000001" },
+      },
+    },
+  };
   const transport = http(rpcUrl);
   return {
     config: createConfig({
