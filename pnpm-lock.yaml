@@ -210,8 +210,8 @@ importers:
   packages/sdk:
     dependencies:
       '@fhevm/sdk':
-        specifier: 0.13.2
-        version: 0.13.2(ethers@6.17.0)(typescript@7.0.2)(viem@2.57.2(typescript@7.0.2)(zod@4.6.7))
+        specifier: 0.13.7
+        version: 0.13.7(ethers@6.17.0)(typescript@7.0.2)(viem@2.57.2(typescript@7.0.2)(zod@4.6.7))
       ethers:
         specifier: '>=6'
         version: 6.17.0
@@ -668,8 +668,8 @@ packages:
       typescript:
         optional: true
 
-  '@fhevm/sdk@0.13.2':
-    resolution: {integrity: sha512-M1ZUKdRJedxRa57bVeQ7jrzVP6hKAXjS8WabvMNJKBui7C2ZXDsvoyb7qpLqYib85obA+OQTwcPZV/oxWfciWA==}
+  '@fhevm/sdk@0.13.7':
+    resolution: {integrity: sha512-K3Wy7iYd7RNranIopMsMlYaWTvbl16m9FTA8BpBHIjBLR5sIj877dg5CewnvQ2BzHCc6uWzGYeVHwV0CjTqQ2A==}
     engines: {node: '>=22.0'}
     peerDependencies:
       ethers: '>=6.8.0'
@@ -4407,9 +4407,6 @@ packages:
   wasm-feature-detect@1.10.1:
     resolution: {integrity: sha512-+wz9+WpMKgQ7H1tm41nJbFwAvwX4DqY0jNY8Blw5Qe6hHg1yhCJ+AqU0R4lgX7p3pyo8irYIl1+mMNoBwSj2Zg==}
 
-  wasm-feature-detect@1.9.0:
-    resolution: {integrity: sha512-zonE+xlIIYtxPy++L24ow0hAD8CICb4+FgPyROd3buyXIqsJvUEDkBgfCCoXOd1Hu3DUr0GOfnPIdcGV+YpNaA==}
-
   web-worker@1.5.0:
     resolution: {integrity: sha512-RiMReJrTAiA+mBjGONMnjVDP2u3p9R1vkcGz6gDIrOMT3oGuYwX2WRMYI9ipkphSuE5XKEhydbhNEJh4NY9mlw==}
 
@@ -4775,11 +4772,11 @@ snapshots:
     optionalDependencies:
       typescript: 7.0.2
 
-  '@fhevm/sdk@0.13.2(ethers@6.17.0)(typescript@7.0.2)(viem@2.57.2(typescript@7.0.2)(zod@4.6.7))':
+  '@fhevm/sdk@0.13.7(ethers@6.17.0)(typescript@7.0.2)(viem@2.57.2(typescript@7.0.2)(zod@4.6.7))':
     dependencies:
       '@noble/curves': 2.0.1
       '@noble/hashes': 2.0.1
-      wasm-feature-detect: 1.9.0
+      wasm-feature-detect: 1.10.1
     optionalDependencies:
       ethers: 6.17.0
       typescript: 7.0.2
@@ -7986,8 +7983,6 @@ snapshots:
       - immer
 
   wasm-feature-detect@1.10.1: {}
-
-  wasm-feature-detect@1.9.0: {}
 
   web-worker@1.5.0: {}
 
