@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.9.0-beta.12](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.11...v3.9.0-beta.12) (2026-11-23)
+
+### Bug Fixes
+
+- **vaults:** leave a paused member out of a group join instead of refusing the group ([#978](https://github.com/zama-ai/sdk/issues/978)) ([0c34f7b]())
+
 ## [3.9.0-beta.11](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.10...v3.9.0-beta.11) (2026-11-23)
 
 ### Features
