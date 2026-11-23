@@ -6,6 +6,15 @@ export type FheChainAuth =
   | { __type: "ApiKeyHeader"; header?: string; value: string };
 
 /**
+ * Where the SDK checks the relayer's FHE public key and CRS: `contract`, the
+ * `KMSGeneration` address on an Ethereum host chain, or `chain`, the Ethereum
+ * chain holding it (read through its `network`), for any other host chain.
+ */
+export type FheKeyVerification =
+  | { readonly contract: Address }
+  | { readonly chain: FheChain & { readonly keyVerification: { readonly contract: Address } } };
+
+/**
  * Complete chain configuration — the single source of truth for
  * per-chain FHE contract addresses and network settings. The built-in presets
  * exported from `@zama-fhe/sdk/chains` are `FheChain` objects.
@@ -25,6 +34,12 @@ export interface FheChain<TId extends number = number> {
   readonly kmsContractAddress: Address;
   /** Address of the input verifier contract. */
   readonly inputVerifierContractAddress: Address;
+  /**
+   * Required on a non-cleartext chain: `{ contract }`, or `{ chain }` whose own
+   * `keyVerification` has a `contract`. Otherwise `createConfig` throws a
+   * `ConfigurationError`. A chain with a built-in preset's id and ACL inherits the preset's.
+   */
+  readonly keyVerification?: FheKeyVerification | undefined;
   /** EIP-712 verifying contract address for decryption requests. */
   readonly verifyingContractAddressDecryption: Address;
   /** EIP-712 verifying contract address for input verification. */

@@ -76,11 +76,55 @@ test("custom chain overrides preserve addresses and can clear optional preset ad
     aclContractAddress: `0x${"01".repeat(20)}`,
   });
 });
+test("a chain can set its KMSGeneration contract", () => {
+  const config = parseContextConfig(
+    ContextConfig.fromPartial({
+      chains: [
+        {
+          ...preset,
+          keyVerification: { target: { $case: "contract", contract: Buffer.alloc(20, 2) } },
+        },
+      ],
+    }),
+  );
+  expect(config.chains[0].keyVerification).toEqual({ contract: `0x${"02".repeat(20)}` });
+});
+test("a key verification chain inherits its preset and takes its own RPC URL", () => {
+  const config = parseContextConfig(
+    ContextConfig.fromPartial({
+      chains: [
+        {
+          id: 80002n,
+          network: "https://rpc.invalid",
+          keyVerification: {
+            target: { $case: "chain", chain: { id: 11155111n, network: "https://eth.invalid" } },
+          },
+        },
+      ],
+    }),
+  );
+  expect(config.chains[0].keyVerification).toEqual({
+    chain: { ...chains[11155111], network: "https://eth.invalid" },
+  });
+});
+test.each([
+  [{ $case: "chain", chain: { id: 999n } }, /no SDK preset/],
+  [{ $case: "chain", chain: { id: 31337n } }, /needs a KMSGeneration contract/],
+  [undefined, /contract or a chain/],
+  [{ $case: "chain", chain: { id: 11155111n, network: "" } }, /non-empty RPC URL/],
+] as const)("rejects key verification %#", (target, message) => {
+  expect(() =>
+    parseContextConfig(
+      ContextConfig.fromPartial({ chains: [{ ...preset, keyVerification: { target } }] }),
+    ),
+  ).toThrow(message);
+});
 test.each([
   ContextConfig.fromPartial({ chains: [preset], chainId: 31337n }),
   ContextConfig.fromPartial({ chains: [{ ...preset, id: 9007199254740992n }] }),
   ContextConfig.fromPartial({ chains: [{ ...preset, aclContractAddress: Buffer.alloc(19) }] }),
   ContextConfig.fromPartial({ chains: [{ ...preset, auth: {} }] }),
+  ContextConfig.fromPartial({ chains: [{ ...preset, network: "" }] }),
   ContextConfig.fromPartial({ chains: [preset], permitTtl: 0.5 }),
   ContextConfig.fromPartial({ chains: [preset], transportKeyPairTtl: -1 }),
   ContextConfig.fromPartial({ chains: [preset], registryTtl: 4294967296 }),
@@ -88,6 +132,6 @@ test.each([
   undefined,
 ])("rejects malformed transport configuration %#", (config) => {
   expect(() => parseContextConfig(config)).toThrow(
-    /configured|integer|20 bytes|credential|requires|required/,
+    /configured|integer|20 bytes|credential|requires|required|non-empty/,
   );
 });
