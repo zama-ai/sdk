@@ -40,7 +40,7 @@ export const ALPHA = defineVault({
 | `chainId`  | `number`                                  | The chain the vault's batchers are on.                        |
 | `batchers` | `{ deposit: Batchers; redeem: Batchers }` | The batchers each direction joins: one, or a list of several. |
 
-A vault names no token: the client reads each batcher's `fromToken()`. A join or read throws `ConfigurationError` when a direction lists no batcher, or for an invalid batcher address or `lastBatchId`. It throws `VaultBatcherPausedError` when every batcher of a direction is closed.
+A vault names no token: the client reads each batcher's `fromToken()`. A join or read throws `ConfigurationError` when a direction lists no batcher, or for an invalid batcher address or `lastBatchId`. A read of a vault on its own, or a join into the chosen vault, throws `VaultBatcherPausedError` when every batcher of the direction is closed. A group member in that state is left out.
 
 ### Batchers
 
@@ -96,7 +96,7 @@ The `prepare*` join methods read the chain, check the join, and encrypt, then re
 
 `prepareDeposit(target, input, options?) => Promise<PreparedJoin>`
 
-Builds a deposit of the asset into one vault: a leg for every vault of a group, or one call for a vault on its own. Only `input.account` can send the calls.
+Builds a deposit of the asset into one vault: a leg for every vault of a group that takes joins, or one call for a vault on its own. A group member whose batchers are all paused or closed is left out. Only `input.account` can send the calls.
 
 | Parameter | Type                          | Description                                             |
 | --------- | ----------------------------- | ------------------------------------------------------- |
@@ -116,8 +116,8 @@ const prepared = await vaults.prepareDeposit(STABLE, {
 
 - `ChainMismatchError` when a wallet is connected and the provider is not on the target's chain.
 - [`ConfigurationError`](errors.md#configurationerror) when the provider is not on the target's chain with no wallet connected, the vault is not in the group, the group is invalid (see [`VaultGroup`](#vaultgroup)), the join uses the router and the chain has none, or a vault lists no batcher.
-- [`VaultBatcherPausedError`](errors.md#vaultbatcherpausederror) when no batcher of a vault the join reaches is open: each one is paused or closed. This check always runs.
-- [`VaultBatcherReadFailedError`](errors.md#vaultbatcherreadfailederror) when a batcher of a vault the join reaches cannot be read. Retryable when the cause is.
+- [`VaultBatcherPausedError`](errors.md#vaultbatcherpausederror) when no batcher of the chosen vault is open: each one is paused or closed. This check always runs.
+- [`VaultBatcherReadFailedError`](errors.md#vaultbatcherreadfailederror) when a batcher of any vault of the target cannot be read. Retryable when the cause is.
 - `InsufficientConfidentialBalanceError` when the balance is below `amount`.
 - `BalanceCheckUnavailableError` when the balance cannot be decrypted: no signer is connected, or `account` is not the signer. Pass `skipBalanceCheck: true`.
 
@@ -295,7 +295,7 @@ if (batch.actions.includes("claim")) {
 
 `readOpenBatches(target, direction) => Promise<OpenBatch[]>`
 
-Reads, for every vault of the target in group order, the open batch a join reaches now. When no batcher of a vault is open, it returns a paused batcher's batch with `paused: true`.
+Reads, for every vault of the target in group order, the open batch a join reaches now. When no batcher of a vault is open, it returns a paused batcher's batch with `paused: true`. A group member whose batchers are all closed is left out.
 
 ```ts
 const open = await vaults.readOpenBatches(STABLE, "deposit");
@@ -304,7 +304,7 @@ const open = await vaults.readOpenBatches(STABLE, "deposit");
 **Throws:**
 
 - [`ConfigurationError`](errors.md#configurationerror) when a vault lists no batcher, or a batcher address or `lastBatchId` is invalid.
-- [`VaultBatcherPausedError`](errors.md#vaultbatcherpausederror) when every batcher of a vault is closed.
+- [`VaultBatcherPausedError`](errors.md#vaultbatcherpausederror) when every batcher of a vault on its own, or of every vault of a group, is closed.
 - [`VaultBatcherReadFailedError`](errors.md#vaultbatcherreadfailederror) when a batcher of a vault cannot be read.
 
 ## Types
@@ -328,17 +328,17 @@ const open = await vaults.readOpenBatches(STABLE, "deposit");
 
 Plain data. Its bigints need a replacer to go through `JSON.stringify`. It holds the chosen vault and the amount in cleartext.
 
-| Field       | Type                    | Description                                                               |
-| ----------- | ----------------------- | ------------------------------------------------------------------------- |
-| `direction` | `"deposit" \| "redeem"` |                                                                           |
-| `chainId`   | `number`                | The chain to send the calls on.                                           |
-| `groupId`   | `string \| undefined`   | The group joined, or `undefined` for a vault on its own.                  |
-| `vaultId`   | `string`                | The vault that gets the amount.                                           |
-| `account`   | `Address`               | The account that must send the calls.                                     |
-| `amount`    | `bigint`                | In the asset for a deposit, in shares for a redemption.                   |
-| `route`     | `"direct" \| "router"`  |                                                                           |
-| `legs`      | `VaultLeg[]`            | Every vault joined, in group order, the zero legs included.               |
-| `calls`     | `VaultCall[]`           | Every call in send order: the missing operator approvals, then the joins. |
+| Field       | Type                    | Description                                                                              |
+| ----------- | ----------------------- | ---------------------------------------------------------------------------------------- |
+| `direction` | `"deposit" \| "redeem"` |                                                                                          |
+| `chainId`   | `number`                | The chain to send the calls on.                                                          |
+| `groupId`   | `string \| undefined`   | The group joined, or `undefined` for a vault on its own.                                 |
+| `vaultId`   | `string`                | The vault that gets the amount.                                                          |
+| `account`   | `Address`               | The account that must send the calls.                                                    |
+| `amount`    | `bigint`                | In the asset for a deposit, in shares for a redemption.                                  |
+| `route`     | `"direct" \| "router"`  |                                                                                          |
+| `legs`      | `VaultLeg[]`            | Every vault joined, in group order, the zero legs included. A vault left out has no leg. |
+| `calls`     | `VaultCall[]`           | Every call in send order: the missing operator approvals, then the joins.                |
 
 A `VaultLeg` is `{ vaultId, batcher, token, amount }`: the batcher the leg joins, the token it spends, and its amount, zero for every leg but the chosen one.
 
@@ -353,10 +353,10 @@ A `Call` (`{ to, data, value: 0n }`) tagged with its `kind`:
 
 ### JoinOutcome
 
-| Field      | Type                                 | Description                                   |
-| ---------- | ------------------------------------ | --------------------------------------------- |
-| `batches`  | `(BatchRef & { vaultId: string })[]` | The batch each leg landed in, in group order. |
-| `txHashes` | `Hex[]`                              | Every transaction sent, approvals first.      |
+| Field      | Type                                 | Description                                                                                      |
+| ---------- | ------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| `batches`  | `(BatchRef & { vaultId: string })[]` | The batch each leg landed in, in group order. A vault left out has no entry: match by `vaultId`. |
+| `txHashes` | `Hex[]`                              | Every transaction sent, approvals first.                                                         |
 
 ### BatchRef
 

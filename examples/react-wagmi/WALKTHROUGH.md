@@ -55,7 +55,7 @@ export const networks = {
     canMint: true,
     vault: { address, confidentialToken },
   }),
-  "bnb-testnet": defineNetwork({ label: "BNB Testnet · Cleartext", transport: "cleartext", ... }),
+  hoodi: defineNetwork({ label: "Hoodi · Cleartext", transport: "cleartext", ... }),
   mainnet: defineNetwork({ label: "Ethereum", transport: "relayer", canMint: false, ... }),
   // ...
 };

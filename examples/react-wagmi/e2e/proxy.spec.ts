@@ -9,7 +9,7 @@ test.describe("relayer proxy", () => {
       enabled: string[];
     };
     expect(enabled).toContain("sepolia"); // public testnet relayer by default
-    expect(enabled).toContain("bnb-testnet"); // cleartext: no relayer needed
+    expect(enabled).toContain("hoodi"); // cleartext: no relayer needed
     expect(enabled).toContain("mainnet"); // MAINNET_RELAYER_URL set in playwright.config.ts
     expect(enabled).not.toContain("polygon"); // POLYGON_RELAYER_URL unset
   });

@@ -31,7 +31,7 @@ test.describe("network picker on an unsupported chain", () => {
   test("lists cleartext networks and configured relayer networks only", async ({ page }) => {
     const picker = page.getByRole("combobox", { name: "Network" });
     await expect(picker.locator("option", { hasText: "Sepolia" })).toHaveCount(1);
-    await expect(picker.locator("option", { hasText: "BNB Testnet · Cleartext" })).toHaveCount(1);
+    await expect(picker.locator("option", { hasText: "Hoodi · Cleartext" })).toHaveCount(1);
     await expect(picker.locator("option", { hasText: "Ethereum" })).toHaveCount(1);
     await expect(picker.locator("option", { hasText: /^Polygon$/ })).toHaveCount(0);
   });
@@ -159,13 +159,13 @@ test.describe("chain switch", () => {
 });
 
 test.describe("cleartext network", () => {
-  test("switches to BNB Testnet from the picker and loads its token list", async ({
+  test("switches to Hoodi from the picker and loads its token list", async ({
     page,
     mockRpc,
     mockWallet,
   }) => {
     await mockRpc();
-    await mockRpc({ network: "bnb-testnet" });
+    await mockRpc({ network: "hoodi" });
     await mockWallet({
       accounts: [],
       chainId: SEPOLIA_CHAIN_ID_HEX,
@@ -175,10 +175,9 @@ test.describe("cleartext network", () => {
     await page.getByRole("button", { name: "Connect Wallet" }).click({ force: true });
     await expect(page.getByText("Balances")).toBeVisible();
 
-    await page.getByRole("combobox", { name: "Network" }).selectOption("bnb-testnet");
+    await page.getByRole("combobox", { name: "Network" }).selectOption("hoodi");
 
-    await expect(page.getByRole("combobox", { name: "Network" })).toHaveValue("bnb-testnet");
-    await expect(page.getByText(/tBNB:/)).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Network" })).toHaveValue("hoodi");
     await expect(page.getByRole("combobox", { name: "Confidential token" })).toHaveValue(
       MOCK_CTOKEN1_ADDRESS,
     );

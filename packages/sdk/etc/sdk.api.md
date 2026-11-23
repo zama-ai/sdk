@@ -568,15 +568,32 @@ export interface BatchDecryptResult {
 export const bscTestnet: Readonly<{
     readonly id: 97;
     readonly gatewayChainId: 10901;
-    readonly relayerUrl: "";
+    readonly relayerUrl: "https://relayer.testnet.zama.org";
     readonly network: "https://bsc-testnet.bnbchain.org";
-    readonly aclContractAddress: "0x52470e945521E247Cb4754088a836Dc4b838AFBE";
-    readonly kmsContractAddress: "0x788F5BB2d93aB4Cb67Fe2277757aE95006504F6F";
-    readonly inputVerifierContractAddress: "0x49e0BAB39904E4192c30CFB58573Cbe27B7E398E";
-    readonly verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64";
-    readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
-    readonly registryAddress: "0xc0E8B73b1C58D846e1d4f8fAE2E1466C85BCeAeC";
-    readonly executorAddress: "0x5985e48689550c1b2893ABfBbe4cc0eE3A22cc54";
+    readonly aclContractAddress: "0x9Adac873Ae2f737AF011f0778305Cff0B220ac36";
+    readonly kmsContractAddress: "0x1F7CAD0c05fDED5F988683AdfDB4F242b310cdcB";
+    readonly inputVerifierContractAddress: "0xDd378841F0125656b97818d9d371e1027Df4c424";
+    readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
+    readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
+    readonly registryAddress: "0x84c5B9669b1BA109D31096c64AFEF1473Ac4Db43";
+    readonly keyVerification: {
+        readonly chain: Readonly<{
+            readonly id: 11155111;
+            readonly gatewayChainId: 10901;
+            readonly relayerUrl: "https://relayer.testnet.zama.org";
+            readonly network: "https://ethereum-sepolia-rpc.publicnode.com";
+            readonly aclContractAddress: "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D";
+            readonly kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A";
+            readonly inputVerifierContractAddress: "0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0";
+            readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
+            readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
+            readonly registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
+            readonly vaultRouterAddress: "0xD5BBFF95F3401aeC3B111664F6b72EdAe73814e8";
+            readonly keyVerification: {
+                readonly contract: "0x77389113d7000EcBCfc2bDed57202f5f46109934";
+            };
+        }>;
+    };
 }>;
 
 // @public
