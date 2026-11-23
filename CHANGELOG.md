@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.0.0-alpha.8](https://github.com/zama-ai/sdk/compare/v4.0.0-alpha.7...v4.0.0-alpha.8) (2026-11-23)
+
+### Features
+
+- **sdk:** reject a chain without a KMSGeneration contract at createConfig ([#975](https://github.com/zama-ai/sdk/issues/975)) ([dea9ab7]())
+
 ## [4.0.0-alpha.7](https://github.com/zama-ai/sdk/compare/v4.0.0-alpha.6...v4.0.0-alpha.7) (2026-11-23)
 
 ### Features
