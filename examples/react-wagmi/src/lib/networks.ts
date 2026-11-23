@@ -80,18 +80,18 @@ export const networks = {
         "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639") as Address,
     },
   }),
-  // Cleartext rows are development deployments: "encrypted" values are stored in cleartext
-  // on-chain and there is no relayer or KMS. They exist to integrate against the SDK on
-  // chains without the full FHE stack, not for production use.
   "bnb-testnet": defineNetwork({
-    label: "BNB Testnet · Cleartext",
+    label: "BNB Testnet",
     chain: bscTestnet,
     fhe: fheBscTestnet,
     rpcUrl: process.env.NEXT_PUBLIC_BNB_TESTNET_RPC_URL,
-    transport: "cleartext",
+    transport: "relayer",
     explorerUrl: "https://testnet.bscscan.com",
     canMint: true,
   }),
+  // Cleartext rows are development deployments: "encrypted" values are stored in cleartext
+  // on-chain and there is no relayer or KMS. They exist to integrate against the SDK on
+  // chains without the full FHE stack, not for production use.
   hoodi: defineNetwork({
     label: "Hoodi · Cleartext",
     chain: hoodi,

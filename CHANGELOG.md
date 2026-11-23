@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.9.0-beta.11](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.10...v3.9.0-beta.11) (2026-11-23)
+
+### Features
+
+- **sdk:** update bsc testnet addresses ([#944](https://github.com/zama-ai/sdk/issues/944)) ([4272f44]()), closes [zama-ai/fhevm#4723]()
+
 ## [3.9.0-beta.10](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.9...v3.9.0-beta.10) (2026-11-23)
 
 ### Bug Fixes

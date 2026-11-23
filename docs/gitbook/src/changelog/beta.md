@@ -26,3 +26,9 @@ description: Unreleased changes on the prerelease (beta) line — not yet in a s
 **A paused group member no longer blocks its group.** `prepareDeposit`, `prepareRedeem`, `deposit` and `redeem` leave out a group member whose batchers are all paused or closed, instead of throwing `VaultBatcherPausedError` for the whole group. They still throw it when the chosen vault takes no joins. `readOpenBatches` and `useOpenBatches` leave out a group member whose batchers are all closed, and throw `VaultBatcherPausedError` when every member is closed. `legs` and `batches` then have no entry for a vault left out, so match them by `vaultId`. See [Paused batchers](../guides/vaults/advanced.md#paused-batchers).
 
 **`BatcherHistory` and `RetiredBatcher` are deprecated.** A history reads as the list `[...retired, latest]`, so `latest` takes joins as soon as it is open. It no longer waits for the retired batchers to pass their `lastBatchId`. Replace `{ retired, latest }` with that list. Code that reads `vault.batchers` must also handle a list.
+
+### Chains
+
+**`bscTestnet` targets the real protocol.** The `bscTestnet` preset (chain ID `97`) now targets the Zama protocol on BNB Smart Chain testnet through the hosted testnet relayer, like `sepolia`. Use it with `web()` or `node()` instead of `cleartext()`. The preset includes the wrappers registry address, so token discovery needs no extra configuration.
+
+**Breaking change for the BSC cleartext deployment:** the preset no longer carries that deployment's contract addresses or `executorAddress`. To keep using it, define a custom `FheChain` with its addresses and use `cleartext()`. See [What each chain includes](../reference/sdk/network-presets.md#what-each-chain-includes).

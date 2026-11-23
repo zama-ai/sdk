@@ -616,7 +616,7 @@ See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/git
 Create a module and add the client:
 
 ```sh
-export ZAMA_SDK_VERSION=3.9.0-beta.10
+export ZAMA_SDK_VERSION=3.9.0-beta.11
 mkdir encrypt-input
 cd encrypt-input
 go mod init example.com/encrypt-input
@@ -794,7 +794,7 @@ See [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/git
 Create a binary project and add the client with the runtime this example uses:
 
 ```sh
-export ZAMA_SDK_VERSION=3.9.0-beta.10
+export ZAMA_SDK_VERSION=3.9.0-beta.11
 cargo new encrypt-input
 cd encrypt-input
 cargo add zama_sdk@=$ZAMA_SDK_VERSION
@@ -2078,7 +2078,7 @@ Relayers are no longer classes you instantiate; they are factories placed in a
 
 `cleartext()` is **new in v3** — the relayer for cleartext-mode chains (no FHE,
 KMS, or gateway): local dev (`hardhat`) and the cleartext testnets (`hoodi`,
-`zenithTrexTestnet`, `bscTestnet`).
+`zenithTrexTestnet`).
 
 ```ts
 // Before
@@ -2557,6 +2557,12 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 **A paused group member no longer blocks its group.** `prepareDeposit`, `prepareRedeem`, `deposit` and `redeem` leave out a group member whose batchers are all paused or closed, instead of throwing `VaultBatcherPausedError` for the whole group. They still throw it when the chosen vault takes no joins. `readOpenBatches` and `useOpenBatches` leave out a group member whose batchers are all closed, and throw `VaultBatcherPausedError` when every member is closed. `legs` and `batches` then have no entry for a vault left out, so match them by `vaultId`. See [Paused batchers](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#paused-batchers).
 
 **`BatcherHistory` and `RetiredBatcher` are deprecated.** A history reads as the list `[...retired, latest]`, so `latest` takes joins as soon as it is open. It no longer waits for the retired batchers to pass their `lastBatchId`. Replace `{ retired, latest }` with that list. Code that reads `vault.batchers` must also handle a list.
+
+### Chains
+
+**`bscTestnet` targets the real protocol.** The `bscTestnet` preset (chain ID `97`) now targets the Zama protocol on BNB Smart Chain testnet through the hosted testnet relayer, like `sepolia`. Use it with `web()` or `node()` instead of `cleartext()`. The preset includes the wrappers registry address, so token discovery needs no extra configuration.
+
+**Breaking change for the BSC cleartext deployment:** the preset no longer carries that deployment's contract addresses or `executorAddress`. To keep using it, define a custom `FheChain` with its addresses and use `cleartext()`. See [What each chain includes](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/network-presets.md#what-each-chain-includes).
 
 ## 3.x
 
@@ -3713,7 +3719,7 @@ let config = SdkConfig::new(11_155_111, rpc_url); // Sepolia preset
 
 
 > [!INFO]
-> The shared Zama testnet relayer needs **no API key**: presets like `sepolia` and `polygonAmoy` work as-is, so leave `auth` unset. Only the Zama-hosted **mainnet** relayer (used by `mainnet` and `polygon`) requires a key; see [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md).
+> The shared Zama testnet relayer needs **no API key**: presets like `sepolia`, `polygonAmoy` and `bscTestnet` work as-is, so leave `auth` unset. Only the Zama-hosted **mainnet** relayer (used by `mainnet` and `polygon`) requires a key; see [Authentication](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/authentication.md).
 
 
 ### 2. Pick a relayer
@@ -11207,7 +11213,7 @@ Each release signs the image in the release workflow and stores the signature, b
 Resolve the tag first, so the digest you verify is the digest you pin:
 
 ```bash
-export ZAMA_SDK_VERSION=3.9.0-beta.10
+export ZAMA_SDK_VERSION=3.9.0-beta.11
 export ZAMA_SDK_DAEMON_DIGEST="$(docker buildx imagetools inspect "ghcr.io/zama-ai/sdk-daemon:${ZAMA_SDK_VERSION}" --format '{{ .Manifest.Digest }}')"
 ```
 
@@ -11267,7 +11273,7 @@ services:
 Download the daemon file next to it, then start both:
 
 ```bash
-export ZAMA_SDK_VERSION=3.9.0-beta.10
+export ZAMA_SDK_VERSION=3.9.0-beta.11
 curl -fsSL -o zama-sdk-daemon.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.yaml"
 docker compose up -d --wait
 ```
@@ -11281,7 +11287,7 @@ When your application runs directly on a Linux host rather than in a container, 
 From the directory that will hold the daemon's files, replace `myapp` with the user your application runs as:
 
 ```bash
-export ZAMA_SDK_VERSION=3.9.0-beta.10
+export ZAMA_SDK_VERSION=3.9.0-beta.11
 curl -fsSL -o compose.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.host.yaml"
 sudo install -d -m 700 -o myapp -g myapp socket storage
 ZAMA_SDK_DAEMON_UID="$(id -u myapp)" ZAMA_SDK_DAEMON_GID="$(id -g myapp)" docker compose up -d --wait
@@ -16216,24 +16222,24 @@ import { sepolia, mainnet, polygon, polygonAmoy, hoodi, hardhat } from "@zama-fh
 
 Each chain object implements the `FheChain` interface:
 
-| Field                                       | Type                              | Description                                                                                                                                                                                                                                                  |
-| ------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `id`                                        | `number`                          | Chain identifier                                                                                                                                                                                                                                             |
-| `gatewayChainId`                            | `number`                          | Chain ID of the gateway                                                                                                                                                                                                                                      |
-| `relayerUrl`                                | `string`                          | Default relayer endpoint for this network                                                                                                                                                                                                                    |
-| `network`                                   | `EIP1193Provider \| string`       | Default RPC URL or EIP-1193 provider for this network                                                                                                                                                                                                        |
-| `aclContractAddress`                        | `Address`                         | ACL contract address                                                                                                                                                                                                                                         |
-| `kmsContractAddress`                        | `Address`                         | KMS contract address                                                                                                                                                                                                                                         |
-| `inputVerifierContractAddress`              | `Address`                         | Input verifier contract address                                                                                                                                                                                                                              |
-| `verifyingContractAddressDecryption`        | `Address`                         | EIP-712 verifying contract for decrypt operations                                                                                                                                                                                                            |
-| `verifyingContractAddressInputVerification` | `Address`                         | EIP-712 verifying contract for encrypt operations                                                                                                                                                                                                            |
-| `keyVerification`                           | `FheKeyVerification \| undefined` | Where the relayer's FHE public key and CRS are checked: `{ contract }`, the `KMSGeneration` address on an Ethereum host chain, or `{ chain }`, the Ethereum chain holding it for other host chains (`polygon` uses `mainnet`, `polygonAmoy` uses `sepolia`). |
-| `registryAddress`                           | `Address \| undefined`            | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat and Polygon Amoy)                                                                                                                                    |
-| `vaultRouterAddress`                        | `Address \| undefined`            | Optional. The multi-vault router, one per chain. A multi-vault join of a [`defineVaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#definevaultgroup) group goes through it. Set it on a custom chain to join multi-vault groups there.                                             |
-| `executorAddress`                           | `Address \| undefined`            | TFHEExecutor contract address (cleartext mode only, undefined for real FHE chains)                                                                                                                                                                           |
-| `auth`                                      | `Auth \| undefined`               | Relayer authentication. Required for the Zama-hosted **mainnet** relayer (Ethereum, Polygon); leave unset on the shared Zama testnet relayer (Sepolia, Polygon Amoy), which needs no key.                                                                    |
-| `kmsSignerPrivateKey`                       | `Hex \| undefined`                | KMS signer private key for EIP-712 verification (cleartext mode)                                                                                                                                                                                             |
-| `inputSignerPrivateKey`                     | `Hex \| undefined`                | Input signer private key for EIP-712 verification (cleartext mode)                                                                                                                                                                                           |
+| Field                                       | Type                              | Description                                                                                                                                                                                                                                                                  |
+| ------------------------------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                                        | `number`                          | Chain identifier                                                                                                                                                                                                                                                             |
+| `gatewayChainId`                            | `number`                          | Chain ID of the gateway                                                                                                                                                                                                                                                      |
+| `relayerUrl`                                | `string`                          | Default relayer endpoint for this network                                                                                                                                                                                                                                    |
+| `network`                                   | `EIP1193Provider \| string`       | Default RPC URL or EIP-1193 provider for this network                                                                                                                                                                                                                        |
+| `aclContractAddress`                        | `Address`                         | ACL contract address                                                                                                                                                                                                                                                         |
+| `kmsContractAddress`                        | `Address`                         | KMS contract address                                                                                                                                                                                                                                                         |
+| `inputVerifierContractAddress`              | `Address`                         | Input verifier contract address                                                                                                                                                                                                                                              |
+| `verifyingContractAddressDecryption`        | `Address`                         | EIP-712 verifying contract for decrypt operations                                                                                                                                                                                                                            |
+| `verifyingContractAddressInputVerification` | `Address`                         | EIP-712 verifying contract for encrypt operations                                                                                                                                                                                                                            |
+| `keyVerification`                           | `FheKeyVerification \| undefined` | Where the relayer's FHE public key and CRS are checked: `{ contract }`, the `KMSGeneration` address on an Ethereum host chain, or `{ chain }`, the Ethereum chain holding it for other host chains (`polygon` uses `mainnet`, `polygonAmoy` and `bscTestnet` use `sepolia`). |
+| `registryAddress`                           | `Address \| undefined`            | Token wrapper registry contract address (undefined for chains without a deployed registry, e.g. Hardhat and Polygon Amoy)                                                                                                                                                    |
+| `vaultRouterAddress`                        | `Address \| undefined`            | Optional. The multi-vault router, one per chain. A multi-vault join of a [`defineVaultGroup`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#definevaultgroup) group goes through it. Set it on a custom chain to join multi-vault groups there.                                                             |
+| `executorAddress`                           | `Address \| undefined`            | TFHEExecutor contract address (cleartext mode only, undefined for real FHE chains)                                                                                                                                                                                           |
+| `auth`                                      | `Auth \| undefined`               | Relayer authentication. Required for the Zama-hosted **mainnet** relayer (Ethereum, Polygon); leave unset on the shared Zama testnet relayer (Sepolia, Polygon Amoy, BNB Smart Chain Testnet), which needs no key.                                                           |
+| `kmsSignerPrivateKey`                       | `Hex \| undefined`                | KMS signer private key for EIP-712 verification (cleartext mode)                                                                                                                                                                                                             |
+| `inputSignerPrivateKey`                     | `Hex \| undefined`                | Input signer private key for EIP-712 verification (cleartext mode)                                                                                                                                                                                                           |
 
 A custom real-FHE chain needs `keyVerification`, with a `KMSGeneration` contract on it (directly, or on the `{ chain }` it points to). Otherwise `createConfig` throws a `ConfigurationError`. A chain with a preset's id and ACL takes the preset's value. A chain spread from a preset keeps the preset's value, so set your own deployment's when you change its contracts.
 
@@ -28665,7 +28671,7 @@ This app replaces the former `example-bnb`, `example-hoodi`, `example-polygon-am
 | Network                  | Chain ID   | Transport         | Gas token                                                          | Listed when                  |
 | ------------------------ | ---------- | ----------------- | ------------------------------------------------------------------ | ---------------------------- |
 | Sepolia (default)        | `11155111` | `web()` via proxy | Sepolia ETH, any public faucet                                     | always                       |
-| BNB Testnet · Cleartext  | `97`       | `cleartext()`     | tBNB, [faucet](https://www.bnbchain.org/en/testnet-faucet)         | always                       |
+| BNB Testnet              | `97`       | `web()` via proxy | tBNB, [faucet](https://www.bnbchain.org/en/testnet-faucet)         | always                       |
 | Hoodi · Cleartext        | `560048`   | `cleartext()`     | Hoodi ETH, [faucet](https://hoodi-faucet.pk910.de)                 | always                       |
 | T-Rex Zenith · Cleartext | `936486`   | `cleartext()`     | CC, [faucet](https://explorer.testnet.t-rex.zenith.network/faucet) | always                       |
 | Ethereum                 | `1`        | `web()` via proxy | ETH                                                                | `MAINNET_RELAYER_URL` is set |
@@ -28742,6 +28748,8 @@ All server-side variables are read by the proxy only and never reach the browser
 | `POLYGON_RELAYER_API_KEY`              | No                                                         | Same for Polygon mainnet.                                                                                                                                                        |
 | `SEPOLIA_RELAYER_URL`                  | No                                                         | Defaults to the public testnet relayer `https://relayer.testnet.zama.org`, which needs no key.                                                                                   |
 | `SEPOLIA_RELAYER_API_KEY`              | No                                                         | Only for a private Sepolia relayer.                                                                                                                                              |
+| `BNB_TESTNET_RELAYER_URL`              | No                                                         | Same for BNB Testnet.                                                                                                                                                            |
+| `BNB_TESTNET_RELAYER_API_KEY`          | No                                                         | Only for a private BNB Testnet relayer.                                                                                                                                          |
 | `SEPOLIA_CUSTOM_RELAYER_URL`           | Custom                                                     | Relayer of the custom environment. No default: the custom environment is hidden while unset.                                                                                     |
 | `SEPOLIA_CUSTOM_RELAYER_API_KEY`       | No                                                         | Only for a custom-environment relayer that needs a key.                                                                                                                          |
 | `RELAYER_PROXY_ALLOWED_ORIGINS`        | No                                                         | Comma-separated origins allowed to call the proxy. Replaces the default, the app's own origin, so list that too.                                                                 |
@@ -28869,7 +28877,7 @@ export const networks = {
     canMint: true,
     vault: { address, confidentialToken },
   }),
-  "bnb-testnet": defineNetwork({ label: "BNB Testnet · Cleartext", transport: "cleartext", ... }),
+  hoodi: defineNetwork({ label: "Hoodi · Cleartext", transport: "cleartext", ... }),
   mainnet: defineNetwork({ label: "Ethereum", transport: "relayer", canMint: false, ... }),
   // ...
 };
@@ -29773,7 +29781,7 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 ## Installation
 
 ```sh
-go get github.com/zama-ai/sdk/clients/go/v3@v3.9.0-beta.10
+go get github.com/zama-ai/sdk/clients/go/v3@v3.9.0-beta.11
 ```
 
 Run the `ghcr.io/zama-ai/sdk-daemon` image at exactly the same version as the client.
@@ -29802,7 +29810,7 @@ The daemon and its Go and Rust clients are experimental. The wire protocol can c
 ## Installation
 
 ```sh
-cargo add zama_sdk@=3.9.0-beta.10
+cargo add zama_sdk@=3.9.0-beta.11
 ```
 
 Run the `ghcr.io/zama-ai/sdk-daemon` image at exactly the same version as the client. Enable the `alloy` feature for the Alloy signing and transaction adapters.
