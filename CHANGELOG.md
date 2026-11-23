@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.9.0-beta.10](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.9...v3.9.0-beta.10) (2026-11-23)
+
+### Bug Fixes
+
+- route daemon ownership to security team ([#981](https://github.com/zama-ai/sdk/issues/981)) ([d7590db]())
+
 ## [3.9.0-beta.9](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.8...v3.9.0-beta.9) (2026-11-23)
 
 ### Features
