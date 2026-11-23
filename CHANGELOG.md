@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.9.0-beta.10](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.9...v3.9.0-beta.10) (2026-11-23)
+
+### Bug Fixes
+
+- route daemon ownership to security team ([#981](https://github.com/zama-ai/sdk/issues/981)) ([d7590db]())
+
+## [3.9.0-beta.9](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.8...v3.9.0-beta.9) (2026-11-23)
+
+### Features
+
+- **sdk:** verify the FHE public key and CRS against KMSGeneration (beta, @fhevm/sdk 0.13.9) ([#974](https://github.com/zama-ai/sdk/issues/974)) ([011ef7c]()), closes [#943]() [zama-ai/fhevm#5028]() [#943]()
+
 ## [3.9.0-beta.8](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.7...v3.9.0-beta.8) (2026-11-23)
 
 ### Bug Fixes

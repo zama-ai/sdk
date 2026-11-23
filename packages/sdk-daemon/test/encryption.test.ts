@@ -62,7 +62,13 @@ async function harness(scenario: Scenario = "", signerEnabled = false) {
   const contextId = await createContext(server.client, {
     config: {
       chains: [
-        { id: 31337n, relayerUrl: scenarioUrl(scenario), auth: undefined, provider: undefined },
+        {
+          id: 31337n,
+          relayerUrl: scenarioUrl(scenario),
+          auth: undefined,
+          keyVerification: undefined,
+          provider: undefined,
+        },
       ],
       processRuntime: undefined,
       relayers: undefined,

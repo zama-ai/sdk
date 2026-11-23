@@ -82,8 +82,14 @@ vi.mock("@fhevm/sdk/viem/cleartext", () => ({
   createFhevmCleartextEncryptClient: clients.createFhevmCleartextEncryptClient,
 }));
 
-import { anvil } from "../../chains";
+import { anvil as anvilPreset, mainnet, polygon, polygonAmoy, sepolia } from "../../chains";
 import type { FheChain } from "../../chains/types";
+
+/** anvil as a real-FHE chain, which needs a KMSGeneration contract to encrypt. */
+const anvil: FheChain = {
+  ...anvilPreset,
+  keyVerification: { contract: "0x0000000000000000000000000000000000000001" },
+};
 import {
   DEFAULT_ENCRYPT_WORKER_TIMEOUTS,
   type EncryptWorkerTimeouts,
@@ -124,6 +130,7 @@ function workerClientConfig() {
     timeouts: EncryptWorkerTimeouts;
     prefetchKey: () => Promise<unknown>;
     initPayload: { clientOptions: unknown };
+    keyVerification: unknown;
   };
 }
 
@@ -364,6 +371,29 @@ describe("FhevmRelayer encrypt offload wiring", () => {
 
     const params = (worker.instance.encryptValues.mock.calls[0] as unknown as unknown[])[0];
     expect(() => structuredClone(params)).not.toThrow();
+  });
+
+  test("hands the worker client the key-verification chain's network instead of a client", () => {
+    const { config } = offloaded(polygon);
+
+    expect(config.initPayload.clientOptions).not.toHaveProperty("keyVerification");
+    expect(config.keyVerification).toMatchObject({
+      chain: { id: mainnet.id },
+      network: mainnet.network,
+    });
+    expect(() => structuredClone(config.initPayload)).not.toThrow();
+  });
+
+  test("'auto' inlines when the key-verification chain's network is a provider", () => {
+    makeRelayer({
+      chain: {
+        ...polygon,
+        keyVerification: { chain: { ...mainnet, network: { request: vi.fn() } as never } },
+      },
+      offloadEncrypt: "auto",
+    });
+
+    expect(worker.EncryptWorkerClient).not.toHaveBeenCalled();
   });
 });
 
@@ -658,6 +688,88 @@ describe("FhevmRelayer request options", () => {
       expect(factory).toHaveBeenCalledWith(
         expect.objectContaining({
           options: { batchRpcCalls: true, moduleVersions: undefined, fheEncryptionKey: undefined },
+        }),
+      );
+    }
+  });
+
+  const { keyVerification: _keyVerification, ...mainnetWithout } = mainnet;
+
+  test.each<[string, FheChain]>([
+    ["a real-FHE chain with no KMSGeneration contract", anvilPreset],
+    [
+      "a keyVerification chain without its own KMSGeneration contract",
+      { ...anvilPreset, keyVerification: { chain: mainnetWithout as never } },
+    ],
+  ])("rejects %s at construction", (_, chain) => {
+    expect(() => makeRelayer({ chain })).toThrow(
+      expect.objectContaining({
+        name: "ConfigurationError",
+        message: expect.stringMatching(/keyVerification/),
+      }),
+    );
+    expect(clients.createFhevmBaseClient).not.toHaveBeenCalled();
+  });
+
+  test("accepts a cleartext chain with no KMSGeneration contract", () => {
+    makeRelayer({ chain: anvilPreset, cleartext: true });
+    expect(clients.createFhevmCleartextEncryptClient).toHaveBeenCalled();
+  });
+
+  test("passes a chain's own KMSGeneration contract to the encrypt client", () => {
+    const own = "0x00000000000000000000000000000000000000Aa" as const;
+    makeRelayer({ chain: { ...sepolia, keyVerification: { contract: own } } });
+
+    expect(clients.createFhevmEncryptClient).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chain: expect.objectContaining({
+          fhevm: expect.objectContaining({
+            contracts: expect.objectContaining({ kmsGeneration: { address: own } }),
+          }),
+        }),
+      }),
+    );
+  });
+
+  test("a contract set on a chain spread from polygonAmoy replaces its verifying chain", () => {
+    const own = "0x00000000000000000000000000000000000000Aa" as const;
+    makeRelayer({ chain: { ...polygonAmoy, keyVerification: { contract: own } } });
+
+    expect(clients.createFhevmEncryptClient).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chain: expect.objectContaining({
+          fhevm: expect.objectContaining({
+            contracts: expect.objectContaining({ kmsGeneration: { address: own } }),
+          }),
+        }),
+        options: expect.objectContaining({ keyVerification: undefined }),
+      }),
+    );
+  });
+
+  test("forwards key verification against the Ethereum KMSGeneration to every factory", () => {
+    makeRelayer({ chain: polygon });
+
+    for (const factory of [
+      clients.createFhevmBaseClient,
+      clients.createFhevmDecryptClient,
+      clients.createFhevmEncryptClient,
+    ]) {
+      expect(factory).toHaveBeenCalledWith(
+        expect.objectContaining({
+          options: expect.objectContaining({
+            keyVerification: {
+              chain: expect.objectContaining({
+                id: mainnet.id,
+                fhevm: expect.objectContaining({
+                  contracts: expect.objectContaining({
+                    kmsGeneration: { address: mainnet.keyVerification.contract },
+                  }),
+                }),
+              }),
+              client: expect.anything(),
+            },
+          }),
         }),
       );
     }

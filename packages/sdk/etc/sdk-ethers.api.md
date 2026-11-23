@@ -198,6 +198,8 @@ export interface FheChain<TId extends number = number> {
     readonly gatewayChainId: number;
     readonly id: TId;
     readonly inputVerifierContractAddress: Address;
+    // Warning: (ae-forgotten-export) The symbol "FheKeyVerification" needs to be exported by the entry point index.d.ts
+    readonly keyVerification?: FheKeyVerification | undefined;
     readonly kmsContractAddress: Address;
     readonly network: EIP1193Provider | string;
     readonly registryAddress: Address | undefined;

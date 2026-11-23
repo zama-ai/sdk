@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { chains, mainnet } from "../configs";
+import { assertKeyVerification, keyVerificationChain } from "../key-verification";
+import { toFhevmChain } from "../to-fhevm-chain";
 
 describe("chain presets", () => {
   test.each(Object.values(chains).map((chain) => [chain.id, chain] as const))(
@@ -20,6 +22,16 @@ describe("chain presets", () => {
         "0x0000000000000000000000000000000000000001";
     }).toThrow(TypeError);
     expect(mainnet.registryAddress).toBe(original);
+  });
+
+  test.each(
+    Object.values(chains)
+      .filter((chain) => chain.relayerUrl !== "")
+      .map((chain) => [chain.id, chain] as const),
+  )("FHE preset %i names a KMSGeneration contract to verify keys against", (_id, chain) => {
+    expect(() => assertKeyVerification(chain)).not.toThrow();
+    const verifier = keyVerificationChain(chain) ?? chain;
+    expect(toFhevmChain(verifier).fhevm.contracts.kmsGeneration?.address).toMatch(/^0x/);
   });
 
   test("spreading a preset still allows overrides", () => {

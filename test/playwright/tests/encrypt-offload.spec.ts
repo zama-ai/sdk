@@ -1,4 +1,5 @@
 import { expect, test as base, type Page } from "@playwright/test";
+import { decodeFunctionData, encodeFunctionResult, parseAbi, type Hex } from "viem";
 import { NEXTJS_ANVIL_PORT } from "../fixtures/constants";
 import {
   MAX_MAIN_THREAD_GAP_MS,
@@ -11,8 +12,9 @@ import {
  * Bundler-resolution coverage for the encrypt worker: the app under test is the
  * real Vite/Next build of the real SDK artifact, so a worker chunk the bundler
  * failed to emit, serve or evaluate shows up here as "no worker". No relayer
- * and no valid FHE key are involved: the key fetch is faked just far enough to
- * reach the spawn, which happens before anything validates the key material.
+ * and no valid FHE key are involved: the key fetch and the `KMSGeneration` reads
+ * it is checked against are faked just far enough to reach the spawn, which
+ * happens before anything deserializes the key material.
  */
 const test = base.extend<Record<string, never>, { anvilPort: number }>({
   anvilPort: [NEXTJS_ANVIL_PORT, { option: true, scope: "worker" }],
@@ -35,8 +37,63 @@ const FAKE_WORKER_BUSY_MS = 2000;
 /** Window flag the vite app raises when the fake worker starts blocking. */
 const FAKE_WORKER_BUSY_FLAG = "__fakeEncryptWorkerBusy";
 
-/** Serves the relayer key endpoints the client hits before spawning the worker. */
+/** Stub key and CRS bytes, and their `KMSGeneration` digests: SHAKE256("PDAT_KEY" ‖ key), SHAKE256("PDAT_CRS" ‖ CRS). */
+const STUB_KEY = "not-a-key";
+const STUB_CRS = "not-a-crs";
+const STUB_KEY_DIGEST = "0xad9fecb59ef6e338c8e2ac318d54bb39fe59a7e3f9530e02ddacd896c18f51cd";
+const STUB_CRS_DIGEST = "0x058f85c3b590032e2067bd5596028b2e0e474c075d5912d4e41114e00818f0af";
+
+const kmsGenerationAbi = parseAbi([
+  "function getVersion() view returns (string)",
+  "function getActiveKeyId() view returns (uint256)",
+  "function getActiveCrsId() view returns (uint256)",
+  "function getKeyMaterials(uint256) view returns (string[], (uint8 keyType, bytes digest)[])",
+  "function getCrsMaterials(uint256) view returns (string[], bytes)",
+]);
+
+function kmsGenerationRpc({
+  id,
+  method,
+  params,
+}: {
+  id: number;
+  method: string;
+  params: unknown[];
+}) {
+  if (method === "eth_chainId") {
+    return { jsonrpc: "2.0", id, result: "0x1" };
+  }
+  if (method !== "eth_call") {
+    return { jsonrpc: "2.0", id, error: { code: -32601, message: `unsupported: ${method}` } };
+  }
+  const { data } = params[0] as { data: Hex };
+  const { functionName } = decodeFunctionData({ abi: kmsGenerationAbi, data });
+  const values = {
+    getVersion: ["KMSGeneration v0.1.0"],
+    getActiveKeyId: [1n],
+    getActiveCrsId: [1n],
+    getKeyMaterials: [[], [{ keyType: 1, digest: STUB_KEY_DIGEST }]],
+    getCrsMaterials: [[], STUB_CRS_DIGEST],
+  }[functionName];
+  const result = encodeFunctionResult({
+    abi: kmsGenerationAbi,
+    functionName,
+    result: values,
+  } as never);
+  return { jsonrpc: "2.0", id, result };
+}
+
+/** Serves the relayer key endpoints and `KMSGeneration` reads the client hits before spawning the worker. */
 async function routeFakeRelayer(page: Page, baseURL: string) {
+  await page.route("**/fake-relayer/kms-rpc", (route) => {
+    const body = route.request().postDataJSON();
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify(
+        Array.isArray(body) ? body.map(kmsGenerationRpc) : kmsGenerationRpc(body),
+      ),
+    });
+  });
   await page.route("**/fake-relayer/v2/keyurl", (route) =>
     route.fulfill({
       contentType: "application/json",
@@ -48,12 +105,11 @@ async function routeFakeRelayer(page: Page, baseURL: string) {
       }),
     }),
   );
-  // Key bytes are never deserialized before the spawn, so any payload will do.
   await page.route("**/fake-relayer/pk", (route) =>
-    route.fulfill({ contentType: "application/octet-stream", body: "not-a-key" }),
+    route.fulfill({ contentType: "application/octet-stream", body: STUB_KEY }),
   );
   await page.route("**/fake-relayer/crs", (route) =>
-    route.fulfill({ contentType: "application/octet-stream", body: "not-a-crs" }),
+    route.fulfill({ contentType: "application/octet-stream", body: STUB_CRS }),
   );
 }
 
