@@ -128,6 +128,7 @@ export const bscTestnet = Object.freeze({
   verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
   verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
   registryAddress: "0x84c5B9669b1BA109D31096c64AFEF1473Ac4Db43",
+  keyVerification: { chain: sepolia },
 } as const satisfies FheChain);
 
 /**
