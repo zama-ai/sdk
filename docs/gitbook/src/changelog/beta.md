@@ -11,6 +11,8 @@ description: Unreleased changes on the prerelease (beta) line — not yet in a s
 
 ### Unshield
 
+**Unshield hooks refresh balances when a finalize loses the race.** Any account can call `finalizeUnwrap`. When another tab or a third party finalizes first, `useUnshield` and `useUnshieldAll` now refresh the balance queries on `UnshieldAlreadyFinalizedError`, as `useResumeUnshield` already did. Treat the error as completion. See [Unshield tokens](../guides/unshield-tokens.md#4-handle-interrupted-unshields).
+
 **Interrupted unshields stay recoverable.** The SDK now saves the unwrap transaction hash as soon as the wallet returns it, instead of after the receipt, and keeps one entry per unshield, so a second unshield on the same token no longer overwrites the first. `getPendingUnshield()` / `usePendingUnshield` return the oldest pending one; after resuming it, the next one is returned. An entry whose unwrap reverted, or was replaced or cancelled in the wallet, is cleared instead of being reported, and an unwrap that is not mined yet no longer stalls `getPendingUnshield()`. `resumeUnshield()` no longer waits for such an unwrap: it throws the new `UnwrapNotMinedError` (`UNWRAP_NOT_MINED`) at once and keeps the entry. Entries move to a new storage key, so an older SDK still open in another tab cannot delete them. See [Unshield tokens](../guides/unshield-tokens.md#4-handle-interrupted-unshields).
 
 **`GenericProvider.getTransactionReceipt`.** An optional method that returns a mined receipt, or `null`, without waiting. `ViemProvider`, `EthersProvider` and `WagmiProvider` implement it. See [GenericProvider](../reference/sdk/GenericProvider.md#gettransactionreceipt).

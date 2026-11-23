@@ -365,6 +365,7 @@ export class WrappedToken extends Token {
    * @param amount - The plaintext amount to unshield.
    * @param options - Optional: `skipBalanceCheck` (default `false`), callbacks.
    * @returns The finalize transaction hash and mined receipt.
+   * @throws if a concurrent finalize won the race; the funds arrived. {@link UnshieldAlreadyFinalizedError}
    *
    * @example
    * ```ts
@@ -410,6 +411,7 @@ export class WrappedToken extends Token {
    * @param callbacks - Optional progress callbacks for each phase.
    * @returns The finalize transaction hash and mined receipt.
    * @throws if the balance is zero. {@link DecryptionFailedError}
+   * @throws if a concurrent finalize won the race; the funds arrived. {@link UnshieldAlreadyFinalizedError}
    *
    * @example
    * ```ts

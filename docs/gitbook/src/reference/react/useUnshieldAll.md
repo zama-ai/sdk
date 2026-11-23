@@ -121,11 +121,15 @@ await unshieldAll({
 });
 ```
 
+**Throws:**
+
+- [`UnshieldAlreadyFinalizedError`](../sdk/errors.md#unshieldalreadyfinalizederror) -- a concurrent finalize won the race. The funds already arrived and the hook refreshes the balance queries, so treat it as completion
+
 ## Return Type
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.
 
-Auto-invalidates the `confidentialBalance` cache on success.
+Auto-invalidates the `confidentialBalance` cache on success, and on `UnshieldAlreadyFinalizedError`.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

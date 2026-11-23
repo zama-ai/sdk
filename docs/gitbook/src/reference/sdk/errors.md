@@ -127,7 +127,7 @@ Exactly seven error classes are retryable today: `RpcRateLimitError`, `RelayerRe
 | `TransactionRevertedError`                | `TRANSACTION_REVERTED`                   | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
 | `HcuBlockLimitExceededError`              | `HCU_BLOCK_LIMIT_EXCEEDED`               | Gas estimation found too little FHE compute (HCU) left in the block; retry in the next block (retryable)                          |
 | `HcuTransactionLimitExceededError`        | `HCU_TRANSACTION_LIMIT_EXCEEDED`         | The transaction needs more FHE compute (HCU), in total or in one sequential chain, than one transaction may use                   |
-| `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
+| `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | A concurrent finalize won the race: funds delivered, nothing left to finalize                                                     |
 | `UnwrapNotMinedError`                     | `UNWRAP_NOT_MINED`                       | The unwrap behind a resumed unshield is not mined yet; its entry is kept (retryable)                                              |
 | `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | Every batcher of the chosen vault is paused or closed, so the join would revert                                                   |
 | `VaultBatcherReadFailedError`             | `VAULT_BATCHER_READ_FAILED`              | A batcher of a vault could not be read, so the SDK cannot tell which batch a join reaches                                         |
@@ -292,7 +292,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Inspect the revert reason. Common causes: insufficient balance or an expired operator approval. Finalizing an already-finalized unwrap through `resumeUnshield()` or `unshield()` throws the more specific `UnshieldAlreadyFinalizedError` instead, and a revert from the protocol's FHE compute limits throws `HcuBlockLimitExceededError` or `HcuTransactionLimitExceededError`.
+**How to handle:** Inspect the revert reason. Common causes: insufficient balance or an expired operator approval. Finalizing an already-finalized unwrap through `unshield()`, `unshieldAll()` or `resumeUnshield()` throws the more specific `UnshieldAlreadyFinalizedError` instead, and a revert from the protocol's FHE compute limits throws `HcuBlockLimitExceededError` or `HcuTransactionLimitExceededError`.
 
 ### HcuBlockLimitExceededError
 
@@ -331,11 +331,11 @@ Thrown by `resumeUnshield()` when the unwrap request no longer exists on-chain: 
 
 ```ts
 matchZamaError(error, {
-  UNSHIELD_ALREADY_FINALIZED: () => dismissResumePrompt(), // the funds already arrived
+  UNSHIELD_ALREADY_FINALIZED: () => markUnshieldComplete(), // the funds already arrived
 });
 ```
 
-**How to handle:** Treat it as completion, not a failure: dismiss the "resume unshield" prompt and refresh balances. `useUnshield`, `useUnshieldAll` and `useResumeUnshield` invalidate the affected queries automatically. Do not retry; nothing is left to finalize.
+**How to handle:** Treat it as completion, not a failure: show the unshield as complete (or dismiss the resume prompt) and refresh balances. `useUnshield`, `useUnshieldAll` and `useResumeUnshield` invalidate the affected queries automatically. Do not retry; nothing is left to finalize.
 
 ### UnwrapNotMinedError
 
