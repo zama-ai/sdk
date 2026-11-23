@@ -14,7 +14,7 @@ import { useVaultClient } from "./use-vault-client";
 /**
  * The batch a join into each vault reaches now, with when it can be dispatched.
  *
- * @returns `data` holds one open batch per vault, in group order.
+ * @returns `data` holds the open batch of each vault that is not closed, in group order.
  */
 export function useOpenBatches(
   target: Vault | VaultGroup,

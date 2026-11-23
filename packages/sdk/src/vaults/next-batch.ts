@@ -1,9 +1,5 @@
 import type { Address } from "viem";
-import {
-  ConfigurationError,
-  VaultBatcherPausedError,
-  VaultBatcherReadFailedError,
-} from "../errors";
+import { ConfigurationError, VaultBatcherReadFailedError } from "../errors";
 import type { GenericProvider } from "../types";
 import { isContractCallError } from "../utils/error";
 import { batchersOf, type BatcherEntry, type Vault } from "./config";
@@ -76,10 +72,10 @@ export function pickNextBatch(
 
 /**
  * The batch a join into each vault reaches, in vault order, and the chain time it was picked at.
+ * A vault whose batchers are all closed reads as closed, naming its first batcher.
  *
  * @internal
  * @throws if a vault lists no batcher, or an address or `lastBatchId` is invalid. {@link ConfigurationError}
- * @throws if every batcher of a vault is closed. {@link VaultBatcherPausedError}
  * @throws if a batcher cannot be read. {@link VaultBatcherReadFailedError}
  */
 export async function readNextBatches(
@@ -89,7 +85,7 @@ export async function readNextBatches(
   direction: JoinDirection,
 ): Promise<{
   readonly now: bigint;
-  readonly next: readonly { readonly vault: Vault; readonly offer: OpenOffer | PausedOffer }[];
+  readonly next: readonly { readonly vault: Vault; readonly offer: BatcherOffer }[];
 }> {
   const [now, read] = await Promise.all([
     provider.getBlockTimestamp(chainId),
@@ -103,16 +99,10 @@ export async function readNextBatches(
       }),
     ),
   ]);
-  const next = read.map(({ vault, entries, offers }) => {
-    const offer = pickNextBatch(offers, now);
-    if (offer === undefined) {
-      throw new VaultBatcherPausedError(
-        `Every ${direction} batcher of vault "${vault.id}" is closed, so the vault takes no joins`,
-        { batcher: entries[0].address, vaultId: vault.id },
-      );
-    }
-    return { vault, offer };
-  });
+  const next = read.map(({ vault, entries, offers }) => ({
+    vault,
+    offer: pickNextBatch(offers, now) ?? { status: "closed" as const, batcher: entries[0].address },
+  }));
   return { now, next };
 }
 
