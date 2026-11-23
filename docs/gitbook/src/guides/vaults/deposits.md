@@ -109,7 +109,7 @@ Before sending, the SDK checks the confidential balance. A confidential transfer
 
 ### 4. Store the batches
 
-`batches` holds the batch every leg landed in, the zero legs included, as `{ vaultId, chainId, batcher, batchId }`. **Without them, your app cannot read, claim or quit the deposit.** Store them where the user finds them again after a reload or on another device. Store the chosen vault as the [privacy rules](README.md#a-group-hides-which-vault-you-chose) say.
+`batches` holds the batch every leg landed in, the zero legs included, as `{ vaultId, chainId, batcher, batchId }`. A vault left out of the join has no batch. **Without them, your app cannot read, claim or quit the deposit.** Store them where the user finds them again after a reload or on another device. Store the chosen vault as the [privacy rules](README.md#a-group-hides-which-vault-you-chose) say.
 
 `batchId` is a `bigint`, which `JSON.stringify` cannot serialize. Convert it to a string and back:
 
@@ -225,7 +225,7 @@ See [Wallet prompts](advanced.md#wallet-prompts) for how many prompts a group re
 
 ## Show the open batches
 
-`readOpenBatches` reads the batch the next join lands in, for every vault of a group. Use it on a form to show when that batch can be dispatched, or that a vault is [paused](advanced.md#paused-batchers):
+`readOpenBatches` reads the batch the next join lands in, for every vault of a group, without a member whose batchers are all closed. Use it on a form to show when that batch can be dispatched, or that a vault is [paused](advanced.md#paused-batchers):
 
 {% tabs %}
 {% tab title="Core SDK" %}

@@ -395,11 +395,15 @@ describe("prepareDeposit", () => {
   });
 
   test.for([
-    ["paused", { paused: [BETA.depositBatcher] }],
-    ["closed", { batches: { [BETA.depositBatcher]: { createdAt: 0n, closed: true } } }],
+    ["paused", { paused: [BETA.depositBatcher] }, "cannot be joined until one resumes"],
+    [
+      "closed",
+      { batches: { [BETA.depositBatcher]: { createdAt: 0n, closed: true } } },
+      "is closed, so the vault takes no joins",
+    ],
   ] as const)(
     "refuses when the chosen vault's batchers are all %s, without the balance check",
-    async ([, chain], { sdk, provider, relayer }) => {
+    async ([, chain, message], { sdk, provider, relayer }) => {
       mockChain(provider, chain);
       mockEncryption(relayer);
       const joining = createVaultClient(sdk).prepareDeposit(STABLE, {
@@ -412,6 +416,7 @@ describe("prepareDeposit", () => {
         batcher: BETA.depositBatcher,
         vaultId: "beta",
       });
+      await expect(joining).rejects.toThrow(message);
       expect(Token.batchBalancesOf).not.toHaveBeenCalled();
     },
   );
@@ -596,22 +601,24 @@ describe("proof binding", () => {
 });
 
 describe("prepareRedeem", () => {
-  test("leaves out a member whose redeem batchers are all paused, and asks no approval for it", async ({
-    sdk,
-    provider,
-    relayer,
-  }) => {
-    mockChain(provider, { operators: false, paused: [ALPHA.redeemBatcher] });
-    mockEncryption(relayer);
-    const prepared = await createVaultClient(sdk).prepareRedeem(STABLE, {
-      vaultId: "beta",
-      account: USER,
-      amount: 10n,
-    });
-    expect(prepared.legs.map((leg) => leg.vaultId)).toStrictEqual(["beta"]);
-    expect(kinds(prepared.calls)).toStrictEqual(["operatorApproval", "join"]);
-    expect(prepared.calls[0]).toMatchObject({ to: BETA.share, vaultId: "beta" });
-  });
+  test.for([
+    ["paused", { paused: [ALPHA.redeemBatcher] }],
+    ["closed", { batches: { [ALPHA.redeemBatcher]: { createdAt: 0n, closed: true } } }],
+  ] as const)(
+    "leaves out a member whose redeem batchers are all %s, and asks no approval for it",
+    async ([, chain], { sdk, provider, relayer }) => {
+      mockChain(provider, { operators: false, ...chain });
+      mockEncryption(relayer);
+      const prepared = await createVaultClient(sdk).prepareRedeem(STABLE, {
+        vaultId: "beta",
+        account: USER,
+        amount: 10n,
+      });
+      expect(prepared.legs.map((leg) => leg.vaultId)).toStrictEqual(["beta"]);
+      expect(kinds(prepared.calls)).toStrictEqual(["operatorApproval", "join"]);
+      expect(prepared.calls[0]).toMatchObject({ to: BETA.share, vaultId: "beta" });
+    },
+  );
 
   test("approves the router as operator on every share token it lacks, for a year, then joins", async ({
     sdk,
@@ -1120,6 +1127,22 @@ describe("readOpenBatches", () => {
       { vaultId: "beta", paused: false },
     ]);
   });
+
+  test("refuses a group whose members are all closed", async ({ sdk, provider }) => {
+    mockChain(provider, {
+      batches: {
+        [ALPHA.depositBatcher]: { createdAt: 0n, closed: true },
+        [BETA.depositBatcher]: { createdAt: 0n, closed: true },
+      },
+    });
+    const reading = createVaultClient(sdk).readOpenBatches(STABLE, "deposit");
+    await expect(reading).rejects.toMatchObject({
+      name: "VaultBatcherPausedError",
+      batcher: ALPHA.depositBatcher,
+      vaultId: "alpha",
+    });
+    await expect(reading).rejects.toThrow(/every vault in group "stable" is closed/);
+  });
 });
 
 describe("a vault on its own", () => {
@@ -1209,6 +1232,26 @@ describe("deposit and redeem", () => {
     });
     expect(signer.writeContract).toHaveBeenCalledTimes(1);
   });
+
+  test.for(["deposit", "redeem"] as const)(
+    "%s returns no batch for a member left out of the join",
+    async (direction, { sdk, provider, relayer }) => {
+      const [alpha, beta] =
+        direction === "deposit"
+          ? [ALPHA.depositBatcher, BETA.depositBatcher]
+          : [ALPHA.redeemBatcher, BETA.redeemBatcher];
+      mockChain(provider, { paused: [alpha] });
+      mockEncryption(relayer);
+      mockReceipt(provider, [beta]);
+      const { batches } = await createVaultClient(sdk)[direction](STABLE, {
+        vaultId: "beta",
+        amount: 10n,
+      });
+      expect(batches).toStrictEqual([
+        { vaultId: "beta", chainId: CHAIN_ID, batcher: beta, batchId: 3n },
+      ]);
+    },
+  );
 
   test("throws when the receipt does not confirm every leg", async ({ sdk, provider, relayer }) => {
     mockChain(provider);

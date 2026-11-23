@@ -304,7 +304,7 @@ const open = await vaults.readOpenBatches(STABLE, "deposit");
 **Throws:**
 
 - [`ConfigurationError`](errors.md#configurationerror) when a vault lists no batcher, or a batcher address or `lastBatchId` is invalid.
-- [`VaultBatcherPausedError`](errors.md#vaultbatcherpausederror) when every batcher of a vault is closed.
+- [`VaultBatcherPausedError`](errors.md#vaultbatcherpausederror) when every batcher of a vault on its own, or of every vault of a group, is closed.
 - [`VaultBatcherReadFailedError`](errors.md#vaultbatcherreadfailederror) when a batcher of a vault cannot be read.
 
 ## Types
@@ -353,10 +353,10 @@ A `Call` (`{ to, data, value: 0n }`) tagged with its `kind`:
 
 ### JoinOutcome
 
-| Field      | Type                                 | Description                                   |
-| ---------- | ------------------------------------ | --------------------------------------------- |
-| `batches`  | `(BatchRef & { vaultId: string })[]` | The batch each leg landed in, in group order. |
-| `txHashes` | `Hex[]`                              | Every transaction sent, approvals first.      |
+| Field      | Type                                 | Description                                                                                      |
+| ---------- | ------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| `batches`  | `(BatchRef & { vaultId: string })[]` | The batch each leg landed in, in group order. A vault left out has no entry: match by `vaultId`. |
+| `txHashes` | `Hex[]`                              | Every transaction sent, approvals first.                                                         |
 
 ### BatchRef
 

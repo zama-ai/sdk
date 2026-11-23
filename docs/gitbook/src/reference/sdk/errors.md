@@ -349,7 +349,7 @@ Thrown by `resumeUnshield()` when the unwrap has no receipt: it is still pending
 
 **Code:** `VAULT_BATCHER_PAUSED`
 
-Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()` and `prepareRedeem()` when no batcher of the chosen vault is open (each one is paused or closed), before anything is sent. A group member in that state is left out of the join instead. `readOpenBatches()` also throws it when every batcher of a vault is closed. The error carries one paused or closed `batcher` of that vault and the `vaultId`.
+Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()` and `prepareRedeem()` when no batcher of the chosen vault is open (each one is paused or closed), before anything is sent. A group member in that state is left out of the join instead. `readOpenBatches()` also throws it when every batcher of a vault on its own, or of every vault of a group, is closed. The error carries one paused or closed `batcher` of that vault and the `vaultId`.
 
 **How to handle:** Not retryable until a batcher of the vault is unpaused. A closed batcher never reopens, so a vault whose batchers are all closed takes no joins until you list a new batcher for it. Claims and quits still work. Show which vault takes no joins. See [Paused batchers](../../guides/vaults/advanced.md#paused-batchers).
 

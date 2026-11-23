@@ -75,7 +75,7 @@ The hook refetches one second after a batch comes within a minute of its due tim
 import { type OpenBatch } from "@zama-fhe/sdk/vaults";
 ```
 
-The `data` property is an [`OpenBatch`](../sdk/VaultClient.md#openbatch) array, one per vault in group order, or `undefined` while loading.
+The `data` property is an [`OpenBatch`](../sdk/VaultClient.md#openbatch) array in group order, without a member whose batchers are all closed, or `undefined` while loading. Match entries by `vaultId`.
 
 {% include ".gitbook/includes/query-result.md" %}
 
