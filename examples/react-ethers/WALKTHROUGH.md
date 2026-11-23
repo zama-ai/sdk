@@ -172,7 +172,7 @@ Unshield is a 2-phase on-chain operation:
 - **Phase 1**: Submit the unwrap transaction. `onFinalizing` fires when Phase 1 is mined and Phase 2 is about to start.
 - **Phase 2**: Finalization transaction.
 
-The SDK persists the pending state automatically after Phase 1 is mined, so it survives a tab close between Phase 1 completion and Phase 2 completion. See §"Pending unshield" below.
+The SDK saves the pending state automatically, so it survives a tab close between the two phases (see [Handle interrupted unshields](../../docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields)). See §"Pending unshield" below.
 
 ---
 

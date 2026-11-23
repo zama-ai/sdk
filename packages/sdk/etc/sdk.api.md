@@ -8169,8 +8169,10 @@ export interface ErrorForCode {
     [ZamaErrorCode.UnifiedDecryptionUnsupported]: UnifiedDecryptionUnsupportedError;
     [ZamaErrorCode.UnifiedPermitNotSupported]: UnifiedPermitNotSupportedError;
     [ZamaErrorCode.UnshieldAlreadyFinalized]: UnshieldAlreadyFinalizedError;
+    [ZamaErrorCode.UnwrapNotMined]: UnwrapNotMinedError;
     [ZamaErrorCode.VaultBatchNotDispatched]: VaultBatchNotDispatchedError;
     [ZamaErrorCode.VaultBatcherPaused]: VaultBatcherPausedError;
+    [ZamaErrorCode.VaultBatcherReadFailed]: VaultBatcherReadFailedError;
     [ZamaErrorCode.VaultJoinUnconfirmed]: VaultJoinUnconfirmedError;
     [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
     [ZamaErrorCode.WalletNotConnected]: WalletNotConnectedError;
@@ -9411,6 +9413,7 @@ export interface GenericLogger {
 export interface GenericProvider {
     getBlockTimestamp(chainId?: number): Promise<bigint>;
     getChainId(): Promise<number>;
+    getTransactionReceipt?(hash: Hex): Promise<TransactionReceipt | null>;
     multicall?<const TCalls extends readonly ReadContractConfig[]>(params: {
         readonly calls: TCalls;
         readonly chainId?: number;
@@ -22157,6 +22160,12 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
 };
 
 // @public
+export class UnwrapNotMinedError extends ZamaError {
+    constructor(message: string, unwrapTxHash: Hex, options?: ErrorOptions);
+    readonly unwrapTxHash: Hex;
+}
+
+// @public
 export interface UnwrapRequest {
     amount: bigint;
     from: Address;
@@ -23329,6 +23338,21 @@ export interface VaultBatcherPausedDetails {
 // @public
 export class VaultBatcherPausedError extends ZamaError {
     constructor(message: string, details: VaultBatcherPausedDetails, options?: ErrorOptions);
+    readonly batcher: Address;
+    readonly vaultId: string;
+}
+
+// @public
+export interface VaultBatcherReadFailedDetails {
+    readonly batcher: Address;
+    readonly vaultId: string;
+}
+
+// @public
+export class VaultBatcherReadFailedError extends ZamaError {
+    constructor(message: string, details: VaultBatcherReadFailedDetails, options?: ErrorOptions & {
+        retryable?: boolean;
+    });
     readonly batcher: Address;
     readonly vaultId: string;
 }
@@ -24768,7 +24792,9 @@ export const ZamaErrorCode: {
     readonly InvalidationTimestampTooLow: "INVALIDATION_TIMESTAMP_TOO_LOW";
     readonly InvalidationTimestampInFuture: "INVALIDATION_TIMESTAMP_IN_FUTURE";
     readonly UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED";
+    readonly UnwrapNotMined: "UNWRAP_NOT_MINED";
     readonly VaultBatcherPaused: "VAULT_BATCHER_PAUSED";
+    readonly VaultBatcherReadFailed: "VAULT_BATCHER_READ_FAILED";
     readonly VaultBatchNotDispatched: "VAULT_BATCH_NOT_DISPATCHED";
     readonly VaultJoinUnconfirmed: "VAULT_JOIN_UNCONFIRMED";
 };

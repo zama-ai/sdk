@@ -22,7 +22,9 @@ import {
   HcuBlockLimitExceededError,
   HcuTransactionLimitExceededError,
   UnshieldAlreadyFinalizedError,
+  UnwrapNotMinedError,
   VaultBatcherPausedError,
+  VaultBatcherReadFailedError,
   VaultBatchNotDispatchedError,
   VaultJoinUnconfirmedError,
   InvalidTransportKeyPairError,
@@ -90,7 +92,7 @@ The `_` wildcard catches any `ZamaError` not explicitly handled. Each handler re
 
 ## Retryability
 
-Every `ZamaError` declares whether it's safe to retry via a `readonly retryable: boolean` field — usually determined by its error code, though `RelayerRequestFailedError` sets it per-instance based on the HTTP status instead. Use `isRetryable()` and `retryAfterSeconds()` instead of hardcoding a set of retryable codes yourself — they stay correct as the error taxonomy grows.
+Every `ZamaError` declares whether it's safe to retry via a `readonly retryable: boolean` field. It usually follows the error code, though `RelayerRequestFailedError` sets it per instance from the HTTP status, and `VaultBatcherReadFailedError` from its cause. Use `isRetryable()` and `retryAfterSeconds()` instead of hardcoding a set of retryable codes yourself: they stay correct as the error taxonomy grows.
 
 ```ts
 import { isRetryable, retryAfterSeconds } from "@zama-fhe/sdk";
@@ -111,7 +113,7 @@ try {
 | `isRetryable`       | `(error: unknown) => error is ZamaError & { retryable: true }` | `true` only for a `ZamaError` instance whose `.retryable` is `true`; `false` for anything else, including non-SDK errors.                                                                                                                            |
 | `retryAfterSeconds` | `(error: unknown) => number \| undefined`                      | Reads the error's own `retryAfter` field when the error is retryable and carries one. Only `RelayerRequestFailedError` and `RpcRateLimitError` currently carry `retryAfter` — treat `undefined` as "retry with your own backoff," not "don't retry." |
 
-Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequestFailedError` (only on an HTTP 429 or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, `WalletAccountNotReadyError`, and `HcuBlockLimitExceededError`. See [Retry transient failures](../../guides/handle-errors.md#8-retry-transient-failures) for the full guide, including React Query integration.
+Exactly seven error classes are retryable today: `RpcRateLimitError`, `RelayerRequestFailedError` (only on an HTTP 429 or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, `WalletAccountNotReadyError`, `HcuBlockLimitExceededError`, and `UnwrapNotMinedError`. `VaultBatcherReadFailedError` is retryable for some instances: see [VaultBatcherReadFailedError](#vaultbatcherreadfailederror). See [Retry transient failures](../../guides/handle-errors.md#8-retry-transient-failures) for the full guide, including React Query integration.
 
 ## Error summary
 
@@ -128,7 +130,9 @@ Exactly six error classes are retryable today: `RpcRateLimitError`, `RelayerRequ
 | `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
 | `InvalidationTimestampTooLowError`        | `INVALIDATION_TIMESTAMP_TOO_LOW`         | Invalidation cutoff was not strictly later than the account's current one                                                         |
 | `InvalidationTimestampInFutureError`      | `INVALIDATION_TIMESTAMP_IN_FUTURE`       | Invalidation cutoff was in the future                                                                                             |
-| `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | A batcher one leg of a vault join would reach is paused, so the whole join would revert                                           |
+| `UnwrapNotMinedError`                     | `UNWRAP_NOT_MINED`                       | The unwrap behind a resumed unshield is not mined yet; its entry is kept (retryable)                                              |
+| `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | Every batcher of a vault in the join is paused or closed, so the whole join would revert                                          |
+| `VaultBatcherReadFailedError`             | `VAULT_BATCHER_READ_FAILED`              | A batcher of a vault could not be read, so the SDK cannot tell which batch a join reaches                                         |
 | `VaultBatchNotDispatchedError`            | `VAULT_BATCH_NOT_DISPATCHED`             | A vault batch cannot be finalized because it is not dispatched: it is still pending, or it was already finalized or canceled      |
 | `VaultJoinUnconfirmedError`               | `VAULT_JOIN_UNCONFIRMED`                 | A vault join was mined, but its receipt has no matching `Joined` event for at least one leg                                       |
 | `InvalidTransportKeyPairError`            | `INVALID_KEYPAIR`                        | Relayer rejected transport key pair (stale or malformed)                                                                          |
@@ -355,7 +359,7 @@ matchZamaError(error, {
 
 **Code:** `UNSHIELD_ALREADY_FINALIZED`
 
-Thrown by `resumeUnshield()` when the unwrap request no longer exists on-chain: it was already finalized, so the underlying ERC-20 tokens were delivered. `unshield()` and `unshieldAll()` throw it too when a concurrent finalize wins the race. The SDK clears the persisted pending-unshield state before throwing, so `getPendingUnshield()` returns `null` afterwards. The error carries `unwrapTxHash` and `unwrapRequestId`.
+Thrown by `resumeUnshield()` when the unwrap request no longer exists on-chain: it was already finalized, so the underlying ERC-20 tokens were delivered. `unshield()` and `unshieldAll()` throw it too when a concurrent finalize wins the race. The SDK clears the matching entry before throwing, so `getPendingUnshield()` no longer returns this `unwrapTxHash`. The error carries `unwrapTxHash` and `unwrapRequestId`.
 
 ```ts
 matchZamaError(error, {
@@ -365,13 +369,29 @@ matchZamaError(error, {
 
 **How to handle:** Treat it as completion, not a failure: dismiss the "resume unshield" prompt and refresh balances. `useResumeUnshield` invalidates the affected queries automatically. Do not retry; nothing is left to finalize.
 
+### UnwrapNotMinedError
+
+**Code:** `UNWRAP_NOT_MINED`
+
+Thrown by `resumeUnshield()` when the unwrap has no receipt: it is still pending, or it was dropped or replaced so this hash is never mined. The SDK does not wait for it and keeps the matching entry. The error carries `unwrapTxHash`.
+
+**How to handle:** Retryable. Tell the user the unwrap is not confirmed yet and offer the resume again later. A dropped unwrap is never mined, so its entry stays, and `getPendingUnshield()` returns it whenever no other entry is verified open. If the same `unwrapTxHash` keeps failing, show it as unconfirmed with a link to a block explorer instead of offering the resume again.
+
 ### VaultBatcherPausedError
 
 **Code:** `VAULT_BATCHER_PAUSED`
 
-Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()` and `prepareRedeem()` when a batcher the join reaches is paused, before anything is sent. The error carries the paused `batcher` and its `vaultId`.
+Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()` and `prepareRedeem()` when no batcher of a vault the join reaches is open (each one is paused or closed), before anything is sent. `readOpenBatches()` also throws it when every batcher of a vault is closed. The error carries one paused or closed `batcher` of that vault and the `vaultId`.
 
-**How to handle:** Not retryable until the batcher is unpaused. Claims and quits still work. Show which vault is paused. See [Paused batchers](../../guides/vaults/advanced.md#paused-batchers).
+**How to handle:** Not retryable until a batcher of the vault is unpaused. A closed batcher never reopens, so a vault whose batchers are all closed takes no joins until you list a new batcher for it. Claims and quits still work. Show which vault takes no joins. See [Paused batchers](../../guides/vaults/advanced.md#paused-batchers).
+
+### VaultBatcherReadFailedError
+
+**Code:** `VAULT_BATCHER_READ_FAILED`
+
+Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()`, `prepareRedeem()` and `readOpenBatches()` when a batcher of a vault cannot be read, before anything is sent. The error carries the `batcher`, the `vaultId`, and the read error as `cause`. It is also thrown when the RPC returns reads from different blocks, so a batcher looks closed while its `closed()` is not true.
+
+**How to handle:** Check `isRetryable(error)`. It is retryable when the cause is an RPC rate limit or another retryable SDK error, and when the reads came from different blocks. Otherwise check that the vault config lists the right batcher address on the right chain.
 
 ### VaultBatchNotDispatchedError
 

@@ -1,5 +1,35 @@
 # Changelog
 
+## [3.9.0-beta.8](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.7...v3.9.0-beta.8) (2026-11-23)
+
+### Bug Fixes
+
+- **daemon:** drop the CVE-2026-76844 waiver from the image scan ([#980](https://github.com/zama-ai/sdk/issues/980)) ([59ca2d3]()), closes [#906]() [#931]()
+
+## [3.9.0-beta.7](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.6...v3.9.0-beta.7) (2026-11-23)
+
+### Bug Fixes
+
+- **daemon:** risk-accept CVE-2026-124709 in the image scan ([#979](https://github.com/zama-ai/sdk/issues/979)) ([d5ea321]())
+
+## [3.9.0-beta.6](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.5...v3.9.0-beta.6) (2026-11-20)
+
+### Build System
+
+- **sdk:** bump @fhevm/sdk from 0.13.2 to 0.13.7 ([#971](https://github.com/zama-ai/sdk/issues/971)) ([3985b7c]())
+
+## [3.9.0-beta.5](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.4...v3.9.0-beta.5) (2026-11-20)
+
+### Bug Fixes
+
+- **sdk:** keep interrupted unshields recoverable, checked under every interleaving ([#967](https://github.com/zama-ai/sdk/issues/967)) ([03c80c6]()), closes [unshield#1]() [#956]()
+
+## [3.9.0-beta.4](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.3...v3.9.0-beta.4) (2026-11-19)
+
+### Features
+
+- **vaults:** route a join to the next batch among several batchers ([#959](https://github.com/zama-ai/sdk/issues/959)) ([5bbc963]())
+
 ## [4.0.0-alpha.6](https://github.com/zama-ai/sdk/compare/v4.0.0-alpha.5...v4.0.0-alpha.6) (2026-11-19)
 
 ### Features

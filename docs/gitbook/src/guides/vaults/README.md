@@ -65,7 +65,7 @@ Every action exists in two forms:
 
 🟨 Go to [**Building a vault UI**](building-a-ui.md) for what to show and offer in each batch state.
 
-🟨 Go to [**Handle wallet prompts, upgrades and custom sending**](advanced.md) for wallet prompts, paused and upgraded batchers, bundling wallets and your own pipeline.
+🟨 Go to [**Handle wallet prompts, batchers and custom sending**](advanced.md) for wallet prompts, paused batchers, several batchers per vault, bundling wallets and your own pipeline.
 
 For the API, see [**VaultClient**](../../reference/sdk/VaultClient.md) and the vault hooks in the [React reference](../../reference/react/README.md).
 

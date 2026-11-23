@@ -1,6 +1,7 @@
 import {
   encodeFunctionData,
   serializeTransaction,
+  TransactionReceiptNotFoundError,
   type Abi,
   type Address,
   type ContractFunctionArgs,
@@ -86,6 +87,18 @@ export class ViemProvider implements GenericProvider {
   /** Wait for a transaction to be mined and return its receipt. */
   async waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt> {
     return this.#publicClient.waitForTransactionReceipt({ hash });
+  }
+
+  /** Return the receipt of a mined transaction, or `null` when it is not mined. */
+  async getTransactionReceipt(hash: Hex): Promise<TransactionReceipt | null> {
+    try {
+      return await this.#publicClient.getTransactionReceipt({ hash });
+    } catch (error) {
+      if (error instanceof TransactionReceiptNotFoundError) {
+        return null;
+      }
+      throw error;
+    }
   }
 
   /** Return the latest block timestamp in seconds. */

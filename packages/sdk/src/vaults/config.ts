@@ -5,30 +5,52 @@ import type { JoinDirection } from "./types";
 /** The most vaults a group may hold. */
 export const MAX_GROUP_VAULTS = 8;
 
-/** A batcher that took joins while its `currentBatchId` was at most `lastBatchId`. */
-export interface RetiredBatcher {
-  /** The retired batcher. */
+/**
+ * A batcher, with the last batch it takes joins in. Set `lastBatchId` only for
+ * a batcher whose contract has no `closed()`.
+ */
+export interface BatcherEntry {
+  /** The batcher's address. */
   readonly address: Address;
-  /** The last batch it took joins into. */
-  readonly lastBatchId: bigint;
+  /** The last batch joins may land in. Past it, joins go to the vault's other batchers. */
+  readonly lastBatchId?: bigint;
 }
 
-/** Every batcher a vault has had in one direction. */
+/** The batchers of one vault direction: an address, or a list of addresses and {@link BatcherEntry} objects. A join or read throws on an empty list. */
+export type Batchers = Address | readonly (Address | BatcherEntry)[];
+
+/**
+ * A batcher that took joins while its `currentBatchId` was at most `lastBatchId`.
+ *
+ * @deprecated List the batchers as {@link Batchers} instead, a retired one as `{ address, lastBatchId }`.
+ */
+export type RetiredBatcher = BatcherEntry & { readonly lastBatchId: bigint };
+
+/**
+ * Every batcher a vault has had in one direction. Read as the list
+ * `[...retired, latest]`, so `latest` takes joins as soon as it is open, even
+ * before a retired batcher reaches its `lastBatchId`.
+ *
+ * @deprecated List the batchers as {@link Batchers} instead.
+ */
 export interface BatcherHistory {
   /** Oldest first. */
   readonly retired: readonly RetiredBatcher[];
-  /** The batcher joins reach once every retired one has passed its `lastBatchId`. */
+  /** The newest batcher. */
   readonly latest: Address;
 }
 
-/** One vault: its chain and the batcher each direction joins. */
+/** One vault: its chain and the batchers each direction joins. */
 export interface Vault<TVaultId extends string = string> {
   /** Names the vault in errors and query keys, and is what a group join passes as `vaultId`. */
   readonly id: TVaultId;
   /** The chain the vault's batchers are on. */
   readonly chainId: number;
-  /** The batcher each direction joins: an address, or a history once it has been upgraded. */
-  readonly batchers: Readonly<Record<JoinDirection, Address | BatcherHistory>>;
+  /**
+   * The batchers each direction joins. A join reaches the open batch that is
+   * dispatched next; paused and closed batchers take none.
+   */
+  readonly batchers: Readonly<Record<JoinDirection, Batchers | BatcherHistory>>;
 }
 
 /** Vaults that take deposits in one confidential asset, joined together. */
@@ -55,7 +77,7 @@ export type VaultIdOf<TGroup extends VaultGroup> =
  * export const ALPHA = defineVault({
  *   id: "alpha",
  *   chainId: 1,
- *   batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
+ *   batchers: { deposit: "0xAlphaDeposit", redeem: ["0xAlphaRedeemA", "0xAlphaRedeemB"] },
  * });
  * ```
  */
@@ -137,29 +159,70 @@ export function scopeOf(target: Vault | VaultGroup): {
 }
 
 /**
- * Every batcher of `vault` in `direction`, checksummed: a plain address is a history with nothing retired.
+ * Every batcher of `vault` in `direction`, checksummed, in declared order. A
+ * history lists its retired batchers, then `latest`.
  *
  * @internal
- * @throws if an address or a `lastBatchId` is invalid. {@link ConfigurationError}
+ * @throws if no batcher is listed, or an address or a `lastBatchId` is invalid. {@link ConfigurationError}
  */
-export function historyOf(vault: Vault, direction: JoinDirection): BatcherHistory {
-  const declared = vault.batchers[direction];
+export function batchersOf(
+  vault: Vault,
+  direction: JoinDirection,
+): readonly [BatcherEntry, ...BatcherEntry[]] {
   const where = `Vault "${vault.id}" ${direction} batcher`;
-  if (typeof declared === "string") {
-    return { retired: [], latest: requireAddress(declared, where) };
+  const [first, ...rest] = listOf(vault.batchers[direction], where).map((batcher) =>
+    entryOf(batcher, where),
+  );
+  if (first === undefined) {
+    throw new ConfigurationError(`${where} list is empty`);
   }
-  return {
-    retired: declared.retired.map((entry) => {
-      // Anything but a non-negative bigint compares false, so the join would silently skip the retired batcher.
-      if (typeof entry.lastBatchId !== "bigint" || entry.lastBatchId < 0n) {
-        throw new ConfigurationError(
-          `${where} has a retired batcher with an invalid lastBatchId: ${String(entry.lastBatchId)}`,
-        );
-      }
-      return { address: requireAddress(entry.address, where), lastBatchId: entry.lastBatchId };
-    }),
-    latest: requireAddress(declared.latest, where),
-  };
+  return [first, ...rest];
+}
+
+function listOf(
+  declared: Batchers | BatcherHistory,
+  where: string,
+): readonly (Address | BatcherEntry)[] {
+  if (typeof declared === "string") {
+    return [declared];
+  }
+  if (isArray(declared)) {
+    return declared;
+  }
+  if (!("latest" in declared)) {
+    throw new ConfigurationError(`${where} must be an address or a list`);
+  }
+  // Without its lastBatchId, a retired batcher would read as live and keep taking joins.
+  const unbounded = declared.retired.find((entry) => entry.lastBatchId === undefined);
+  if (unbounded !== undefined) {
+    throw new ConfigurationError(
+      `${where} ${unbounded.address} has an invalid lastBatchId: undefined`,
+    );
+  }
+  return [...declared.retired, declared.latest];
+}
+
+// `Array.isArray` does not narrow a readonly array out of a union.
+function isArray(value: unknown): value is readonly (Address | BatcherEntry)[] {
+  return Array.isArray(value);
+}
+
+function entryOf(batcher: Address | BatcherEntry, where: string): BatcherEntry {
+  if (typeof batcher === "string") {
+    return { address: requireAddress(batcher, where) };
+  }
+  const address = requireAddress(batcher.address, where);
+  const { lastBatchId } = batcher;
+  if (lastBatchId === undefined) {
+    return { address };
+  }
+  // A non-bigint can compare false and keep the batcher open past its last batch; a negative one closes it for good.
+  if (typeof lastBatchId !== "bigint" || lastBatchId < 0n) {
+    throw new ConfigurationError(
+      `${where} ${address} has an invalid lastBatchId: ${String(lastBatchId)}`,
+    );
+  }
+  return { address, lastBatchId };
 }
 
 function requireAddress(value: unknown, where: string): Address {

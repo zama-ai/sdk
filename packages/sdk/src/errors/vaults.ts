@@ -1,19 +1,20 @@
 import type { Address, Hex } from "viem";
 import type { TransactionReceipt } from "../types/transaction";
 import type { BatchState } from "../vaults/types";
-import { ZamaError, ZamaErrorCode } from "./base";
+import { isRpcRateLimitError } from "../utils/error";
+import { isRetryable, ZamaError, ZamaErrorCode } from "./base";
 
 /** What a {@link VaultBatcherPausedError} carries. */
 export interface VaultBatcherPausedDetails {
-  /** The batcher that reported `paused()`. */
+  /** A paused or closed batcher of the vault. */
   readonly batcher: Address;
   /** The vault whose leg needs the batcher. */
   readonly vaultId: string;
 }
 
-/** A batcher that a join needs is paused. */
+/** No batcher of a vault is open: each one is paused or closed. */
 export class VaultBatcherPausedError extends ZamaError {
-  /** The batcher that reported `paused()`. */
+  /** A paused or closed batcher of the vault. */
   readonly batcher: Address;
   /** The vault whose leg needs the batcher. */
   readonly vaultId: string;
@@ -21,6 +22,41 @@ export class VaultBatcherPausedError extends ZamaError {
   constructor(message: string, details: VaultBatcherPausedDetails, options?: ErrorOptions) {
     super(ZamaErrorCode.VaultBatcherPaused, message, options);
     this.name = "VaultBatcherPausedError";
+    this.batcher = details.batcher;
+    this.vaultId = details.vaultId;
+  }
+}
+
+/** What a {@link VaultBatcherReadFailedError} carries. */
+export interface VaultBatcherReadFailedDetails {
+  /** The batcher that could not be read. */
+  readonly batcher: Address;
+  /** The vault that lists the batcher. */
+  readonly vaultId: string;
+}
+
+/**
+ * A batcher of a vault could not be read, so the SDK cannot tell which batch a join reaches.
+ * Retryable when its `cause` is, or when RPC nodes returned reads from different blocks.
+ */
+export class VaultBatcherReadFailedError extends ZamaError {
+  /** The batcher that could not be read. */
+  readonly batcher: Address;
+  /** The vault that lists the batcher. */
+  readonly vaultId: string;
+
+  constructor(
+    message: string,
+    details: VaultBatcherReadFailedDetails,
+    options?: ErrorOptions & { retryable?: boolean },
+  ) {
+    super(ZamaErrorCode.VaultBatcherReadFailed, message, {
+      ...options,
+      // Providers pass an RPC rate limit through as a raw viem or ethers error, not an SDK one.
+      retryable:
+        options?.retryable ?? (isRetryable(options?.cause) || isRpcRateLimitError(options?.cause)),
+    });
+    this.name = "VaultBatcherReadFailedError";
     this.batcher = details.batcher;
     this.vaultId = details.vaultId;
   }

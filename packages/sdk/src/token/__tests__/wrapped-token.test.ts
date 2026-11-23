@@ -1,6 +1,6 @@
 import type { EncryptValuesReturnType } from "@fhevm/sdk/actions/encrypt";
 import type { TypedValue } from "@fhevm/sdk/types";
-import { zeroAddress, type Address } from "viem";
+import { zeroAddress, type Address, type Hex } from "viem";
 import {
   DecryptionFailedError,
   TransactionRevertedError,
@@ -11,7 +11,11 @@ import { Topics } from "../../events";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import type { TransactionReceipt } from "../../types/transaction";
 import { ZERO_ENCRYPTED_VALUE } from "../../utils/handles";
-import { savePendingUnshield } from "../pending-unshield";
+import {
+  loadPendingUnshields,
+  pendingUnshieldsKey,
+  savePendingUnshield,
+} from "../pending-unshield";
 
 const UNDERLYING = "0x9C9c9c9c9c9c9C9c9c9C9C9c9c9C9c9c9c9c9C9c" as Address;
 const REQUEST_ID = ("0x" + "ff".repeat(32)) as `0x${string}`;
@@ -624,13 +628,18 @@ describe("WrappedToken", () => {
     });
 
     test("getPendingUnshield returns the saved unwrap tx hash, or null when none", async ({
+      userAddress,
       wrappedToken,
       wrapperAddress,
       storage,
+      provider,
     }) => {
       expect(await wrappedToken.getPendingUnshield()).toBeNull();
 
       await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX);
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValueOnce(
+        receiptWithUnwrapRequested(userAddress),
+      );
       expect(await wrappedToken.getPendingUnshield()).toBe(UNWRAP_TX);
     });
   });
@@ -639,24 +648,7 @@ describe("WrappedToken", () => {
     const UNWRAP_TX = ("0x" + "ab".repeat(32)) as `0x${string}`;
     const REQUESTER = "0x1111111111111111111111111111111111111111" as Address;
 
-    test("getPendingUnshield clears a pointer whose request was already finalized", async ({
-      wrappedToken,
-      wrapperAddress,
-      storage,
-      provider,
-    }) => {
-      await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX, REQUEST_ID);
-      vi.mocked(provider.readContract).mockResolvedValueOnce(zeroAddress);
-
-      expect(await wrappedToken.getPendingUnshield()).toBeNull();
-
-      expect(provider.readContract).toHaveBeenCalledWith(
-        expect.objectContaining({ functionName: "unwrapRequester", args: [REQUEST_ID] }),
-      );
-      expect(await storage.get(`zama:pending-unshield:${wrapperAddress}`)).toBeNull();
-    });
-
-    test("getPendingUnshield heals a legacy hash-only pointer via the unwrap receipt", async ({
+    test("getPendingUnshield clears an entry whose request was already finalized", async ({
       userAddress,
       wrappedToken,
       wrapperAddress,
@@ -672,36 +664,47 @@ describe("WrappedToken", () => {
       expect(await wrappedToken.getPendingUnshield()).toBeNull();
 
       expect(provider.waitForTransactionReceipt).toHaveBeenCalledWith(UNWRAP_TX);
-      expect(await storage.get(`zama:pending-unshield:${wrapperAddress}`)).toBeNull();
+      expect(provider.readContract).toHaveBeenCalledWith(
+        expect.objectContaining({ functionName: "unwrapRequester", args: [REQUEST_ID] }),
+      );
+      expect(await storage.get(pendingUnshieldsKey(wrapperAddress))).toBeNull();
     });
 
-    test("getPendingUnshield keeps a genuinely open pointer", async ({
+    test("getPendingUnshield keeps an open entry", async ({
+      userAddress,
       wrappedToken,
       wrapperAddress,
       storage,
       provider,
     }) => {
-      await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX, REQUEST_ID);
+      await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX);
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValueOnce(
+        receiptWithUnwrapRequested(userAddress),
+      );
       vi.mocked(provider.readContract).mockResolvedValueOnce(REQUESTER);
 
       expect(await wrappedToken.getPendingUnshield()).toBe(UNWRAP_TX);
-      expect(await storage.get(`zama:pending-unshield:${wrapperAddress}`)).not.toBeNull();
+      expect(await storage.get(pendingUnshieldsKey(wrapperAddress))).not.toBeNull();
     });
 
     test("getPendingUnshield fails open when the verification read fails", async ({
+      userAddress,
       wrappedToken,
       wrapperAddress,
       storage,
       provider,
     }) => {
-      await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX, REQUEST_ID);
+      await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX);
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValueOnce(
+        receiptWithUnwrapRequested(userAddress),
+      );
       vi.mocked(provider.readContract).mockRejectedValueOnce(new Error("RPC unavailable"));
 
       expect(await wrappedToken.getPendingUnshield()).toBe(UNWRAP_TX);
-      expect(await storage.get(`zama:pending-unshield:${wrapperAddress}`)).not.toBeNull();
+      expect(await storage.get(pendingUnshieldsKey(wrapperAddress))).not.toBeNull();
     });
 
-    test("getPendingUnshield fails open when the legacy receipt fetch fails", async ({
+    test("getPendingUnshield fails open when the receipt fetch fails", async ({
       wrappedToken,
       wrapperAddress,
       storage,
@@ -713,7 +716,7 @@ describe("WrappedToken", () => {
       );
 
       expect(await wrappedToken.getPendingUnshield()).toBe(UNWRAP_TX);
-      expect(await storage.get(`zama:pending-unshield:${wrapperAddress}`)).not.toBeNull();
+      expect(await storage.get(pendingUnshieldsKey(wrapperAddress))).not.toBeNull();
     });
 
     test("resumeUnshield throws UNSHIELD_ALREADY_FINALIZED and clears storage when the request is consumed", async ({
@@ -724,7 +727,7 @@ describe("WrappedToken", () => {
       storage,
       provider,
     }) => {
-      await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX, REQUEST_ID);
+      await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX);
       vi.mocked(provider.waitForTransactionReceipt).mockResolvedValueOnce(
         receiptWithUnwrapRequested(userAddress),
       );
@@ -737,7 +740,7 @@ describe("WrappedToken", () => {
       });
 
       expect(signer.writeContract).not.toHaveBeenCalled();
-      expect(await storage.get(`zama:pending-unshield:${wrapperAddress}`)).toBeNull();
+      expect(await storage.get(pendingUnshieldsKey(wrapperAddress))).toBeNull();
     });
 
     test("resumeUnshield proceeds when the pre-check read fails (fail open)", async ({
@@ -762,7 +765,7 @@ describe("WrappedToken", () => {
       storage,
       provider,
     }) => {
-      await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX, REQUEST_ID);
+      await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX);
       vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue(
         receiptWithUnwrapRequested(userAddress),
       );
@@ -774,7 +777,7 @@ describe("WrappedToken", () => {
       await expect(wrappedToken.resumeUnshield(UNWRAP_TX)).rejects.toMatchObject({
         code: ZamaErrorCode.UnshieldAlreadyFinalized,
       });
-      expect(await storage.get(`zama:pending-unshield:${wrapperAddress}`)).toBeNull();
+      expect(await storage.get(pendingUnshieldsKey(wrapperAddress))).toBeNull();
     });
 
     test("resumeUnshield maps a finalize mined as reverted after a concurrent finalize to UNSHIELD_ALREADY_FINALIZED", async ({
@@ -784,7 +787,7 @@ describe("WrappedToken", () => {
       storage,
       provider,
     }) => {
-      await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX, REQUEST_ID);
+      await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX);
       vi.mocked(provider.waitForTransactionReceipt)
         .mockResolvedValueOnce(receiptWithUnwrapRequested(userAddress))
         .mockResolvedValueOnce({ logs: [], status: "reverted" });
@@ -795,7 +798,7 @@ describe("WrappedToken", () => {
       await expect(wrappedToken.resumeUnshield(UNWRAP_TX)).rejects.toMatchObject({
         code: ZamaErrorCode.UnshieldAlreadyFinalized,
       });
-      expect(await storage.get(`zama:pending-unshield:${wrapperAddress}`)).toBeNull();
+      expect(await storage.get(pendingUnshieldsKey(wrapperAddress))).toBeNull();
     });
 
     test("resumeUnshield rejects an unwrap transaction that reverted", async ({
@@ -825,11 +828,45 @@ describe("WrappedToken", () => {
       );
 
       await expect(wrappedToken.resumeUnshield(UNWRAP_TX)).rejects.toThrow(
-        "No UnwrapRequested event from this wrapper found in the unwrap receipt",
+        "opened no unwrap request from this wrapper",
       );
     });
 
-    test("unshield persists the unwrap request id alongside the tx hash", async ({
+    test("resumeUnshield throws UNWRAP_NOT_MINED at once and keeps the entry when the unwrap is not mined", async ({
+      signer,
+      wrappedToken,
+      wrapperAddress,
+      storage,
+      provider,
+    }) => {
+      await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX);
+      provider.getTransactionReceipt = vi.fn().mockResolvedValue(null);
+
+      await expect(wrappedToken.resumeUnshield(UNWRAP_TX)).rejects.toMatchObject({
+        code: ZamaErrorCode.UnwrapNotMined,
+        unwrapTxHash: UNWRAP_TX,
+      });
+      expect(provider.waitForTransactionReceipt).not.toHaveBeenCalled();
+      expect(signer.writeContract).not.toHaveBeenCalled();
+      expect(await loadPendingUnshields(storage, wrapperAddress)).toEqual([UNWRAP_TX]);
+    });
+
+    test("unshield saves the unwrap tx hash before waiting for its receipt", async ({
+      signer,
+      wrappedToken,
+      wrapperAddress,
+      storage,
+      provider,
+    }) => {
+      vi.mocked(signer.writeContract).mockResolvedValue(UNWRAP_TX);
+      vi.mocked(provider.waitForTransactionReceipt).mockRejectedValue(new Error("RPC timeout"));
+
+      await expect(wrappedToken.unshield(50n, { skipBalanceCheck: true })).rejects.toThrow();
+
+      expect(await loadPendingUnshields(storage, wrapperAddress)).toEqual([UNWRAP_TX]);
+    });
+
+    test("a second unshield on the same wrapper keeps the first one's entry", async ({
       relayer,
       signer,
       userAddress,
@@ -838,21 +875,123 @@ describe("WrappedToken", () => {
       storage,
       provider,
     }) => {
-      vi.mocked(signer.writeContract).mockResolvedValue(UNWRAP_TX);
+      const SECOND_TX = ("0x" + "cd".repeat(32)) as Hex;
+      vi.mocked(signer.writeContract)
+        .mockResolvedValueOnce(UNWRAP_TX)
+        .mockResolvedValueOnce(SECOND_TX)
+        .mockResolvedValueOnce(("0x" + "ef".repeat(32)) as Hex);
       vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue(
         receiptWithUnwrapRequested(userAddress),
       );
-      // Interrupt phase 2 so the persisted recovery state survives.
-      vi.mocked(relayer.decryptPublicValuesWithSignatures).mockRejectedValue(
+      // The first unshield stops before its finalize; the second one finishes.
+      vi.mocked(relayer.decryptPublicValuesWithSignatures).mockRejectedValueOnce(
         new Error("interrupt"),
       );
 
       await expect(wrappedToken.unshield(50n, { skipBalanceCheck: true })).rejects.toThrow();
+      await wrappedToken.unshield(50n, { skipBalanceCheck: true });
 
-      expect(await storage.get(`zama:pending-unshield:${wrapperAddress}`)).toMatchObject({
-        unwrapTxHash: UNWRAP_TX,
-        unwrapRequestId: REQUEST_ID,
+      expect(await loadPendingUnshields(storage, wrapperAddress)).toEqual([UNWRAP_TX]);
+    });
+
+    test("getPendingUnshield clears an entry whose unwrap reverted and reports the next one", async ({
+      userAddress,
+      wrappedToken,
+      wrapperAddress,
+      storage,
+      provider,
+    }) => {
+      const REVERTED_TX = ("0x" + "dd".repeat(32)) as Hex;
+      await savePendingUnshield(storage, wrapperAddress, REVERTED_TX);
+      await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX);
+      vi.mocked(provider.waitForTransactionReceipt).mockImplementation(async (hash) =>
+        hash === REVERTED_TX
+          ? { status: "reverted", logs: [] }
+          : receiptWithUnwrapRequested(userAddress),
+      );
+      vi.mocked(provider.readContract).mockResolvedValue(REQUESTER);
+
+      expect(await wrappedToken.getPendingUnshield()).toBe(UNWRAP_TX);
+      expect(await loadPendingUnshields(storage, wrapperAddress)).toEqual([UNWRAP_TX]);
+    });
+
+    test("getPendingUnshield reports an open entry before one it could not verify", async ({
+      userAddress,
+      wrappedToken,
+      wrapperAddress,
+      storage,
+      provider,
+    }) => {
+      const DROPPED_TX = ("0x" + "dd".repeat(32)) as Hex;
+      await savePendingUnshield(storage, wrapperAddress, DROPPED_TX);
+      await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX);
+      vi.mocked(provider.waitForTransactionReceipt).mockImplementation(async (hash) => {
+        if (hash === DROPPED_TX) {
+          throw new Error("timed out while waiting for transaction receipt");
+        }
+        return receiptWithUnwrapRequested(userAddress);
       });
+      vi.mocked(provider.readContract).mockResolvedValue(REQUESTER);
+
+      expect(await wrappedToken.getPendingUnshield()).toBe(UNWRAP_TX);
+    });
+
+    test("getPendingUnshield looks receipts up without waiting, and keeps an unmined entry", async ({
+      userAddress,
+      wrappedToken,
+      wrapperAddress,
+      storage,
+      provider,
+    }) => {
+      const UNMINED_TX = ("0x" + "dd".repeat(32)) as Hex;
+      provider.getTransactionReceipt = vi.fn(async (hash: Hex) =>
+        hash === UNMINED_TX ? null : receiptWithUnwrapRequested(userAddress),
+      );
+      await savePendingUnshield(storage, wrapperAddress, UNMINED_TX);
+      await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX);
+      vi.mocked(provider.readContract).mockResolvedValue(REQUESTER);
+
+      expect(await wrappedToken.getPendingUnshield()).toBe(UNWRAP_TX);
+      expect(provider.waitForTransactionReceipt).not.toHaveBeenCalled();
+      expect(await loadPendingUnshields(storage, wrapperAddress)).toEqual([UNMINED_TX, UNWRAP_TX]);
+    });
+
+    test("getPendingUnshield stops waiting for a receipt after a short timeout", async ({
+      wrappedToken,
+      wrapperAddress,
+      storage,
+      provider,
+    }) => {
+      vi.useFakeTimers();
+      try {
+        await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX);
+        vi.mocked(provider.waitForTransactionReceipt).mockReturnValue(new Promise(() => {}));
+        const pending = wrappedToken.getPendingUnshield();
+        await vi.advanceTimersByTimeAsync(5_000);
+        expect(await pending).toBe(UNWRAP_TX);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    test("an unwrap mined without opening a request (replaced or cancelled) is cleared", async ({
+      wrappedToken,
+      wrapperAddress,
+      storage,
+      provider,
+    }) => {
+      await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX);
+      vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+        logs: [],
+        status: "success",
+      });
+
+      expect(await wrappedToken.getPendingUnshield()).toBeNull();
+      await savePendingUnshield(storage, wrapperAddress, UNWRAP_TX);
+      await expect(wrappedToken.resumeUnshield(UNWRAP_TX)).rejects.toMatchObject({
+        code: ZamaErrorCode.TransactionReverted,
+      });
+      expect(await loadPendingUnshields(storage, wrapperAddress)).toEqual([]);
     });
   });
 

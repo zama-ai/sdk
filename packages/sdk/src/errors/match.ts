@@ -54,9 +54,10 @@ import type {
   HcuTransactionLimitExceededError,
   TransactionRevertedError,
 } from "./transaction";
-import type { UnshieldAlreadyFinalizedError } from "./unshield";
+import type { UnshieldAlreadyFinalizedError, UnwrapNotMinedError } from "./unshield";
 import type {
   VaultBatcherPausedError,
+  VaultBatcherReadFailedError,
   VaultBatchNotDispatchedError,
   VaultJoinUnconfirmedError,
 } from "./vaults";
@@ -157,8 +158,12 @@ export interface ErrorForCode {
   [ZamaErrorCode.InvalidationTimestampInFuture]: InvalidationTimestampInFutureError;
   /** Thrown for {@link ZamaErrorCode.UnshieldAlreadyFinalized}. */
   [ZamaErrorCode.UnshieldAlreadyFinalized]: UnshieldAlreadyFinalizedError;
+  /** Thrown for {@link ZamaErrorCode.UnwrapNotMined}. */
+  [ZamaErrorCode.UnwrapNotMined]: UnwrapNotMinedError;
   /** Thrown for {@link ZamaErrorCode.VaultBatcherPaused}. */
   [ZamaErrorCode.VaultBatcherPaused]: VaultBatcherPausedError;
+  /** Thrown for {@link ZamaErrorCode.VaultBatcherReadFailed}. */
+  [ZamaErrorCode.VaultBatcherReadFailed]: VaultBatcherReadFailedError;
   /** Thrown for {@link ZamaErrorCode.VaultBatchNotDispatched}. */
   [ZamaErrorCode.VaultBatchNotDispatched]: VaultBatchNotDispatchedError;
   /** Thrown for {@link ZamaErrorCode.VaultJoinUnconfirmed}. */

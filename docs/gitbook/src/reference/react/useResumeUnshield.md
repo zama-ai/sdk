@@ -29,8 +29,7 @@ function ResumeUnshieldGuard({
   wrapperAddress: Address;
   children: React.ReactNode;
 }) {
-  // The SDK persisted the unwrap tx hash during phase 1 and clears it
-  // automatically once the resume finalizes; the query invalidates on success.
+  // After a resume the query refetches and shows the next pending unshield, if any.
   const { data: unwrapTxHash } = usePendingUnshield(wrapperAddress);
   const { mutate: resumeUnshield } = useResumeUnshield(wrapperAddress);
 
@@ -106,15 +105,19 @@ await resumeUnshield({ unwrapTxHash: "0xabc..." });
 
 ## Recovery pattern
 
-The SDK persists the unwrap tx hash automatically when phase 1 is submitted and clears it once finalization confirms, so recovery is two steps:
+The SDK saves the unwrap tx hash for you (see [Handle interrupted unshields](../../guides/unshield-tokens.md#4-handle-interrupted-unshields)), so recovery is two steps:
 
-1. **[`usePendingUnshield(tokenAddress)`](./usePendingUnshield.md)** — returns the stored unwrap tx hash (or `null` if none is pending).
+1. **[`usePendingUnshield(tokenAddress)`](./usePendingUnshield.md)**: returns the oldest stored unwrap tx hash (or `null` if none is pending); after a resume it refetches and returns the next one.
 2. **`resumeUnshield({ unwrapTxHash })`** — picks up from the finalize step using the unwrap receipt, then clears the persisted state on success (the query invalidates automatically).
 
 Run this check on mount to handle any session that was interrupted. Resuming is intentionally caller-driven — prompt the user rather than finalizing on load, so you never trigger a wallet transaction they did not initiate.
 
 {% hint style="warning" %}
 **An already-finalized resume is not a failure.** If the unwrap request was already finalized (another tab, a double click, a third party), the mutation fails with [`UnshieldAlreadyFinalizedError`](../sdk/errors.md#unshieldalreadyfinalizederror). The funds already arrived. The SDK clears the persisted state and the hook invalidates the pending-unshield and balance queries, so the resume prompt disappears on its own. Treat the error as completion; do not retry.
+
+If the unwrap reverted, or was mined without opening an unwrap request from this wrapper, the mutation fails with [`TransactionRevertedError`](../sdk/errors.md#transactionrevertederror). The SDK clears that entry and the hook invalidates the pending-unshield query, so the prompt moves on to the next pending unshield, if any.
+
+If the unwrap has no receipt (still pending, or dropped or replaced so this hash is never mined), the mutation fails at once with [`UnwrapNotMinedError`](../sdk/errors.md#unwrapnotminederror). The SDK keeps the entry. Retry later.
 {% endhint %}
 
 {% hint style="info" %}

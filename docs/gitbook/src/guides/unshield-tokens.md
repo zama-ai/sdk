@@ -130,7 +130,7 @@ await unshieldAll();
 
 ### 4. Handle interrupted unshields
 
-If the user closes their browser between the unwrap and finalize steps, the unwrap is on-chain but the finalize has not happened yet. The SDK persists the unwrap transaction hash automatically when phase 1 is submitted and clears it once finalization confirms, so you only need to detect and resume the pending state on the next page load.
+If the user closes their browser between the unwrap and finalize steps, the unwrap is on-chain but the finalize has not happened yet. The SDK persists the unwrap transaction hash as soon as the wallet returns it and clears it once finalization confirms, so you only need to detect and resume the pending state on the next page load.
 
 Resuming is intentionally caller-driven: surface a "resume" prompt rather than finalizing on load, so you never trigger a wallet transaction the user did not initiate.
 
@@ -138,10 +138,11 @@ Resuming is intentionally caller-driven: surface a "resume" prompt rather than f
 {% tab title="Core SDK" %}
 
 ```ts
-// On next page load, check for a pending unshield
-const pending = await wrappedToken.getPendingUnshield();
-if (pending) {
-  await wrappedToken.resumeUnshield(pending);
+// On next page load, resume every pending unshield, oldest first
+let pending = await wrappedToken.getPendingUnshield();
+while (pending) {
+  await wrappedToken.resumeUnshield(pending); // one wallet prompt per entry
+  pending = await wrappedToken.getPendingUnshield();
 }
 ```
 
@@ -153,8 +154,8 @@ import { usePendingUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
 
 const WRAPPER = "0xWrappedEncryptedERC20";
 
-// The SDK persisted the unwrap tx hash during phase 1 and clears it
-// automatically once the resume finalizes; the query invalidates on success.
+// The SDK saved the unwrap tx hash when the wallet returned it and clears it
+// once the resume finalizes; the query then refetches and shows the next one, if any.
 const { data: unwrapTxHash } = usePendingUnshield(WRAPPER);
 const { mutate: resumeUnshield } = useResumeUnshield(WRAPPER);
 
@@ -169,11 +170,13 @@ if (unwrapTxHash) {
 
 The flow is:
 
-1. **`getPendingUnshield`** -- returns the unwrap transaction hash of an interrupted unshield, or `null` if none is pending. The SDK saved it automatically during phase 1. Before reporting it, the SDK verifies it on-chain: an already-finalized request is cleared and `null` comes back, so a stale entry never shows a resume prompt.
+1. **`getPendingUnshield`** -- returns the unwrap transaction hash of an interrupted unshield, or `null` if none is pending. The SDK saved it automatically as soon as the wallet returned the unwrap hash. If several unshields on the same token were interrupted, it returns the oldest one; after resuming it, call it again for the next. Before reporting a hash, the SDK verifies it on-chain: an already-finalized request is cleared, so a stale entry never shows a resume prompt.
 2. **`resumeUnshield`** -- picks up where the SDK left off by polling for the proof and submitting the finalize transaction. On success the SDK clears the persisted state for you.
 
 {% hint style="warning" %}
 **A resume can lose the race.** Another tab, a double click, or a third party can finalize the same request first. `resumeUnshield` then clears the persisted state and throws `UnshieldAlreadyFinalizedError` instead of broadcasting a transaction that would revert. Treat the error as completion: the funds already arrived, so dismiss the prompt and refresh balances. `useResumeUnshield` refreshes the affected queries automatically. See [UnshieldAlreadyFinalizedError](../reference/sdk/errors.md#unshieldalreadyfinalizederror).
+
+**An unwrap may not be mined yet.** If the unwrap has no receipt (still pending, or dropped or replaced so this hash is never mined), `resumeUnshield` throws `UnwrapNotMinedError` at once and keeps the entry. Show the unshield as not confirmed and offer the resume again later. See [UnwrapNotMinedError](../reference/sdk/errors.md#unwrapnotminederror).
 {% endhint %}
 
 {% hint style="info" %}

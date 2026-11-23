@@ -28,28 +28,34 @@ Returns `vault` unchanged, with its `id` kept as a literal type. Like viem's `de
 export const ALPHA = defineVault({
   id: "alpha",
   chainId: 1,
-  batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
+  batchers: { deposit: "0xAlphaDeposit", redeem: ["0xAlphaRedeemA", "0xAlphaRedeemB"] },
 });
 ```
 
 ### Vault
 
-| Field      | Type                                                                        | Description                                                               |
-| ---------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `id`       | `string`                                                                    | Names the vault in `vaultId`, errors and query keys.                      |
-| `chainId`  | `number`                                                                    | The chain the vault's batchers are on.                                    |
-| `batchers` | `{ deposit: Address \| BatcherHistory; redeem: Address \| BatcherHistory }` | The batcher each direction joins: an address, or a history once upgraded. |
+| Field      | Type                                      | Description                                                   |
+| ---------- | ----------------------------------------- | ------------------------------------------------------------- |
+| `id`       | `string`                                  | Names the vault in `vaultId`, errors and query keys.          |
+| `chainId`  | `number`                                  | The chain the vault's batchers are on.                        |
+| `batchers` | `{ deposit: Batchers; redeem: Batchers }` | The batchers each direction joins: one, or a list of several. |
 
-A vault names no token: the client reads each batcher's `fromToken()`. A join or read throws `ConfigurationError` for an invalid batcher address or `lastBatchId`.
+A vault names no token: the client reads each batcher's `fromToken()`. A join or read throws `ConfigurationError` when a direction lists no batcher, or for an invalid batcher address or `lastBatchId`. It throws `VaultBatcherPausedError` when every batcher of a direction is closed.
 
-### BatcherHistory
+### Batchers
 
-| Field     | Type                                          | Description                                                                               |
-| --------- | --------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `retired` | `{ address: Address; lastBatchId: bigint }[]` | Replaced batchers, oldest first. `lastBatchId` is the last batch joins may land in there. |
-| `latest`  | `Address`                                     | The batcher joins reach once every retired one is past its `lastBatchId`.                 |
+An address, or a list of addresses and `BatcherEntry` objects. A list must not be empty.
 
-See [Upgrade a batcher](../../guides/vaults/advanced.md#upgrade-a-batcher).
+`BatcherEntry` fields:
+
+| Field         | Type                  | Description                                                                                   |
+| ------------- | --------------------- | --------------------------------------------------------------------------------------------- |
+| `address`     | `Address`             | The batcher's address.                                                                        |
+| `lastBatchId` | `bigint \| undefined` | The last batch joins may land in. Set it only for a batcher whose contract has no `closed()`. |
+
+A join reaches the open batch that is dispatched next among the batchers that are not paused or closed. See [Several batchers](../../guides/vaults/advanced.md#several-batchers).
+
+`BatcherHistory` (`{ retired, latest }`) is deprecated. It still works, and reads as the list `[...retired, latest]`, so `latest` takes joins as soon as it is open.
 
 ## defineVaultGroup
 
@@ -109,8 +115,9 @@ const prepared = await vaults.prepareDeposit(STABLE, {
 **Throws:**
 
 - `ChainMismatchError` when a wallet is connected and the provider is not on the target's chain.
-- `ConfigurationError` when the provider is not on the target's chain with no wallet connected, the vault is not in the group, the group is invalid (see [`VaultGroup`](#vaultgroup)), or the join uses the router and the chain has none.
-- `VaultBatcherPausedError` when a batcher the join reaches is paused. This check always runs.
+- [`ConfigurationError`](errors.md#configurationerror) when the provider is not on the target's chain with no wallet connected, the vault is not in the group, the group is invalid (see [`VaultGroup`](#vaultgroup)), the join uses the router and the chain has none, or a vault lists no batcher.
+- [`VaultBatcherPausedError`](errors.md#vaultbatcherpausederror) when no batcher of a vault the join reaches is open: each one is paused or closed. This check always runs.
+- [`VaultBatcherReadFailedError`](errors.md#vaultbatcherreadfailederror) when a batcher of a vault the join reaches cannot be read. Retryable when the cause is.
 - `InsufficientConfidentialBalanceError` when the balance is below `amount`.
 - `BalanceCheckUnavailableError` when the balance cannot be decrypted: no signer is connected, or `account` is not the signer. Pass `skipBalanceCheck: true`.
 
@@ -288,11 +295,17 @@ if (batch.actions.includes("claim")) {
 
 `readOpenBatches(target, direction) => Promise<OpenBatch[]>`
 
-Reads the open batch of every vault of the target, in group order, on each vault's active batcher.
+Reads, for every vault of the target in group order, the open batch a join reaches now. When no batcher of a vault is open, it returns a paused batcher's batch with `paused: true`.
 
 ```ts
 const open = await vaults.readOpenBatches(STABLE, "deposit");
 ```
+
+**Throws:**
+
+- [`ConfigurationError`](errors.md#configurationerror) when a vault lists no batcher, or a batcher address or `lastBatchId` is invalid.
+- [`VaultBatcherPausedError`](errors.md#vaultbatcherpausederror) when every batcher of a vault is closed.
+- [`VaultBatcherReadFailedError`](errors.md#vaultbatcherreadfailederror) when a batcher of a vault cannot be read.
 
 ## Types
 
@@ -373,12 +386,12 @@ A `BatchRef` plus the fields below. Times are in chain seconds. `Batch` is a uni
 
 When each action is listed:
 
-| Action     | Listed when                                                                       |
-| ---------- | --------------------------------------------------------------------------------- |
-| `claim`    | The account joined the batch, and the batch is finalized.                         |
-| `quit`     | The account joined the batch, and the batch is pending or canceled.               |
-| `dispatch` | The batch is pending, the batcher is not paused, and `dispatchableAt` has passed. |
-| `finalize` | The batch is dispatched.                                                          |
+| Action     | Listed when                                                                                                            |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `claim`    | The account joined the batch, and the batch is finalized.                                                              |
+| `quit`     | The account joined the batch, and the batch is pending or canceled.                                                    |
+| `dispatch` | The batch is pending, the batcher is not paused, the previous batch is not in flight, and `dispatchableAt` has passed. |
+| `finalize` | The batch is dispatched.                                                                                               |
 
 `claim` and `quit` are listed without decrypting the deposit. A deposit that was paid out reads as an encrypted zero, so they stay listed after the payout. Sending them again moves nothing.
 
@@ -386,12 +399,12 @@ When each action is listed:
 
 A `BatchRef` for the batch the next join lands in, plus:
 
-| Field            | Type      | Description                                           |
-| ---------------- | --------- | ----------------------------------------------------- |
-| `vaultId`        | `string`  |                                                       |
-| `dispatchableAt` | `bigint`  | When anyone may dispatch the batch, in chain seconds. |
-| `paused`         | `boolean` | Whether the batcher is paused.                        |
-| `observedAt`     | `bigint`  | The block timestamp of the read.                      |
+| Field            | Type      | Description                                                      |
+| ---------------- | --------- | ---------------------------------------------------------------- |
+| `vaultId`        | `string`  |                                                                  |
+| `dispatchableAt` | `bigint`  | When anyone may dispatch the batch, in chain seconds.            |
+| `paused`         | `boolean` | Whether no batcher of the vault is open, so no join can be sent. |
+| `observedAt`     | `bigint`  | The block timestamp of the read.                                 |
 
 ## TanStack Query
 
@@ -400,7 +413,7 @@ The `vaults` subpath exports framework-agnostic query and mutation options over 
 | Export                                                                                           | Wraps                                                                                                                                                                                  |
 | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `batchQueryOptions(client, { batch?, account?, query? })`                                        | `readBatch`. Refetches when `nextChangeAt` passes, and polls while the batch waits for a keeper. Stops polling once the batch is finalized or canceled. Disabled until `batch` is set. |
-| `openBatchesQueryOptions(client, { group \| vault, direction })`                                 | `readOpenBatches`. Does not refetch on its own.                                                                                                                                        |
+| `openBatchesQueryOptions(client, { group \| vault, direction })`                                 | `readOpenBatches`. Refetches when a batch comes within a minute of its due time, and polls until a keeper dispatches it. Stops polling while every vault is paused.                    |
 | `depositMutationOptions(client)`, `redeemMutationOptions(client)`                                | `deposit`, `redeem`. Variables are `{ group, vaultId }` or `{ vault }`, plus `amount` and the send options.                                                                            |
 | `claimMutationOptions(client)`, `quitMutationOptions(client)`, `finalizeMutationOptions(client)` | `claim`, `quit`, `finalize`. Variables are a `BatchRef`, plus an optional `account` for a claim.                                                                                       |
 | `dispatchMutationOptions(client)`                                                                | `dispatch`. Variables are a `BatcherRef`.                                                                                                                                              |
