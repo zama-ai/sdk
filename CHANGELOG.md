@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.9.0-beta.7](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.6...v3.9.0-beta.7) (2026-11-23)
+
+### Bug Fixes
+
+- **daemon:** risk-accept CVE-2026-124709 in the image scan ([#979](https://github.com/zama-ai/sdk/issues/979)) ([d5ea321]())
+
 ## [3.9.0-beta.6](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.5...v3.9.0-beta.6) (2026-11-20)
 
 ### Build System
