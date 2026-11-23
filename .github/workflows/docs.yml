@@ -93,6 +93,14 @@ jobs:
         with:
           # Accept 403/429 so bot-hostile hosts (Discord, Etherscan) don't flake the gate.
           # Placeholder URLs in code samples are listed in .lycheeignore.
-          args: --no-progress --max-retries 3 --accept 200..=299,403,429 --cache "docs/**/*.md" "README.md" "packages/*/README.md"
+          # github.com answers 503 to bursts of page requests, and lychee does not retry a 503,
+          # so requests to one host are paced, and links to this repo's files are checked
+          # against the checkout. The action runs `args` through `eval`, so the remap stays in
+          # single quotes.
+          args: >-
+            --no-progress --max-retries 3 --accept 200..=299,403,429 --cache
+            --host-concurrency 2 --host-request-interval 250ms
+            --remap '^https://github\.com/zama-ai/sdk/(?:blob|tree)/[^/]+/([^#?]*).* file://${{ github.workspace }}/$1'
+            "docs/**/*.md" "README.md" "packages/*/README.md"
           token: ${{ secrets.GITHUB_TOKEN }}
           fail: true
