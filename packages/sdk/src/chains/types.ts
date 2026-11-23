@@ -6,7 +6,7 @@ export type FheChainAuth =
   | { __type: "ApiKeyHeader"; header?: string; value: string };
 
 /**
- * Where encryption checks the relayer's FHE public key and CRS: `contract`, the
+ * Where the SDK checks the relayer's FHE public key and CRS: `contract`, the
  * `KMSGeneration` address on an Ethereum host chain, or `chain`, the Ethereum
  * chain holding it (read through its `network`), for any other host chain.
  */
@@ -44,8 +44,9 @@ export interface FheChain<TId extends number = number> {
    */
   readonly protocolConfigContractAddress?: Address | undefined;
   /**
-   * Required to encrypt on a non-cleartext chain; reads and decryption work
-   * without it. A chain with a built-in preset's id and ACL inherits the preset's.
+   * Required on a non-cleartext chain: `{ contract }`, or `{ chain }` whose own
+   * `keyVerification` has a `contract`. Otherwise `createConfig` throws a
+   * `ConfigurationError`. A chain with a built-in preset's id and ACL inherits the preset's.
    */
   readonly keyVerification?: FheKeyVerification | undefined;
   /** EIP-712 verifying contract address for decryption requests. */

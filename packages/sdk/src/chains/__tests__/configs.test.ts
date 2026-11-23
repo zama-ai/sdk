@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { chains, mainnet } from "../configs";
-import { keyVerificationChain, keyVerificationProblem } from "../key-verification";
+import { assertKeyVerification, keyVerificationChain } from "../key-verification";
 import { toFhevmChain } from "../to-fhevm-chain";
 
 describe("chain presets", () => {
@@ -29,7 +29,7 @@ describe("chain presets", () => {
       .filter((chain) => chain.relayerUrl !== "")
       .map((chain) => [chain.id, chain] as const),
   )("FHE preset %i names a KMSGeneration contract to verify keys against", (_id, chain) => {
-    expect(keyVerificationProblem(chain)).toBeUndefined();
+    expect(() => assertKeyVerification(chain)).not.toThrow();
     const verifier = keyVerificationChain(chain) ?? chain;
     expect(toFhevmChain(verifier).fhevm.contracts.kmsGeneration?.address).toMatch(/^0x/);
   });

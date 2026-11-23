@@ -22,14 +22,13 @@ export function keyVerificationChain(chain: FheChain): FheChain | undefined {
     : undefined;
 }
 
-/** Why encryption on a non-cleartext `chain` cannot run, or `undefined` when it can. */
-export function keyVerificationProblem(chain: FheChain): ConfigurationError | undefined {
+/** Throws `ConfigurationError` when a non-cleartext `chain` has no `KMSGeneration` contract to verify its FHE key against. */
+export function assertKeyVerification(chain: FheChain): void {
   const holder = keyVerificationChain(chain) ?? chain;
-  const keyVerification = holder.keyVerification;
-  if (keyVerification !== undefined && "contract" in keyVerification) {
-    return undefined;
+  if (holder.keyVerification !== undefined && "contract" in holder.keyVerification) {
+    return;
   }
-  return new ConfigurationError(
+  throw new ConfigurationError(
     `Chain ${chain.id} has no KMSGeneration contract to check the FHE public key and CRS against. ` +
       `Set keyVerification on its FheChain: { contract } on an Ethereum host chain, or { chain } with ` +
       `the Ethereum chain that holds it on other host chains.`,

@@ -701,13 +701,14 @@ describe("FhevmRelayer request options", () => {
       "a keyVerification chain without its own KMSGeneration contract",
       { ...anvilPreset, keyVerification: { chain: mainnetWithout as never } },
     ],
-  ])("%s constructs and decrypts, but cannot encrypt", async (_, chain) => {
-    const relayer = makeRelayer({ chain });
-
-    await expect(relayer.encryptValues(encryptArgs)).rejects.toThrow(ConfigurationError);
-    await expect(relayer.fetchFheEncryptionKeyBytes()).rejects.toThrow(/keyVerification/);
-    expect(clients.createFhevmEncryptClient).not.toHaveBeenCalled();
-    expect(clients.createFhevmDecryptClient).toHaveBeenCalled();
+  ])("rejects %s at construction", (_, chain) => {
+    expect(() => makeRelayer({ chain })).toThrow(
+      expect.objectContaining({
+        name: "ConfigurationError",
+        message: expect.stringMatching(/keyVerification/),
+      }),
+    );
+    expect(clients.createFhevmBaseClient).not.toHaveBeenCalled();
   });
 
   test("accepts a cleartext chain with no KMSGeneration contract", () => {
