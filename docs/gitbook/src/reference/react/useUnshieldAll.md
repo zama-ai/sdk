@@ -123,7 +123,7 @@ await unshieldAll({
 
 **Throws:**
 
-- [`UnshieldAlreadyFinalizedError`](../sdk/errors.md#unshieldalreadyfinalizederror) -- a concurrent finalize won the race. The funds already arrived and the hook refreshes the balance queries, so treat it as completion
+- [`UnshieldAlreadyFinalizedError`](../sdk/errors.md#unshieldalreadyfinalizederror) -- another tab or account called `finalizeUnwrap` first. The funds already arrived and the hook refreshes the balance queries, so treat it as completion
 
 ## Return Type
 

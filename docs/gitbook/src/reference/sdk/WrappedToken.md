@@ -154,7 +154,7 @@ The returned `txHash` and `receipt` are for the finalization transaction.
 const { txHash, receipt } = await wrappedToken.unshield(500n);
 ```
 
-If a concurrent finalize (another tab, a third party) wins the race, it clears the persisted pending state and throws [`UnshieldAlreadyFinalizedError`](errors.md#unshieldalreadyfinalizederror). The funds already arrived; treat the error as completion.
+If another tab or account calls `finalizeUnwrap` first, it clears the persisted pending state and throws [`UnshieldAlreadyFinalizedError`](errors.md#unshieldalreadyfinalizederror). The funds already arrived; treat the error as completion.
 
 Options:
 
@@ -169,7 +169,7 @@ Options:
 
 `(callbacks?: UnshieldCallbacks) => Promise<TransactionResult>`
 
-Unshields the entire confidential balance by using the on-chain encrypted balance handle directly. It handles a lost finalize race the same way as `unshield`.
+Unshields the entire confidential balance by using the on-chain encrypted balance handle directly. If another tab or account finalizes first, it behaves the same way as `unshield`.
 
 ```ts
 await wrappedToken.unshieldAll({

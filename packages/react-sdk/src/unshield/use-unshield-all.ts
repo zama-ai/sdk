@@ -19,9 +19,9 @@ import { useWrappedToken } from "../token/use-wrapped-token";
  * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
  * - {@link SigningRejectedError} — user rejected the wallet prompt
  * - {@link DecryptionFailedError} — public decryption failed during finalize
- * - {@link UnshieldAlreadyFinalizedError}: a concurrent finalize (another tab or a
- *   third party) won the race. The funds arrived and this hook refreshed the balances,
- *   so treat it as completion
+ * - {@link UnshieldAlreadyFinalizedError}: another tab or account called `finalizeUnwrap`
+ *   first. The funds arrived and this hook refreshed the balances, so treat it as
+ *   completion
  * - {@link TransactionRevertedError} — on-chain transaction reverted
  *
  * @param address - Address of the confidential wrapper contract.

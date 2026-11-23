@@ -48,7 +48,7 @@ describe("useUnshield", () => {
     expect(queryClient).toHaveCacheUntouched(otherAllowanceKey, 333n);
   });
 
-  test("cache: invalidates balance, allowance, and wagmi when a concurrent finalize won the race", async ({
+  test("cache: invalidates balance, allowance, and wagmi when another account finalized first", async ({
     renderWithProviders,
     provider,
     signer,

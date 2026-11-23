@@ -2542,7 +2542,7 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 
 ### Unshield
 
-**Unshield hooks refresh balances when a finalize loses the race.** Any account can call `finalizeUnwrap`. When another tab or a third party finalizes first, `useUnshield` and `useUnshieldAll` now refresh the balance queries on `UnshieldAlreadyFinalizedError`, as `useResumeUnshield` already did. Treat the error as completion. See [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields).
+**Unshield hooks refresh balances when someone else finalizes the unwrap.** Any account can call `finalizeUnwrap`. When another tab or another account calls it first, `useUnshield` and `useUnshieldAll` now refresh the balance queries on `UnshieldAlreadyFinalizedError`, as `useResumeUnshield` already did. Treat the error as completion. See [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields).
 
 **Interrupted unshields stay recoverable.** The SDK now saves the unwrap transaction hash as soon as the wallet returns it, instead of after the receipt, and keeps one entry per unshield, so a second unshield on the same token no longer overwrites the first. `getPendingUnshield()` / `usePendingUnshield` return the oldest pending one; after resuming it, the next one is returned. An entry whose unwrap reverted, or was replaced or cancelled in the wallet, is cleared instead of being reported, and an unwrap that is not mined yet no longer stalls `getPendingUnshield()`. `resumeUnshield()` no longer waits for such an unwrap: it throws the new `UnwrapNotMinedError` (`UNWRAP_NOT_MINED`) at once and keeps the entry. Entries move to a new storage key, so an older SDK still open in another tab cannot delete them. See [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields).
 
@@ -5564,7 +5564,7 @@ The flow is:
 
 
 > [!WARNING]
-> **A finalize can lose the race.** Any account can call `finalizeUnwrap`, so another tab, a double click, or a third-party bot can finalize the same request first. `unshield`, `unshieldAll` and `resumeUnshield` then clear the persisted state and throw `UnshieldAlreadyFinalizedError`. Treat the error as completion: the funds already arrived, so dismiss the prompt and refresh balances. `useUnshield`, `useUnshieldAll` and `useResumeUnshield` refresh the affected queries automatically. See [UnshieldAlreadyFinalizedError](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror).
+> **Someone else can finalize the unwrap first.** Any account can call `finalizeUnwrap`, so another tab, a double click, or another account's bot can finalize the same request before the SDK does. `unshield`, `unshieldAll` and `resumeUnshield` then clear the persisted state and throw `UnshieldAlreadyFinalizedError`. Treat the error as completion: the funds already arrived, so dismiss the prompt and refresh balances. `useUnshield`, `useUnshieldAll` and `useResumeUnshield` refresh the affected queries automatically. See [UnshieldAlreadyFinalizedError](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror).
 >
 > **An unwrap may not be mined yet.** If the unwrap has no receipt (still pending, or dropped or replaced so this hash is never mined), `resumeUnshield` throws `UnwrapNotMinedError` at once and keeps the entry. Show the unshield as not confirmed and offer the resume again later. See [UnwrapNotMinedError](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unwrapnotminederror).
 
@@ -6317,7 +6317,7 @@ Every SDK error is an instance of `ZamaError`, which extends the native `Error` 
 | `TRANSACTION_REVERTED`                   | `TransactionRevertedError`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                   |
 | `HCU_BLOCK_LIMIT_EXCEEDED`               | `HcuBlockLimitExceededError`              | Gas estimation found too little FHE compute (HCU) left in the block (retryable)                                  |
 | `HCU_TRANSACTION_LIMIT_EXCEEDED`         | `HcuTransactionLimitExceededError`        | The transaction needs more FHE compute (HCU) than one transaction may use                                        |
-| `UNSHIELD_ALREADY_FINALIZED`             | `UnshieldAlreadyFinalizedError`           | A concurrent finalize won the race -- funds already arrived, nothing left to finalize                            |
+| `UNSHIELD_ALREADY_FINALIZED`             | `UnshieldAlreadyFinalizedError`           | Someone else already called `finalizeUnwrap` -- funds already arrived, nothing left to finalize                  |
 | `UNWRAP_NOT_MINED`                       | `UnwrapNotMinedError`                     | `resumeUnshield()` called for an unwrap that is not mined yet -- the entry is kept, retry later (retryable)      |
 | `INVALID_KEYPAIR`                        | `InvalidTransportKeyPairError`            | Relayer rejected transport key pair (stale or malformed)                                                         |
 | `KEYPAIR_EXPIRED`                        | `TransportKeyPairExpiredError`            | Transport key pair expired -- user needs to re-sign                                                              |
@@ -6588,7 +6588,7 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 | `ConfigurationError` (`CONFIGURATION`) on first operation        | FHE runtime failed to initialize                             | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`. Check transport config.                                                                                                                                                                   |
 | `EncryptionFailedError` (`ENCRYPTION_FAILED`)                    | FHE encryption failed during an operation                    | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`.                                                                                                                                                                                           |
 | `DecryptionFailedError` (`DECRYPTION_FAILED`) after page reload  | Unshield was interrupted                                     | Use `getPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.                                                                                                                                                                          |
-| `UnshieldAlreadyFinalizedError` (`UNSHIELD_ALREADY_FINALIZED`)   | A concurrent finalize won the race                           | Funds already arrived -- treat as completion, not failure. `useUnshield`, `useUnshieldAll` and `useResumeUnshield` refresh balances automatically; if calling the `WrappedToken` methods directly, catch this error and refresh balances instead of retrying. |
+| `UnshieldAlreadyFinalizedError` (`UNSHIELD_ALREADY_FINALIZED`)   | Someone else already called `finalizeUnwrap`                 | Funds already arrived -- treat as completion, not failure. `useUnshield`, `useUnshieldAll` and `useResumeUnshield` refresh balances automatically; if calling the `WrappedToken` methods directly, catch this error and refresh balances instead of retrying. |
 | `UnwrapNotMinedError` (`UNWRAP_NOT_MINED`) on resume             | The unwrap has no receipt yet: still pending, or dropped     | The entry is kept. Show the unshield as not confirmed and offer the resume again later.                                                                                                                                                                       |
 | `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`)           | Relayer URL wrong or auth missing                            | Verify `relayerUrl` in your transport config. If using API key auth, check the `auth` option.                                                                                                                                                                 |
 | Go or Rust error with no SDK code                                | The daemon connection or a callback channel failed           | Follow [Monitor and troubleshoot](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md) and [Recover from disconnections](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/recover-from-disconnections.md).                                                                                       |
@@ -12480,7 +12480,7 @@ The returned `txHash` and `receipt` are for the finalization transaction.
 const { txHash, receipt } = await wrappedToken.unshield(500n);
 ```
 
-If a concurrent finalize (another tab, a third party) wins the race, it clears the persisted pending state and throws [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror). The funds already arrived; treat the error as completion.
+If another tab or account calls `finalizeUnwrap` first, it clears the persisted pending state and throws [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror). The funds already arrived; treat the error as completion.
 
 Options:
 
@@ -12495,7 +12495,7 @@ Options:
 
 `(callbacks?: UnshieldCallbacks) => Promise<TransactionResult>`
 
-Unshields the entire confidential balance by using the on-chain encrypted balance handle directly. It handles a lost finalize race the same way as `unshield`.
+Unshields the entire confidential balance by using the on-chain encrypted balance handle directly. If another tab or account finalizes first, it behaves the same way as `unshield`.
 
 ```ts
 await wrappedToken.unshieldAll({
@@ -14513,7 +14513,7 @@ Exactly seven error classes are retryable today: `RpcRateLimitError`, `RelayerRe
 | `TransactionRevertedError`                | `TRANSACTION_REVERTED`                   | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
 | `HcuBlockLimitExceededError`              | `HCU_BLOCK_LIMIT_EXCEEDED`               | Gas estimation found too little FHE compute (HCU) left in the block; retry in the next block (retryable)                          |
 | `HcuTransactionLimitExceededError`        | `HCU_TRANSACTION_LIMIT_EXCEEDED`         | The transaction needs more FHE compute (HCU), in total or in one sequential chain, than one transaction may use                   |
-| `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | A concurrent finalize won the race: funds delivered, nothing left to finalize                                                     |
+| `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | Someone else already called `finalizeUnwrap`: funds delivered, nothing left to finalize                                           |
 | `UnwrapNotMinedError`                     | `UNWRAP_NOT_MINED`                       | The unwrap behind a resumed unshield is not mined yet; its entry is kept (retryable)                                              |
 | `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | Every batcher of the chosen vault is paused or closed, so the join would revert                                                   |
 | `VaultBatcherReadFailedError`             | `VAULT_BATCHER_READ_FAILED`              | A batcher of a vault could not be read, so the SDK cannot tell which batch a join reaches                                         |
@@ -14713,7 +14713,7 @@ matchZamaError(error, {
 
 **Code:** `UNSHIELD_ALREADY_FINALIZED`
 
-Thrown by `resumeUnshield()` when the unwrap request no longer exists on-chain: it was already finalized, so the underlying ERC-20 tokens were delivered. `unshield()` and `unshieldAll()` throw it too when a concurrent finalize wins the race. The SDK clears the matching entry before throwing, so `getPendingUnshield()` no longer returns this `unwrapTxHash`. The error carries `unwrapTxHash` and `unwrapRequestId`.
+Thrown by `resumeUnshield()` when the unwrap request no longer exists on-chain: it was already finalized, so the underlying ERC-20 tokens were delivered. `unshield()` and `unshieldAll()` throw it too when another tab or account calls `finalizeUnwrap` first. The SDK clears the matching entry before throwing, so `getPendingUnshield()` no longer returns this `unwrapTxHash`. The error carries `unwrapTxHash` and `unwrapRequestId`.
 
 ```ts
 matchZamaError(error, {
@@ -18468,7 +18468,7 @@ await unshield({
 
 - `InsufficientConfidentialBalanceError` -- if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
 - `BalanceCheckUnavailableError` -- if balance validation is required but decryption is not possible (no stored permits). Grant a permit first with `useGrantPermit`, or use `skipBalanceCheck: true`
-- [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror) -- a concurrent finalize won the race. The funds already arrived and the hook refreshes the balance queries, so treat it as completion
+- [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror) -- another tab or account called `finalizeUnwrap` first. The funds already arrived and the hook refreshes the balance queries, so treat it as completion
 
 ## Return Type
 
@@ -18684,7 +18684,7 @@ await unshieldAll({
 
 **Throws:**
 
-- [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror) -- a concurrent finalize won the race. The funds already arrived and the hook refreshes the balance queries, so treat it as completion
+- [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror) -- another tab or account called `finalizeUnwrap` first. The funds already arrived and the hook refreshes the balance queries, so treat it as completion
 
 ## Return Type
 

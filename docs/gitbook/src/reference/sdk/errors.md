@@ -127,7 +127,7 @@ Exactly seven error classes are retryable today: `RpcRateLimitError`, `RelayerRe
 | `TransactionRevertedError`                | `TRANSACTION_REVERTED`                   | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
 | `HcuBlockLimitExceededError`              | `HCU_BLOCK_LIMIT_EXCEEDED`               | Gas estimation found too little FHE compute (HCU) left in the block; retry in the next block (retryable)                          |
 | `HcuTransactionLimitExceededError`        | `HCU_TRANSACTION_LIMIT_EXCEEDED`         | The transaction needs more FHE compute (HCU), in total or in one sequential chain, than one transaction may use                   |
-| `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | A concurrent finalize won the race: funds delivered, nothing left to finalize                                                     |
+| `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | Someone else already called `finalizeUnwrap`: funds delivered, nothing left to finalize                                           |
 | `UnwrapNotMinedError`                     | `UNWRAP_NOT_MINED`                       | The unwrap behind a resumed unshield is not mined yet; its entry is kept (retryable)                                              |
 | `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | Every batcher of the chosen vault is paused or closed, so the join would revert                                                   |
 | `VaultBatcherReadFailedError`             | `VAULT_BATCHER_READ_FAILED`              | A batcher of a vault could not be read, so the SDK cannot tell which batch a join reaches                                         |
@@ -327,7 +327,7 @@ matchZamaError(error, {
 
 **Code:** `UNSHIELD_ALREADY_FINALIZED`
 
-Thrown by `resumeUnshield()` when the unwrap request no longer exists on-chain: it was already finalized, so the underlying ERC-20 tokens were delivered. `unshield()` and `unshieldAll()` throw it too when a concurrent finalize wins the race. The SDK clears the matching entry before throwing, so `getPendingUnshield()` no longer returns this `unwrapTxHash`. The error carries `unwrapTxHash` and `unwrapRequestId`.
+Thrown by `resumeUnshield()` when the unwrap request no longer exists on-chain: it was already finalized, so the underlying ERC-20 tokens were delivered. `unshield()` and `unshieldAll()` throw it too when another tab or account calls `finalizeUnwrap` first. The SDK clears the matching entry before throwing, so `getPendingUnshield()` no longer returns this `unwrapTxHash`. The error carries `unwrapTxHash` and `unwrapRequestId`.
 
 ```ts
 matchZamaError(error, {
