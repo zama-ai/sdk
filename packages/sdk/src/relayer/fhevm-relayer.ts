@@ -15,7 +15,7 @@ import {
   createFhevmCleartextEncryptClient,
 } from "@fhevm/sdk/viem/cleartext";
 import { createPublicClient, custom, http } from "viem";
-import { keyVerificationChain, keyVerificationProblem } from "../chains/key-verification";
+import { assertKeyVerification, keyVerificationChain } from "../chains/key-verification";
 import { toFhevmChain } from "../chains/to-fhevm-chain";
 import type { FheChain } from "../chains/types";
 import { ConfigurationError } from "../errors";
@@ -106,8 +106,13 @@ export class FhevmRelayer implements RelayerSDK {
    * Builds capability-scoped `@fhevm/sdk` clients for the chain and captures
    * the chain's `auth`/`timeout`/`debug` as request defaults. Construction is
    * cheap; each client's one-time init is deferred to its first operation.
+   * Throws `ConfigurationError` on a non-cleartext chain with no `KMSGeneration`
+   * contract, since the FHE key cannot be verified without one.
    */
   constructor(config: FhevmRelayerConfig) {
+    if (!config.cleartext) {
+      assertKeyVerification(config.chain);
+    }
     this.#chain = config.chain;
     const { timeout, debug, batchRpcCalls, moduleVersions, fheEncryptionKey } =
       config.options ?? {};
@@ -153,10 +158,6 @@ export class FhevmRelayer implements RelayerSDK {
       this.#decrypt = createFhevmCleartextDecryptClient(params);
       this.#encrypt = withInlineInit(createFhevmCleartextEncryptClient(params));
     } else {
-      const problem = keyVerificationProblem(this.#chain);
-      if (problem !== undefined) {
-        throw problem;
-      }
       this.#base = createFhevmBaseClient(params);
       this.#decrypt = createFhevmDecryptClient(params);
       this.#encrypt = this.#buildEncryptBackend(config, params, {

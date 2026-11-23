@@ -702,8 +702,13 @@ describe("FhevmRelayer request options", () => {
       { ...anvilPreset, keyVerification: { chain: mainnetWithout as never } },
     ],
   ])("rejects %s at construction", (_, chain) => {
-    expect(() => makeRelayer({ chain })).toThrow(ConfigurationError);
-    expect(() => makeRelayer({ chain })).toThrow(/keyVerification/);
+    expect(() => makeRelayer({ chain })).toThrow(
+      expect.objectContaining({
+        name: "ConfigurationError",
+        message: expect.stringMatching(/keyVerification/),
+      }),
+    );
+    expect(clients.createFhevmBaseClient).not.toHaveBeenCalled();
   });
 
   test("accepts a cleartext chain with no KMSGeneration contract", () => {
