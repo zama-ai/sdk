@@ -5,7 +5,7 @@ description: Query hook that reads the open batch of every vault in a group.
 
 # useOpenBatches
 
-Query hook that reads the batch the next join lands in, for every vault of a group: when it can be dispatched, and whether its batcher is paused. Wraps [`VaultClient.readOpenBatches`](../sdk/VaultClient.md#readopenbatches).
+Query hook that reads the batch the next join lands in, for every vault of a group: when it can be dispatched, and whether the vault takes no joins because its batchers are paused. When every batcher of a vault is closed, `error` is a `VaultBatcherPausedError`. Wraps [`VaultClient.readOpenBatches`](../sdk/VaultClient.md#readopenbatches).
 
 ## Import
 
@@ -67,7 +67,7 @@ Whether to read the deposit batchers or the redeem batchers.
 
 {% include ".gitbook/includes/query-options.md" %}
 
-The hook sets no `refetchInterval`.
+The hook refetches one second after a batch comes within a minute of its due time, since joins may then move to another batch, then every 15 seconds until a keeper dispatches it. It stops while every vault is paused. A `refetchInterval` you pass replaces this.
 
 ## Return Type
 

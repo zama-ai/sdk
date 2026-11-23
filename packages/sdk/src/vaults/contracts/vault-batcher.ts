@@ -136,6 +136,11 @@ export function pausedContract(batcher: Address) {
   return { address: batcher, abi: vaultBatcherAbi, functionName: "paused", args: [] } as const;
 }
 
+/** Returns the contract config to read whether the batcher is past its last batch. Batchers deployed before `closed()` revert. */
+export function closedContract(batcher: Address) {
+  return { address: batcher, abi: vaultBatcherAbi, functionName: "closed", args: [] } as const;
+}
+
 /** Returns the contract config to read the unwrap request a dispatched batch is waiting on. */
 export function unwrapRequestIdContract(batcher: Address, batchId: bigint) {
   return {

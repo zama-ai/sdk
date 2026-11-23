@@ -64,6 +64,7 @@ export function createContextFactory(manager: StorageManager): ContextFactory {
       getChainId: () => current().getChainId(),
       readContract: (config) => current().readContract(config),
       waitForTransactionReceipt: (hash) => current().waitForTransactionReceipt(hash),
+      getTransactionReceipt: (hash) => current().getTransactionReceipt(hash),
       getBlockTimestamp: (readChainId) => current().getBlockTimestamp(readChainId),
       prepareTransaction: (args) => current().prepareTransaction(args),
     };
