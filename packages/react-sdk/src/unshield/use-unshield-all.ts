@@ -3,6 +3,7 @@
 import type { UseMutationOptions } from "@tanstack/react-query";
 import { useMutation } from "@tanstack/react-query";
 import type { Address, TransactionResult } from "@zama-fhe/sdk";
+import { UnshieldAlreadyFinalizedError } from "@zama-fhe/sdk";
 import {
   invalidateAfterUnshield,
   invalidateAfterUnshieldSettled,
@@ -18,6 +19,9 @@ import { useWrappedToken } from "../token/use-wrapped-token";
  * Errors are {@link ZamaError} subclasses — use `instanceof` to handle specific failures:
  * - {@link SigningRejectedError} — user rejected the wallet prompt
  * - {@link DecryptionFailedError} — public decryption failed during finalize
+ * - {@link UnshieldAlreadyFinalizedError}: a concurrent finalize (another tab or a
+ *   third party) won the race. The funds arrived and this hook refreshed the balances,
+ *   so treat it as completion
  * - {@link TransactionRevertedError} — on-chain transaction reverted
  *
  * @param address - Address of the confidential wrapper contract.
@@ -41,6 +45,12 @@ export function useUnshieldAll(
     onSuccess: (data, variables, onMutateResult, context) => {
       options?.onSuccess?.(data, variables, onMutateResult, context);
       invalidateAfterUnshield(context.client, token.address);
+    },
+    onError: (error, variables, onMutateResult, context) => {
+      options?.onError?.(error, variables, onMutateResult, context);
+      if (error instanceof UnshieldAlreadyFinalizedError) {
+        invalidateAfterUnshield(context.client, token.address);
+      }
     },
     onSettled: (data, error, variables, onMutateResult, context) => {
       options?.onSettled?.(data, error, variables, onMutateResult, context);

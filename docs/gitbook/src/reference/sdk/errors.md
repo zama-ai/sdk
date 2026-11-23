@@ -335,7 +335,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Treat it as completion, not a failure: dismiss the "resume unshield" prompt and refresh balances. `useResumeUnshield` invalidates the affected queries automatically. Do not retry; nothing is left to finalize.
+**How to handle:** Treat it as completion, not a failure: dismiss the "resume unshield" prompt and refresh balances. `useUnshield`, `useUnshieldAll` and `useResumeUnshield` invalidate the affected queries automatically. Do not retry; nothing is left to finalize.
 
 ### UnwrapNotMinedError
 

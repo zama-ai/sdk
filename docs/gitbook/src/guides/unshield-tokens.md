@@ -174,7 +174,7 @@ The flow is:
 2. **`resumeUnshield`** -- picks up where the SDK left off by polling for the proof and submitting the finalize transaction. On success the SDK clears the persisted state for you.
 
 {% hint style="warning" %}
-**A resume can lose the race.** Another tab, a double click, or a third party can finalize the same request first. `resumeUnshield` then clears the persisted state and throws `UnshieldAlreadyFinalizedError` instead of broadcasting a transaction that would revert. Treat the error as completion: the funds already arrived, so dismiss the prompt and refresh balances. `useResumeUnshield` refreshes the affected queries automatically. See [UnshieldAlreadyFinalizedError](../reference/sdk/errors.md#unshieldalreadyfinalizederror).
+**A finalize can lose the race.** Any account can call `finalizeUnwrap`, so another tab, a double click, or a third-party bot can finalize the same request first. `unshield`, `unshieldAll` and `resumeUnshield` then clear the persisted state and throw `UnshieldAlreadyFinalizedError`. Treat the error as completion: the funds already arrived, so dismiss the prompt and refresh balances. `useUnshield`, `useUnshieldAll` and `useResumeUnshield` refresh the affected queries automatically. See [UnshieldAlreadyFinalizedError](../reference/sdk/errors.md#unshieldalreadyfinalizederror).
 
 **An unwrap may not be mined yet.** If the unwrap has no receipt (still pending, or dropped or replaced so this hash is never mined), `resumeUnshield` throws `UnwrapNotMinedError` at once and keeps the entry. Show the unshield as not confirmed and offer the resume again later. See [UnwrapNotMinedError](../reference/sdk/errors.md#unwrapnotminederror).
 {% endhint %}
