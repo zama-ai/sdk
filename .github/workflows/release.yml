@@ -399,20 +399,45 @@ jobs:
             runner: ubuntu-24.04-arm
     steps:
       # The release commit, not the tag: the commit is what the revision label names, and the tag can still move.
+      # Full history, so the next step can check that the commit is on the branch.
       - name: Checkout release commit
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ env.REVISION }}
+          fetch-depth: 0
           persist-credentials: false
 
-      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      # The channel tag comes from the version, so any other version shape (2.3.4-test.1) would publish its own
+      # public tag. A publish-tag run is checked against the branch it was dispatched from.
+      - name: Check the release
+        run: |
+          case "${GITHUB_REF_NAME}" in
+            main) pattern='^[0-9]+\.[0-9]+\.[0-9]+$' expected=latest ;;
+            beta | alpha) pattern="^[0-9]+\.[0-9]+\.[0-9]+-${GITHUB_REF_NAME}\.[0-9]+$" expected="${GITHUB_REF_NAME}" ;;
+            *)
+              echo "::error::Images are published only from main, beta or alpha (got: ${GITHUB_REF_NAME})."
+              exit 1
+              ;;
+          esac
+          if [[ ! "${VERSION}" =~ ${pattern} || "${CHANNEL}" != "${expected}" ]]; then
+            echo "::error::${VERSION} (channel ${CHANNEL}) is not a ${GITHUB_REF_NAME} release."
+            exit 1
+          fi
+          git merge-base --is-ancestor "${REVISION}" "origin/${GITHUB_REF_NAME}" && rc=0 || rc=$?
+          if [[ "${rc}" -eq 1 ]]; then
+            echo "::error::${REVISION} is not on ${GITHUB_REF_NAME}."
+            exit 1
+          elif [[ "${rc}" -ne 0 ]]; then
+            echo "::error::git merge-base failed unexpectedly (exit ${rc})."
+            exit "${rc}"
+          fi
+          sdk_version="$(jq -r .version packages/sdk/package.json)"
+          if [[ "${sdk_version}" != "${VERSION}" ]]; then
+            echo "::error::${REVISION} is @zama-fhe/sdk ${sdk_version}, not ${VERSION}."
+            exit 1
+          fi
 
-      - name: Log in to GHCR
-        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       # No password: the action exchanges the job's OIDC token for a short-lived Docker Hub token.
       - name: Log in to Docker Hardened Images
@@ -423,28 +448,12 @@ jobs:
           registry: dhi.io
           username: ${{ vars.DOCKERHUB_OIDC_USER }}
 
-      # Boots this build before the push below reuses its layers. Reads, never writes, the gate's layer cache:
-      # a release can only restore caches from its own branch or the default branch, which only merges write.
-      - name: Build for the boot test
+      # Built once, to a local OCI layout: the steps below test, scan and push this directory, so the pushed image is
+      # the tested one. BuildKit's own provenance and SBOM are off; the signed attestations below replace them.
+      # Reads, never writes, the gate's layer cache: a release can only restore caches from its own branch or the
+      # default branch, which only merges write.
+      - name: Build the image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0 # zizmor: ignore[cache-poisoning]
-        with:
-          context: .
-          file: packages/sdk-daemon/Dockerfile
-          platforms: ${{ matrix.platform }}
-          load: true
-          tags: ${{ env.DAEMON_IMAGE }}:release-check
-          cache-from: type=gha,scope=daemon-image-${{ matrix.arch }}
-
-      - name: Start the daemon with the deployment Compose file
-        env:
-          ZAMA_SDK_VERSION: release-check
-        run: |
-          trap 'docker compose -f packages/sdk-daemon/deploy/compose.yaml down -v' EXIT
-          docker compose -f packages/sdk-daemon/deploy/compose.yaml up -d --wait --wait-timeout 120
-
-      - name: Build and push by digest
-        id: build
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: packages/sdk-daemon/Dockerfile
@@ -456,26 +465,36 @@ jobs:
             org.opencontainers.image.title=${{ env.DAEMON_IMAGE_TITLE }}
             org.opencontainers.image.description=${{ env.DAEMON_IMAGE_DESCRIPTION }}
             org.opencontainers.image.licenses=${{ env.DAEMON_IMAGE_LICENSES }}
-          outputs: type=image,name=${{ env.DAEMON_IMAGE }},push-by-digest=true,name-canonical=true,push=true
-          provenance: mode=max
-          sbom: true
+          outputs: type=oci,dest=${{ runner.temp }}/image,tar=false,name=${{ env.DAEMON_IMAGE }}:release-check
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=daemon-image-${{ matrix.arch }}
 
-      # With provenance and sbom on, the pushed digest is a one-platform index: the image manifest plus BuildKit's
-      # attestation manifest. The manifest list flattens it, so the tag references the image manifest, never the
-      # index. That is the digest to scan and attest.
-      - name: Resolve the image manifest digest
+      # The layout's one image manifest is the digest that is scanned, pushed and attested.
+      - name: Load the image
         id: image
-        env:
-          INDEX_DIGEST: ${{ steps.build.outputs.digest }}
-          ARCH: ${{ matrix.arch }}
         run: |
-          digest="$(docker buildx imagetools inspect "${DAEMON_IMAGE}@${INDEX_DIGEST}" \
-            --format '{{ range .Manifest.Manifests }}{{ if eq .Platform.Architecture "'"${ARCH}"'" }}{{ .Digest }}{{ end }}{{ end }}')"
-          if [[ "${digest}" != sha256:* ]]; then
-            echo "::error::No ${ARCH} image manifest in ${DAEMON_IMAGE}@${INDEX_DIGEST}: got '${digest}'."
+          digest="$(jq -r 'if (.manifests | length) == 1 and .manifests[0].mediaType == "application/vnd.oci.image.manifest.v1+json"
+            then .manifests[0].digest else error("expected one image manifest") end' "${RUNNER_TEMP}/image/index.json")"
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+          tar -C "${RUNNER_TEMP}/image" -c . | docker load
+
+      - name: Check the image matches the release
+        run: |
+          ref="${DAEMON_IMAGE}:release-check"
+          revision="$(docker image inspect "${ref}" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')"
+          sdk_version="$(docker run --rm "${ref}" node -p 'require("/app/packages/sdk/package.json").version')"
+          if [[ "${revision}" != "${REVISION}" || "${sdk_version}" != "${VERSION}" ]]; then
+            echo "::error::The image is ${revision} with @zama-fhe/sdk ${sdk_version}, not ${REVISION} with ${VERSION}."
             exit 1
           fi
-          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+
+      - name: Start the daemon with the deployment Compose file
+        env:
+          ZAMA_SDK_VERSION: release-check
+        run: |
+          trap 'docker compose -f packages/sdk-daemon/deploy/compose.yaml down -v' EXIT
+          docker compose -f packages/sdk-daemon/deploy/compose.yaml up -d --wait --wait-timeout 120
 
       # The branch tip, not the release commit: a CVE disclosed after the Daemon CI gate is risk-accepted on the
       # branch and picked up by re-running this job, and tags cut before the file existed can still be republished.
@@ -488,27 +507,41 @@ jobs:
           sparse-checkout-cone-mode: false
           persist-credentials: false
 
-      # The digest is pushed untagged: nothing below it is reachable by tag until publish-image-manifest runs,
-      # and that job only runs when every platform passed this gate. Same gate as Daemon CI: every CRITICAL or
-      # HIGH finding fails unless it was risk-accepted in .trivyignore after a security review.
-      - name: Scan the pushed digest
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+      - uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
         with:
-          image-ref: ${{ env.DAEMON_IMAGE }}@${{ steps.image.outputs.digest }}
-          exit-code: "1"
-          vuln-type: os,library
-          severity: CRITICAL,HIGH
-          trivyignores: branch-tip/.trivyignore
           version: v0.76.0
 
-      - name: Generate the SBOM
-        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+      # Same gate as Daemon CI: every CRITICAL or HIGH finding fails unless it was risk-accepted in .trivyignore.
+      # The SBOM comes from the same Trivy and the same layout, so it lists what was scanned.
+      - name: Scan the image and generate the SBOM
+        run: |
+          trivy image --input "${RUNNER_TEMP}/image" --pkg-types os,library --severity CRITICAL,HIGH \
+            --ignorefile branch-tip/.trivyignore --exit-code 1
+          trivy image --input "${RUNNER_TEMP}/image" --format spdx-json --output "${RUNNER_TEMP}/sbom.spdx.json"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
-          image: ${{ env.DAEMON_IMAGE }}@${{ steps.image.outputs.digest }}
-          format: spdx-json
-          output-file: ${{ runner.temp }}/sbom.spdx.json
-          upload-artifact: false
-          upload-release-assets: false
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Pushed untagged, by digest: skopeo refuses to upload a manifest whose digest differs from the scanned one.
+      # Nothing is reachable by tag until publish-image-manifest runs, which needs every platform to pass.
+      - name: Push the scanned image
+        env:
+          DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          if ! command -v skopeo > /dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq skopeo
+          fi
+          skopeo copy --preserve-digests "oci:${RUNNER_TEMP}/image" "docker://${DAEMON_IMAGE}@${DIGEST}"
+          pushed="$(docker buildx imagetools inspect "${DAEMON_IMAGE}@${DIGEST}" --format '{{ .Manifest.Digest }}')"
+          if [[ "${pushed}" != "${DIGEST}" ]]; then
+            echo "::error::GHCR serves ${pushed} for ${DIGEST}."
+            exit 1
+          fi
 
       # Signed with the workflow's OIDC identity and stored next to the image, so partners verify it with
       # `gh attestation verify oci://…` or cosign without trusting anything outside the registry and Sigstore.
@@ -529,7 +562,7 @@ jobs:
 
       - name: Export digest
         env:
-          DIGEST: ${{ steps.build.outputs.digest }}
+          DIGEST: ${{ steps.image.outputs.digest }}
         run: |
           mkdir -p "${RUNNER_TEMP}/digests"
           touch "${RUNNER_TEMP}/digests/${DIGEST#sha256:}"
