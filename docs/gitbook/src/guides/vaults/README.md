@@ -39,7 +39,7 @@ A **vault group** is a set of vaults that take deposits in the same confidential
 The SDK builds every group join this way. What it cannot enforce is up to your app:
 
 - **Join through the group.** A vault can also be joined on its own, which is simpler but shows on-chain which vault was chosen.
-- **Never change a group once users have joined it.** All users of a group must join the same vaults in the same order, except that a vault that takes no joins is left out, or their transactions stop looking alike. To change the vaults, define a new group.
+- **Never change a group once users have joined it.** All users of a group must join the same vaults in the same order, or their transactions stop looking alike. A vault that takes no joins is left out of every join. To change the vaults, define a new group.
 - **Quit every leg, or none.** A quit is sent by the user and is public. Quitting only the chosen vault's batch shows which vault it was.
 - **Decrypt every leg together.** Decrypting only the chosen vault's balance or deposit tells the relayer which vault the user cares about.
 - **Keep the chosen vault in the user's own storage.** The batches of a join name every vault of the group that takes joins, so they reveal nothing. A record of the chosen vault does, and so does a `PreparedJoin`, which holds the chosen vault and the amount in cleartext.
