@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.9.0-beta.8](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.7...v3.9.0-beta.8) (2026-11-23)
+
+### Bug Fixes
+
+- **daemon:** drop the CVE-2026-76844 waiver from the image scan ([#980](https://github.com/zama-ai/sdk/issues/980)) ([59ca2d3]()), closes [#906]() [#931]()
+
 ## [3.9.0-beta.7](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.6...v3.9.0-beta.7) (2026-11-23)
 
 ### Bug Fixes
