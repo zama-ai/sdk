@@ -43,7 +43,7 @@ A vault names its batchers for each direction: the ones deposits join, and the o
 Every method that takes a group also takes a vault on its own, such as `ALPHA`, with no `vaultId`. Join through the group, as the [privacy rules](README.md#a-group-hides-which-vault-you-chose) say.
 
 {% hint style="warning" %}
-The order of `vaults` is the leg order of every join. Never change a group once users have joined it: define a new one. See [A group hides which vault you chose](README.md#a-group-hides-which-vault-you-chose).
+The order of `vaults` is the leg order of every join. A vault that takes no joins has no leg, so match legs and batches by `vaultId`, not by position. Never change a group once users have joined it: define a new one. See [A group hides which vault you chose](README.md#a-group-hides-which-vault-you-chose).
 {% endhint %}
 
 ### 2. Create the client

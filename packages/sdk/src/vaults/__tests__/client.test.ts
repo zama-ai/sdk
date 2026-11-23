@@ -394,22 +394,27 @@ describe("prepareDeposit", () => {
     expect(structuredClone(prepared)).toEqual(prepared);
   });
 
-  test("refuses when the chosen vault's batcher is paused, without the balance check", async ({
-    sdk,
-    provider,
-    relayer,
-  }) => {
-    mockChain(provider, { paused: [BETA.depositBatcher] });
-    mockEncryption(relayer);
-    const joining = createVaultClient(sdk).prepareDeposit(STABLE, {
-      vaultId: "beta",
-      account: USER,
-      amount: 10n,
-    });
-    await expect(joining).rejects.toBeInstanceOf(VaultBatcherPausedError);
-    await expect(joining).rejects.toMatchObject({ batcher: BETA.depositBatcher, vaultId: "beta" });
-    expect(Token.batchBalancesOf).not.toHaveBeenCalled();
-  });
+  test.for([
+    ["paused", { paused: [BETA.depositBatcher] }],
+    ["closed", { batches: { [BETA.depositBatcher]: { createdAt: 0n, closed: true } } }],
+  ] as const)(
+    "refuses when the chosen vault's batchers are all %s, without the balance check",
+    async ([, chain], { sdk, provider, relayer }) => {
+      mockChain(provider, chain);
+      mockEncryption(relayer);
+      const joining = createVaultClient(sdk).prepareDeposit(STABLE, {
+        vaultId: "beta",
+        account: USER,
+        amount: 10n,
+      });
+      await expect(joining).rejects.toBeInstanceOf(VaultBatcherPausedError);
+      await expect(joining).rejects.toMatchObject({
+        batcher: BETA.depositBatcher,
+        vaultId: "beta",
+      });
+      expect(Token.batchBalancesOf).not.toHaveBeenCalled();
+    },
+  );
 
   test.for([
     ["paused", { paused: [BETA.depositBatcher] }],
@@ -1098,6 +1103,21 @@ describe("readOpenBatches", () => {
     expect(batches).toMatchObject([
       { vaultId: "alpha", batcher: ALPHA.depositBatcher, batchId: 7n, observedAt: NOW },
       { vaultId: "beta", batcher: BETA.depositBatcher, batchId: 7n, observedAt: NOW },
+    ]);
+  });
+
+  test("leaves out a group member whose batchers are all closed, and keeps a paused one", async ({
+    sdk,
+    provider,
+  }) => {
+    mockChain(provider, { batches: { [ALPHA.depositBatcher]: { createdAt: 0n, closed: true } } });
+    expect(await createVaultClient(sdk).readOpenBatches(STABLE, "deposit")).toMatchObject([
+      { vaultId: "beta", paused: false },
+    ]);
+    mockChain(provider, { paused: [ALPHA.depositBatcher] });
+    expect(await createVaultClient(sdk).readOpenBatches(STABLE, "deposit")).toMatchObject([
+      { vaultId: "alpha", paused: true },
+      { vaultId: "beta", paused: false },
     ]);
   });
 });

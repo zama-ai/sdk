@@ -2554,7 +2554,7 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 
 **Several batchers per vault direction.** A vault's `batchers.deposit` and `batchers.redeem` take an address, or a list of addresses and `BatcherEntry` objects (`{ address, lastBatchId? }`). A join goes to the open batch that is dispatched next among the batchers that are not paused or closed, and `readOpenBatches` returns that batch. `openBatchesQueryOptions` and `useOpenBatches` refetch when that batch comes within a minute of its due time. `VaultBatcherPausedError` is now thrown only when no batcher of a vault is open. `readOpenBatches` also throws it, instead of `ConfigurationError`, when every batcher of a vault is closed. The new `VaultBatcherReadFailedError` names the batcher and the vault when one cannot be read. `readBatch` no longer lists `dispatch` while the previous batch is in flight. See [Several batchers](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#several-batchers).
 
-**A paused group member no longer blocks its group.** `prepareDeposit`, `prepareRedeem`, `deposit` and `redeem` leave out a group member whose batchers are all paused or closed, instead of throwing `VaultBatcherPausedError` for the whole group. They still throw it when the chosen vault takes no joins. See [Paused batchers](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#paused-batchers).
+**A paused group member no longer blocks its group.** `prepareDeposit`, `prepareRedeem`, `deposit` and `redeem` leave out a group member whose batchers are all paused or closed, instead of throwing `VaultBatcherPausedError` for the whole group. They still throw it when the chosen vault takes no joins. `readOpenBatches` and `useOpenBatches` leave out a group member whose batchers are all closed. `legs` and `batches` then have no entry for a vault left out, so match them by `vaultId`. See [Paused batchers](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#paused-batchers).
 
 **`BatcherHistory` and `RetiredBatcher` are deprecated.** A history reads as the list `[...retired, latest]`, so `latest` takes joins as soon as it is open. It no longer waits for the retired batchers to pass their `lastBatchId`. Replace `{ retired, latest }` with that list. Code that reads `vault.batchers` must also handle a list.
 
@@ -9975,7 +9975,7 @@ The SDK builds every group join this way. What it cannot enforce is up to your a
 - **Never change a group once users have joined it.** All users of a group must join the same vaults in the same order, or their transactions stop looking alike. To change the vaults, define a new group.
 - **Quit every leg, or none.** A quit is sent by the user and is public. Quitting only the chosen vault's batch shows which vault it was.
 - **Decrypt every leg together.** Decrypting only the chosen vault's balance or deposit tells the relayer which vault the user cares about.
-- **Keep the chosen vault in the user's own storage.** The batches of a join name every vault of the group, so they reveal nothing. A record of the chosen vault does, and so does a `PreparedJoin`, which holds the chosen vault and the amount in cleartext.
+- **Keep the chosen vault in the user's own storage.** The batches of a join name every vault of the group that takes joins, so they reveal nothing. A record of the chosen vault does, and so does a `PreparedJoin`, which holds the chosen vault and the amount in cleartext.
 
 These follow the router's [rules for clients](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#rules-for-clients).
 
@@ -10059,7 +10059,7 @@ Every method that takes a group also takes a vault on its own, such as `ALPHA`, 
 
 
 > [!WARNING]
-> The order of `vaults` is the leg order of every join. Never change a group once users have joined it: define a new one. See [A group hides which vault you chose](https://raw.githubusercontent.com/zama-ai/sdk/beta/README.md#a-group-hides-which-vault-you-chose).
+> The order of `vaults` is the leg order of every join. A vault that takes no joins has no leg, so match legs and batches by `vaultId`, not by position. Never change a group once users have joined it: define a new one. See [A group hides which vault you chose](https://raw.githubusercontent.com/zama-ai/sdk/beta/README.md#a-group-hides-which-vault-you-chose).
 
 
 ### 2. Create the client
@@ -10289,7 +10289,7 @@ The router's address comes from `vaultRouterAddress` in the [chain preset](https
 
 ## Paused batchers
 
-A paused batcher rejects joins. When a vault has [several batchers](#several-batchers), joins go to the others. When every batcher of a vault is paused or closed, the vault takes no joins. A group join leaves that vault out and sends a leg to every other vault, so the group still takes joins; the vault takes no joins from anyone, so leaving it out does not reveal the chosen one. When the chosen vault takes no joins, `deposit` and `redeem` check this first and throw `VaultBatcherPausedError`, naming the vault. `readOpenBatches` throws it too when every batcher of a vault is closed. Claims and quits still work, so existing deposits are never stuck.
+A paused batcher rejects joins. When a vault has [several batchers](#several-batchers), joins go to the others. When every batcher of a vault is paused or closed, the vault takes no joins. A group join leaves that vault out and sends a leg to every other vault, so the group still takes joins; the vault takes no joins from anyone, so leaving it out does not reveal the chosen one. When the chosen vault takes no joins, `deposit` and `redeem` check this first and throw `VaultBatcherPausedError`, naming the vault. `readOpenBatches` leaves a closed group member out too, and throws it for a vault on its own whose batchers are all closed. Claims and quits still work, so existing deposits are never stuck.
 
 To disable the form before the user submits, read `paused` from [`readOpenBatches`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md#show-the-open-batches).
 
@@ -10418,15 +10418,15 @@ Redemptions go through the same steps: read "shares" for "assets" and the other 
 
 ## The form
 
-| Situation                                      | What to do                                                                                                                                                                                            |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The balance is encrypted                       | Show it as hidden, with a button to decrypt it. The first decryption asks for a signature, so start it from a click. See [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useConfidentialBalance.md). |
-| The amount is above the balance                | Disable the button and say why. The SDK checks too, but the user should not learn it from an error.                                                                                                   |
-| No batcher of a vault in the group is open     | [`useOpenBatches`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useOpenBatches.md) returns `paused` for each vault. Disable the button and say joins are paused. See [Paused batchers](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#paused-batchers).         |
-| The user wants to know when the batch closes   | `useOpenBatches` returns each vault's `dispatchableAt`: the earliest time the open batch can be dispatched.                                                                                           |
-| A redemption                                   | Label the amount as shares, not assets.                                                                                                                                                               |
-| A first redemption from a group of N vaults    | Before the user starts, say the wallet may ask for up to N approvals, then the redemption. See [Wallet prompts](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#wallet-prompts).                                                          |
-| The user holds public tokens, not confidential | Shield first with [`useShield`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useShield.md).                                                                                                                                  |
+| Situation                                      | What to do                                                                                                                                                                                                                                                    |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The balance is encrypted                       | Show it as hidden, with a button to decrypt it. The first decryption asks for a signature, so start it from a click. See [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useConfidentialBalance.md).                                                         |
+| The amount is above the balance                | Disable the button and say why. The SDK checks too, but the user should not learn it from an error.                                                                                                                                                           |
+| No batcher of the chosen vault is open         | [`useOpenBatches`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useOpenBatches.md) returns `paused` for that vault. Disable the button for that vault and say it takes no joins. The other vaults of the group still take joins. See [Paused batchers](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#paused-batchers). |
+| The user wants to know when the batch closes   | `useOpenBatches` returns each vault's `dispatchableAt`: the earliest time the open batch can be dispatched.                                                                                                                                                   |
+| A redemption                                   | Label the amount as shares, not assets.                                                                                                                                                                                                                       |
+| A first redemption from a group of N vaults    | Before the user starts, say the wallet may ask for up to N approvals, then the redemption. See [Wallet prompts](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#wallet-prompts).                                                                                                                  |
+| The user holds public tokens, not confidential | Shield first with [`useShield`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useShield.md).                                                                                                                                                                                          |
 
 ## The send
 
@@ -12893,7 +12893,7 @@ export const ALPHA = defineVault({
 | `chainId`  | `number`                                  | The chain the vault's batchers are on.                        |
 | `batchers` | `{ deposit: Batchers; redeem: Batchers }` | The batchers each direction joins: one, or a list of several. |
 
-A vault names no token: the client reads each batcher's `fromToken()`. A join or read throws `ConfigurationError` when a direction lists no batcher, or for an invalid batcher address or `lastBatchId`. It throws `VaultBatcherPausedError` when every batcher of a direction is closed.
+A vault names no token: the client reads each batcher's `fromToken()`. A join or read throws `ConfigurationError` when a direction lists no batcher, or for an invalid batcher address or `lastBatchId`. A read of a vault on its own, or a join into the chosen vault, throws `VaultBatcherPausedError` when every batcher of the direction is closed. A group member in that state is left out.
 
 ### Batchers
 
@@ -12970,7 +12970,7 @@ const prepared = await vaults.prepareDeposit(STABLE, {
 - `ChainMismatchError` when a wallet is connected and the provider is not on the target's chain.
 - [`ConfigurationError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#configurationerror) when the provider is not on the target's chain with no wallet connected, the vault is not in the group, the group is invalid (see [`VaultGroup`](#vaultgroup)), the join uses the router and the chain has none, or a vault lists no batcher.
 - [`VaultBatcherPausedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultbatcherpausederror) when no batcher of the chosen vault is open: each one is paused or closed. This check always runs.
-- [`VaultBatcherReadFailedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultbatcherreadfailederror) when a batcher of a vault the join reaches cannot be read. Retryable when the cause is.
+- [`VaultBatcherReadFailedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#vaultbatcherreadfailederror) when a batcher of any vault of the target cannot be read. Retryable when the cause is.
 - `InsufficientConfidentialBalanceError` when the balance is below `amount`.
 - `BalanceCheckUnavailableError` when the balance cannot be decrypted: no signer is connected, or `account` is not the signer. Pass `skipBalanceCheck: true`.
 
@@ -13148,7 +13148,7 @@ if (batch.actions.includes("claim")) {
 
 `readOpenBatches(target, direction) => Promise<OpenBatch[]>`
 
-Reads, for every vault of the target in group order, the open batch a join reaches now. When no batcher of a vault is open, it returns a paused batcher's batch with `paused: true`.
+Reads, for every vault of the target in group order, the open batch a join reaches now. When no batcher of a vault is open, it returns a paused batcher's batch with `paused: true`. A group member whose batchers are all closed is left out.
 
 ```ts
 const open = await vaults.readOpenBatches(STABLE, "deposit");
@@ -13181,17 +13181,17 @@ const open = await vaults.readOpenBatches(STABLE, "deposit");
 
 Plain data. Its bigints need a replacer to go through `JSON.stringify`. It holds the chosen vault and the amount in cleartext.
 
-| Field       | Type                    | Description                                                               |
-| ----------- | ----------------------- | ------------------------------------------------------------------------- |
-| `direction` | `"deposit" \| "redeem"` |                                                                           |
-| `chainId`   | `number`                | The chain to send the calls on.                                           |
-| `groupId`   | `string \| undefined`   | The group joined, or `undefined` for a vault on its own.                  |
-| `vaultId`   | `string`                | The vault that gets the amount.                                           |
-| `account`   | `Address`               | The account that must send the calls.                                     |
-| `amount`    | `bigint`                | In the asset for a deposit, in shares for a redemption.                   |
-| `route`     | `"direct" \| "router"`  |                                                                           |
-| `legs`      | `VaultLeg[]`            | Every vault joined, in group order, the zero legs included.               |
-| `calls`     | `VaultCall[]`           | Every call in send order: the missing operator approvals, then the joins. |
+| Field       | Type                    | Description                                                                              |
+| ----------- | ----------------------- | ---------------------------------------------------------------------------------------- |
+| `direction` | `"deposit" \| "redeem"` |                                                                                          |
+| `chainId`   | `number`                | The chain to send the calls on.                                                          |
+| `groupId`   | `string \| undefined`   | The group joined, or `undefined` for a vault on its own.                                 |
+| `vaultId`   | `string`                | The vault that gets the amount.                                                          |
+| `account`   | `Address`               | The account that must send the calls.                                                    |
+| `amount`    | `bigint`                | In the asset for a deposit, in shares for a redemption.                                  |
+| `route`     | `"direct" \| "router"`  |                                                                                          |
+| `legs`      | `VaultLeg[]`            | Every vault joined, in group order, the zero legs included. A vault left out has no leg. |
+| `calls`     | `VaultCall[]`           | Every call in send order: the missing operator approvals, then the joins.                |
 
 A `VaultLeg` is `{ vaultId, batcher, token, amount }`: the batcher the leg joins, the token it spends, and its amount, zero for every leg but the chosen one.
 
@@ -25010,7 +25010,7 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 # useOpenBatches
 
-Query hook that reads the batch the next join lands in, for every vault of a group: when it can be dispatched, and whether the vault takes no joins because its batchers are paused. When every batcher of a vault is closed, `error` is a `VaultBatcherPausedError`. Wraps [`VaultClient.readOpenBatches`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#readopenbatches).
+Query hook that reads the batch the next join lands in, for every vault of a group: when it can be dispatched, and whether the vault takes no joins because its batchers are paused. A group member whose batchers are all closed is left out. For a vault on its own, `error` is then a `VaultBatcherPausedError`. Wraps [`VaultClient.readOpenBatches`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/VaultClient.md#readopenbatches).
 
 ## Import
 

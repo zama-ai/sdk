@@ -72,7 +72,7 @@ export function pickNextBatch(
 
 /**
  * The batch a join into each vault reaches, in vault order, and the chain time it was picked at.
- * A vault whose every batcher is closed reads as closed, naming its first batcher.
+ * A vault whose batchers are all closed reads as closed, naming its first batcher.
  *
  * @internal
  * @throws if a vault lists no batcher, or an address or `lastBatchId` is invalid. {@link ConfigurationError}

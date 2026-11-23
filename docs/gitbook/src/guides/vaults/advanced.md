@@ -28,7 +28,7 @@ The router's address comes from `vaultRouterAddress` in the [chain preset](../..
 
 ## Paused batchers
 
-A paused batcher rejects joins. When a vault has [several batchers](#several-batchers), joins go to the others. When every batcher of a vault is paused or closed, the vault takes no joins. A group join leaves that vault out and sends a leg to every other vault, so the group still takes joins; the vault takes no joins from anyone, so leaving it out does not reveal the chosen one. When the chosen vault takes no joins, `deposit` and `redeem` check this first and throw `VaultBatcherPausedError`, naming the vault. `readOpenBatches` throws it too when every batcher of a vault is closed. Claims and quits still work, so existing deposits are never stuck.
+A paused batcher rejects joins. When a vault has [several batchers](#several-batchers), joins go to the others. When every batcher of a vault is paused or closed, the vault takes no joins. A group join leaves that vault out and sends a leg to every other vault, so the group still takes joins; the vault takes no joins from anyone, so leaving it out does not reveal the chosen one. When the chosen vault takes no joins, `deposit` and `redeem` check this first and throw `VaultBatcherPausedError`, naming the vault. `readOpenBatches` leaves a closed group member out too, and throws it for a vault on its own whose batchers are all closed. Claims and quits still work, so existing deposits are never stuck.
 
 To disable the form before the user submits, read `paused` from [`readOpenBatches`](deposits.md#show-the-open-batches).
 

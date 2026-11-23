@@ -36,7 +36,7 @@ import { isEncryptedValueZero } from "../utils/handles";
 import { submitTransaction } from "../utils/submit-transaction";
 import type { ZamaSDK } from "../zama-sdk";
 import { scopeOf, type Vault, type VaultGroup, type VaultIdOf } from "./config";
-import { readBatchState, readNextBatches, waitsOnPrevious } from "./next-batch";
+import { readBatchState, readNextBatches, waitsOnPrevious, type OpenOffer } from "./next-batch";
 import {
   batchCallbackDeadlineContract,
   batchCreatedAtContract,
@@ -164,8 +164,8 @@ export class VaultClient {
    *
    * @throws if the provider is not on the vault's chain while a wallet is connected. {@link ChainMismatchError}
    * @throws if the provider is on another chain with no wallet connected, a vault lists no batcher, or a batcher address or `lastBatchId` is invalid. {@link ConfigurationError}
-   * @throws if no batcher of the chosen vault is open, even with `skipBalanceCheck`. {@link VaultBatcherPausedError}
-   * @throws if a batcher of a vault the join reaches cannot be read. {@link VaultBatcherReadFailedError}
+   * @throws if no batcher of the vault is open, even with `skipBalanceCheck`. {@link VaultBatcherPausedError}
+   * @throws if a batcher of any vault of the target cannot be read. {@link VaultBatcherReadFailedError}
    * @throws if the balance is less than `amount` and `skipBalanceCheck` is not set. {@link InsufficientConfidentialBalanceError}
    * @throws if `skipBalanceCheck` is not set and no signer is connected, `account` is not the signer's, or the balance cannot be read. {@link BalanceCheckUnavailableError}
    * @throws if encryption returns a different number of values than the join has legs. {@link EncryptionFailedError}
@@ -173,8 +173,8 @@ export class VaultClient {
   prepareDeposit(vault: Vault, input: JoinInput, options?: JoinOptions): Promise<PreparedJoin>;
   /**
    * Build a deposit into one vault of a group, with a leg for every vault
-   * that takes joins. A vault whose batchers are all paused or closed is left
-   * out, unless it is the chosen one, which throws as on its own.
+   * that takes joins. A vault whose batchers are all paused or closed gets no
+   * leg; when it is the chosen vault, this throws {@link VaultBatcherPausedError}.
    * With `route: "direct"`, send the calls as one atomic bundle, and with
    * `skipBalanceCheck`, decrypt every leg's token together: doing either for
    * only some legs shows which vault was chosen.
@@ -205,12 +205,11 @@ export class VaultClient {
   prepareRedeem(vault: Vault, input: JoinInput, options?: JoinOptions): Promise<PreparedJoin>;
   /**
    * Build a redemption of the shares of one vault of a group, with a leg for
-   * every vault that takes joins, left out as in {@link prepareDeposit}.
-   * On the router route, `calls` starts with a year-long operator
-   * approval on each share token the account has not approved. With
-   * `route: "direct"`, send the calls as one atomic bundle, and with
-   * `skipBalanceCheck`, decrypt every leg's token together: doing either for
-   * only some legs shows which vault was chosen.
+   * every vault that takes joins, as {@link prepareDeposit}. On the router
+   * route, `calls` starts with a year-long operator approval on each share
+   * token the account has not approved. With `route: "direct"`, send the calls
+   * as one atomic bundle, and with `skipBalanceCheck`, decrypt every leg's
+   * token together: doing either for only some legs shows which vault was chosen.
    *
    * @throws as {@link prepareDeposit} for a group, except that the batchers may take different tokens.
    */
@@ -507,35 +506,41 @@ export class VaultClient {
   /**
    * The batch a join reaches now, for a vault or each vault of a group, with
    * when it can be dispatched. When no batcher of a vault is open, it is a
-   * paused batcher's batch with `paused: true`.
+   * paused batcher's batch with `paused: true`. A group member whose batchers
+   * are all closed is left out, as a join leaves it out.
    *
    * @throws if a vault lists no batcher, or an address or `lastBatchId` is invalid. {@link ConfigurationError}
-   * @throws if every batcher of a vault is closed. {@link VaultBatcherPausedError}
+   * @throws if every batcher of a vault on its own is closed. {@link VaultBatcherPausedError}
    * @throws if a batcher cannot be read. {@link VaultBatcherReadFailedError}
    */
   async readOpenBatches(
     target: Vault | VaultGroup,
     direction: JoinDirection,
   ): Promise<readonly OpenBatch[]> {
-    const { vaults, chainId } = scopeOf(target);
+    const { group, vaults, chainId } = scopeOf(target);
     const { now, next } = await readNextBatches(this.#sdk.provider, chainId, vaults, direction);
-    return next.map(({ vault, offer }) => {
+    return next.flatMap(({ vault, offer }): OpenBatch[] => {
       if (offer.status === "closed") {
+        if (group !== undefined) {
+          return [];
+        }
         throw new VaultBatcherPausedError(
           `Every ${direction} batcher of vault "${vault.id}" is closed, so the vault takes no joins`,
           { batcher: offer.batcher, vaultId: vault.id },
         );
       }
       const { status, batcher, batchId, dispatchableAt } = offer;
-      return {
-        vaultId: vault.id,
-        chainId,
-        batcher,
-        batchId,
-        dispatchableAt,
-        paused: status === "paused",
-        observedAt: now,
-      };
+      return [
+        {
+          vaultId: vault.id,
+          chainId,
+          batcher,
+          batchId,
+          dispatchableAt,
+          paused: status === "paused",
+          observedAt: now,
+        },
+      ];
     });
   }
 
@@ -554,31 +559,34 @@ export class VaultClient {
     await this.#requireProviderChain(chainId, `vault ${direction}`);
     const router = group !== undefined && route === "router" ? this.#router(group) : undefined;
     // A paused batcher reverts the whole join, so every leg needs an open batch. A member with
-    // none takes no joins from anyone, so leaving it out does not reveal the chosen vault.
+    // none takes no joins from anyone, so leaving it out reveals nothing.
     const { next } = await readNextBatches(this.#sdk.provider, chainId, vaults, direction);
-    const joined = next.filter(({ vault, offer }) => offer.status === "open" || vault === chosen);
-    const batchers = joined.map(({ vault, offer }) => {
-      if (offer.status !== "open") {
-        throw new VaultBatcherPausedError(
-          group === undefined
-            ? `Every ${direction} batcher of vault "${vault.id}" is paused or closed, so the vault cannot be joined until one resumes`
-            : `Every ${direction} batcher of vault "${vault.id}" in group "${group.id}" is paused or closed, so the vault cannot be joined until one resumes`,
-          { batcher: offer.batcher, vaultId: vault.id },
-        );
-      }
-      return offer.batcher;
-    });
-    const members = joined.map(({ vault }) => vault);
-    const tokens = await Promise.all(batchers.map((batcher) => this.#fromToken(chainId, batcher)));
+    const mine = at(next, vaults.indexOf(chosen)).offer;
+    if (mine.status !== "open") {
+      const where = group === undefined ? "" : ` in group "${group.id}"`;
+      throw new VaultBatcherPausedError(
+        `Every ${direction} batcher of vault "${chosen.id}"${where} is paused or closed, so the vault cannot be joined until one resumes`,
+        { batcher: mine.batcher, vaultId: chosen.id },
+      );
+    }
+    const joined = next.filter(
+      (entry): entry is { vault: Vault; offer: OpenOffer } => entry.offer.status === "open",
+    );
+    const tokens = await Promise.all(
+      joined.map(({ offer }) => this.#fromToken(chainId, offer.batcher)),
+    );
     const legs = nonEmpty(
-      members.map((vault, index): VaultLeg => ({
+      joined.map(({ vault, offer }, index): VaultLeg => ({
         vaultId: vault.id,
-        batcher: at(batchers, index),
+        batcher: offer.batcher,
         token: at(tokens, index),
         amount: vault === chosen ? input.amount : 0n,
       })),
     );
-    const target = at(legs, members.indexOf(chosen));
+    const target = at(
+      legs,
+      joined.findIndex(({ vault }) => vault === chosen),
+    );
     // A group deposits one asset: the router transfers it once and splits it into the legs.
     const stray = legs.find((leg) => direction === "deposit" && leg.token !== target.token);
     if (stray !== undefined) {
