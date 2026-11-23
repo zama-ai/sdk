@@ -394,21 +394,44 @@ describe("prepareDeposit", () => {
     expect(structuredClone(prepared)).toEqual(prepared);
   });
 
-  test("refuses when any vault's batcher is paused, without the balance check", async ({
+  test("refuses when the chosen vault's batcher is paused, without the balance check", async ({
     sdk,
     provider,
     relayer,
   }) => {
     mockChain(provider, { paused: [BETA.depositBatcher] });
     mockEncryption(relayer);
-    await expect(
-      createVaultClient(sdk).prepareDeposit(STABLE, {
-        vaultId: "alpha",
-        account: USER,
-        amount: 10n,
-      }),
-    ).rejects.toBeInstanceOf(VaultBatcherPausedError);
+    const joining = createVaultClient(sdk).prepareDeposit(STABLE, {
+      vaultId: "beta",
+      account: USER,
+      amount: 10n,
+    });
+    await expect(joining).rejects.toBeInstanceOf(VaultBatcherPausedError);
+    await expect(joining).rejects.toMatchObject({ batcher: BETA.depositBatcher, vaultId: "beta" });
+    expect(Token.batchBalancesOf).not.toHaveBeenCalled();
   });
+
+  test.for([
+    ["paused", { paused: [BETA.depositBatcher] }],
+    ["closed", { batches: { [BETA.depositBatcher]: { createdAt: 0n, closed: true } } }],
+  ] as const)(
+    "leaves out a member whose batchers are all %s",
+    async ([, chain], { sdk, provider, relayer }) => {
+      mockChain(provider, chain);
+      mockEncryption(relayer);
+      for (const route of ["router", "direct"] as const) {
+        const prepared = await createVaultClient(sdk).prepareDeposit(
+          STABLE,
+          { vaultId: "alpha", account: USER, amount: 10n },
+          { route },
+        );
+        expect(prepared.legs.map((leg) => [leg.vaultId, leg.amount])).toStrictEqual([
+          ["alpha", 10n],
+        ]);
+        expect(prepared.calls).toHaveLength(1);
+      }
+    },
+  );
 
   test("refuses a short balance unless told to skip the check", async ({
     sdk,
@@ -568,6 +591,23 @@ describe("proof binding", () => {
 });
 
 describe("prepareRedeem", () => {
+  test("leaves out a member whose redeem batchers are all paused, and asks no approval for it", async ({
+    sdk,
+    provider,
+    relayer,
+  }) => {
+    mockChain(provider, { operators: false, paused: [ALPHA.redeemBatcher] });
+    mockEncryption(relayer);
+    const prepared = await createVaultClient(sdk).prepareRedeem(STABLE, {
+      vaultId: "beta",
+      account: USER,
+      amount: 10n,
+    });
+    expect(prepared.legs.map((leg) => leg.vaultId)).toStrictEqual(["beta"]);
+    expect(kinds(prepared.calls)).toStrictEqual(["operatorApproval", "join"]);
+    expect(prepared.calls[0]).toMatchObject({ to: BETA.share, vaultId: "beta" });
+  });
+
   test("approves the router as operator on every share token it lacks, for a year, then joins", async ({
     sdk,
     provider,

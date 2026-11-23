@@ -96,7 +96,7 @@ The `prepare*` join methods read the chain, check the join, and encrypt, then re
 
 `prepareDeposit(target, input, options?) => Promise<PreparedJoin>`
 
-Builds a deposit of the asset into one vault: a leg for every vault of a group, or one call for a vault on its own. Only `input.account` can send the calls.
+Builds a deposit of the asset into one vault: a leg for every vault of a group that takes joins, or one call for a vault on its own. A group member whose batchers are all paused or closed is left out. Only `input.account` can send the calls.
 
 | Parameter | Type                          | Description                                             |
 | --------- | ----------------------------- | ------------------------------------------------------- |
@@ -116,7 +116,7 @@ const prepared = await vaults.prepareDeposit(STABLE, {
 
 - `ChainMismatchError` when a wallet is connected and the provider is not on the target's chain.
 - [`ConfigurationError`](errors.md#configurationerror) when the provider is not on the target's chain with no wallet connected, the vault is not in the group, the group is invalid (see [`VaultGroup`](#vaultgroup)), the join uses the router and the chain has none, or a vault lists no batcher.
-- [`VaultBatcherPausedError`](errors.md#vaultbatcherpausederror) when no batcher of a vault the join reaches is open: each one is paused or closed. This check always runs.
+- [`VaultBatcherPausedError`](errors.md#vaultbatcherpausederror) when no batcher of the chosen vault is open: each one is paused or closed. This check always runs.
 - [`VaultBatcherReadFailedError`](errors.md#vaultbatcherreadfailederror) when a batcher of a vault the join reaches cannot be read. Retryable when the cause is.
 - `InsufficientConfidentialBalanceError` when the balance is below `amount`.
 - `BalanceCheckUnavailableError` when the balance cannot be decrypted: no signer is connected, or `account` is not the signer. Pass `skipBalanceCheck: true`.

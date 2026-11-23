@@ -34,7 +34,7 @@ A keeper is an off-chain service that watches the batchers. It dispatches each b
 
 ## A group hides which vault you chose
 
-A **vault group** is a set of vaults that take deposits in the same confidential asset. A join into a group sends a leg to every vault of the group: the vault you chose gets the amount, and the others get an encrypted zero. An observer sees the same transactions whichever vault you picked.
+A **vault group** is a set of vaults that take deposits in the same confidential asset. A join into a group sends a leg to every vault of the group that takes joins: the vault you chose gets the amount, and the others get an encrypted zero. A vault whose batchers are all [paused](advanced.md#paused-batchers) is left out. An observer sees the same transactions whichever vault you picked.
 
 The SDK builds every group join this way. What it cannot enforce is up to your app:
 
