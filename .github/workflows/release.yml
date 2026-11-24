@@ -383,9 +383,7 @@ jobs:
     environment: release-dockerhub
     permissions:
       contents: read
-      packages: write
-      id-token: write # Sigstore signing of the attestations, Docker Hub OIDC login
-      attestations: write
+      id-token: write # Docker Hub OIDC login
     strategy:
       # A failed platform must not cancel the other, so re-running only the failed job completes the matrix.
       fail-fast: false
@@ -448,8 +446,9 @@ jobs:
           registry: dhi.io
           username: ${{ vars.DOCKERHUB_OIDC_USER }}
 
-      # Built once, to a local OCI layout: the steps below test, scan and push this directory, so the pushed image is
-      # the tested one. BuildKit's own provenance and SBOM are off; the signed attestations below replace them.
+      # Built once, to a local OCI layout: the steps below test and scan this directory and publish-image-manifest
+      # pushes it, so the pushed image is the tested one. BuildKit's own provenance and SBOM are off; the signed
+      # attestations in publish-image-manifest replace them.
       # Reads, never writes, the gate's layer cache: a release can only restore caches from its own branch or the
       # default branch, which only merges write.
       - name: Build the image
@@ -470,14 +469,8 @@ jobs:
           sbom: false
           cache-from: type=gha,scope=daemon-image-${{ matrix.arch }}
 
-      # The layout's one image manifest is the digest that is scanned, pushed and attested.
       - name: Load the image
-        id: image
-        run: |
-          digest="$(jq -r 'if (.manifests | length) == 1 and .manifests[0].mediaType == "application/vnd.oci.image.manifest.v1+json"
-            then .manifests[0].digest else error("expected one image manifest") end' "${RUNNER_TEMP}/image/index.json")"
-          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
-          tar -C "${RUNNER_TEMP}/image" -c . | docker load
+        run: tar -C "${RUNNER_TEMP}/image" -c . | docker load
 
       - name: Check the image matches the release
         run: |
@@ -519,61 +512,16 @@ jobs:
             --ignorefile branch-tip/.trivyignore --exit-code 1
           trivy image --input "${RUNNER_TEMP}/image" --format spdx-json --output "${RUNNER_TEMP}/sbom.spdx.json"
 
-      - name: Log in to GHCR
-        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Pushed untagged, by digest: skopeo refuses to upload a manifest whose digest differs from the scanned one.
-      # Nothing is reachable by tag until publish-image-manifest runs, which needs every platform to pass.
-      - name: Push the scanned image
-        env:
-          DIGEST: ${{ steps.image.outputs.digest }}
-        run: |
-          if ! command -v skopeo > /dev/null; then
-            sudo apt-get update -qq
-            sudo apt-get install -y -qq skopeo
-          fi
-          skopeo copy --preserve-digests "oci:${RUNNER_TEMP}/image" "docker://${DAEMON_IMAGE}@${DIGEST}"
-          pushed="$(docker buildx imagetools inspect "${DAEMON_IMAGE}@${DIGEST}" --format '{{ .Manifest.Digest }}')"
-          if [[ "${pushed}" != "${DIGEST}" ]]; then
-            echo "::error::GHCR serves ${pushed} for ${DIGEST}."
-            exit 1
-          fi
-
-      # Signed with the workflow's OIDC identity and stored next to the image, so partners verify it with
-      # `gh attestation verify oci://…` or cosign without trusting anything outside the registry and Sigstore.
-      - name: Attest the build provenance
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        with:
-          subject-name: ${{ env.DAEMON_IMAGE }}
-          subject-digest: ${{ steps.image.outputs.digest }}
-          push-to-registry: true
-
-      - name: Attest the SBOM
-        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
-        with:
-          subject-name: ${{ env.DAEMON_IMAGE }}
-          subject-digest: ${{ steps.image.outputs.digest }}
-          sbom-path: ${{ runner.temp }}/sbom.spdx.json
-          push-to-registry: true
-
-      - name: Export digest
-        env:
-          DIGEST: ${{ steps.image.outputs.digest }}
-        run: |
-          mkdir -p "${RUNNER_TEMP}/digests"
-          touch "${RUNNER_TEMP}/digests/${DIGEST#sha256:}"
-
-      - name: Upload digest
+      # Handed to publish-image-manifest instead of pushed: nothing reaches GHCR, even untagged, until every platform
+      # passed. Matches the 30-day re-run window, so re-running one failed platform still finds the other's image.
+      - name: Upload the scanned image
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
-          name: daemon-digest-${{ matrix.arch }}
-          path: ${{ runner.temp }}/digests/*
+          name: daemon-image-${{ matrix.arch }}
+          path: |
+            ${{ runner.temp }}/image
+            ${{ runner.temp }}/sbom.spdx.json
           if-no-files-found: error
-          # Matches the 30-day re-run window, so re-running one failed platform still finds the other's digest.
           retention-days: 30
 
   publish-image-manifest:
@@ -592,18 +540,18 @@ jobs:
       id-token: write # Sigstore signing of the attestation
       attestations: write
     steps:
-      # One step per platform: a missing digest fails the job instead of publishing a single-platform image.
-      - name: Download the amd64 digest
+      # One step per platform: a missing image fails the job instead of publishing a single-platform image.
+      - name: Download the amd64 image
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: daemon-digest-amd64
-          path: ${{ runner.temp }}/digests
+          name: daemon-image-amd64
+          path: ${{ runner.temp }}/amd64
 
-      - name: Download the arm64 digest
+      - name: Download the arm64 image
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: daemon-digest-arm64
-          path: ${{ runner.temp }}/digests
+          name: daemon-image-arm64
+          path: ${{ runner.temp }}/arm64
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
@@ -614,16 +562,68 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Pushed untagged, by digest: skopeo refuses to upload a manifest whose digest differs from the scanned one.
+      - name: Push the scanned images
+        id: push
+        run: |
+          if ! command -v skopeo > /dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq skopeo
+          fi
+          for arch in amd64 arm64; do
+            layout="${RUNNER_TEMP}/${arch}/image"
+            digest="$(jq -r 'if (.manifests | length) == 1 and .manifests[0].mediaType == "application/vnd.oci.image.manifest.v1+json"
+              then .manifests[0].digest else error("expected one image manifest") end' "${layout}/index.json")"
+            skopeo copy --preserve-digests "oci:${layout}" "docker://${DAEMON_IMAGE}@${digest}"
+            pushed="$(docker buildx imagetools inspect "${DAEMON_IMAGE}@${digest}" --format '{{ .Manifest.Digest }}')"
+            if [[ "${pushed}" != "${digest}" ]]; then
+              echo "::error::GHCR serves ${pushed} for ${digest}."
+              exit 1
+            fi
+            echo "${arch}=${digest}" >> "$GITHUB_OUTPUT"
+          done
+
+      # Signed with the workflow's OIDC identity and stored next to the image, so partners verify it with
+      # `gh attestation verify oci://…` or cosign without trusting anything outside the registry and Sigstore.
+      - name: Attest the amd64 build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.DAEMON_IMAGE }}
+          subject-digest: ${{ steps.push.outputs.amd64 }}
+          push-to-registry: true
+
+      - name: Attest the amd64 SBOM
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          subject-name: ${{ env.DAEMON_IMAGE }}
+          subject-digest: ${{ steps.push.outputs.amd64 }}
+          sbom-path: ${{ runner.temp }}/amd64/sbom.spdx.json
+          push-to-registry: true
+
+      - name: Attest the arm64 build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.DAEMON_IMAGE }}
+          subject-digest: ${{ steps.push.outputs.arm64 }}
+          push-to-registry: true
+
+      - name: Attest the arm64 SBOM
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          subject-name: ${{ env.DAEMON_IMAGE }}
+          subject-digest: ${{ steps.push.outputs.arm64 }}
+          sbom-path: ${{ runner.temp }}/arm64/sbom.spdx.json
+          push-to-registry: true
+
       - name: Create manifest list
         id: manifest
-        working-directory: ${{ runner.temp }}/digests
+        working-directory: ${{ runner.temp }}
         env:
           SOURCE: ${{ github.server_url }}/${{ github.repository }}
+          AMD64: ${{ steps.push.outputs.amd64 }}
+          ARM64: ${{ steps.push.outputs.arm64 }}
         run: |
-          sources=()
-          for digest in *; do
-            sources+=("${DAEMON_IMAGE}@sha256:${digest}")
-          done
+          sources=("${DAEMON_IMAGE}@${AMD64}" "${DAEMON_IMAGE}@${ARM64}")
           # Move the channel tag only forward, so re-running an older run or recovering an older tag keeps it.
           # Versions on one channel share a prerelease suffix, so sort -V orders them.
           tags=(--tag "${DAEMON_IMAGE}:${VERSION}")
@@ -655,7 +655,7 @@ jobs:
           echo "digest=${digest}" >> "$GITHUB_OUTPUT"
 
       # Tags resolve to the manifest list, so partners verifying `:<version>` or pinning its digest need an
-      # attestation on this digest too; the per-platform image manifests were attested in publish-image.
+      # attestation on this digest too; the per-platform image manifests were attested above.
       - name: Attest the manifest list
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
