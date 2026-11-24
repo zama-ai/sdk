@@ -9,6 +9,9 @@ test.describe("security headers", () => {
       /script-src 'self' 'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic' 'wasm-unsafe-eval'/,
     );
     expect(csp).toContain("worker-src 'self' blob:");
+    // The SDK downloads the FHE key on the page thread, so the storage the relayer names in
+    // `/v2/keyurl` must be allowed. Sepolia's relayer is e2e/stub-relayer.mjs.
+    expect(csp).toMatch(/connect-src [^;]*https:\/\/keys\.stub-relayer\.test/);
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("object-src 'none'");
     // Only `next dev` needs eval and inline styles; CI runs the build.

@@ -143,7 +143,7 @@ function VaultPanel({ vault, detail, error, account }: VaultPanelProps) {
   return (
     <>
       <VaultActionCard {...props} kind="deposit" token={detail.asset.address} />
-      <VaultActionCard {...props} kind="withdraw" token={detail.share.address} />
+      <VaultActionCard {...props} kind="redeem" token={detail.share.address} />
     </>
   );
 }

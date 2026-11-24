@@ -4,13 +4,13 @@ Next.js 16 example app demonstrating how to integrate `@zama-fhe/react-sdk` with
 [wagmi v3](https://wagmi.sh/) on every network the SDK ships a chain preset for. A network
 picker switches the wallet between them; nothing else in the app changes per chain.
 
-Covers: connect wallet (browser wallet, or a Dynamic-backed connect dialog with WalletConnect for a Safe), pick a network, shield ERC-20 → confidential, confidential transfer, unshield, grant/revoke/use delegation, pending unshield recovery, confidential vault deposits and withdrawals.
+Covers: connect wallet (browser wallet, or a Dynamic-backed connect dialog with WalletConnect for a Safe), pick a network, shield ERC-20 → confidential, confidential transfer, unshield, grant/revoke/use delegation, pending unshield recovery, confidential vault deposits and redemptions.
 
 The connected app has three tabs:
 
 - **Tokens**: balances, shield, confidential transfer, unshield and pending unshield recovery for the selected token. The core of the SDK.
 - **Delegation**: grant, revoke and use decryption delegation for the selected token.
-- **Vaults**: deposit into and withdraw from a confidential ERC-4626 vault with `@zama-fhe/react-sdk/vaults`. The top of the tab shows your shares in every vault and every batch still in progress, with one view per batch state: cancel, settle a late batch, claim, take a canceled amount back. The Deposit and Withdraw boxes below hold the chosen vault's forms. The joined batches live in localStorage. It implements the [Building a vault UI](../../docs/gitbook/src/guides/vaults/building-a-ui.md) guide. Set each network's vaults in `.env.local` (`NEXT_PUBLIC_<NETWORK>_VAULTS`) to use it; with several, a picker chooses the vault.
+- **Vaults**: deposit into and redeem from a confidential ERC-4626 vault with `@zama-fhe/react-sdk/vaults`. The top of the tab shows your shares in every vault and every batch still in progress, with one view per batch state: cancel, settle a late batch, claim, take a canceled amount back. The Deposit and Redeem boxes below hold the chosen vault's forms. The joined batches live in localStorage. It implements the [Building a vault UI](../../docs/gitbook/src/guides/vaults/building-a-ui.md) guide. Set each network's vaults in `.env.local` (`NEXT_PUBLIC_<NETWORK>_VAULTS`) to use it; with several, a picker chooses the vault.
 
 This app replaces the former `example-bnb`, `example-hoodi`, `example-polygon-amoy` and `example-zenith` apps, which were copies of it pinned to one chain each.
 
@@ -68,7 +68,7 @@ Open [http://localhost:3004](http://localhost:3004) and connect a wallet.
 - Without it, the app connects MetaMask (or any EIP-1193 browser wallet) through wagmi's
   injected connector.
 
-If the wallet is on a chain the app does not support, the app shows a **Choose a Network** screen. A chain that is in the table but that the deployment has no relayer for (mainnet, until you configure one) gets the same screen with a note on how to run the app with a relayer. Picking a network asks the wallet to switch, and to add the chain first if the wallet does not know it (Hoodi and Zenith, typically). The same picker sits above the token selector once connected.
+If the wallet is on a chain the app does not support, the app shows a **Choose a Network** screen. A chain that is in the table but that the deployment has no relayer for (mainnet, until you configure one) gets the same screen with a note on how to run the app with a relayer. Picking a network asks the wallet to switch, and to add the chain first if the wallet does not know it (Hoodi and Zenith, typically). Once connected, the same picker sits above the tabs.
 
 ## Mainnet access
 
@@ -137,7 +137,7 @@ A `.env.local` on your own machine is enough to run the same app yourself (see [
 
 ## Adding a network
 
-1. Add a row to `networks` in `src/lib/networks.ts`: the viem chain, the `@zama-fhe/sdk/chains` preset, the transport, the explorer and the flags.
+1. Add a row to `networks` in `src/lib/networks.ts`: the viem chain, the `@zama-fhe/sdk/chains` preset, the transport, the explorer, the flags, and `vaults` (`vaultsFromEnv("NEXT_PUBLIC_<KEY>_VAULTS", process.env.NEXT_PUBLIC_<KEY>_VAULTS)`; write the variable name in full so Next.js inlines it).
 2. For a `relayer` network, add an upstream entry in `src/lib/relayers.ts` (and the env vars it reads).
 3. If the suite should cover it, add the chain to `NETWORKS` in `e2e/fixtures.ts`.
 
@@ -149,7 +149,7 @@ npm run test:e2e        # runs Playwright (starts its own dev server; port 3004 
 
 Tests mock `window.ethereum` and the RPC of the network under test, and abort every relayer request — no wallet or real network required. The suite forces the injected-wallet stack (`NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` cleared), since the Dynamic connect dialog needs Dynamic's API. `dynamicConnector.spec.ts` covers the Dynamic path below the dialog: it drives the connector in the test process with a fake WalletConnect wallet (the chains a session approved, a wallet's own chain switch, a closed session), so it needs no page, Dynamic account or paired phone. The config enables the Ethereum mainnet row with an unreachable relayer URL so the picker and the mainnet feature flags are covered.
 
-With `CI` set, Playwright builds the app and runs the suite against `next start` instead of the dev server, because the production CSP is stricter than the development one (no `'unsafe-eval'`, no inline styles). `security.spec.ts` checks the headers and that the app loads without a CSP violation; encryption is not exercised, since every relayer call is aborted. `allowlist.spec.ts` covers `ENABLED_NETWORKS` by loading the relayer table in the test process, since the server under test runs with it unset, and with `CI` set it also checks that `next start` refuses to boot on an unknown key.
+With `CI` set, Playwright builds the app and runs the suite against `next start` instead of the dev server, because the production CSP is stricter than the development one (no `'unsafe-eval'`, no inline styles). `security.spec.ts` checks the headers and that the app loads without a CSP violation; encryption is not exercised, since every relayer call is aborted. `allowlist.spec.ts` covers `ENABLED_NETWORKS` by loading the relayer table in the test process, since the server under test runs with it unset, and with `CI` set it also checks that `next start` refuses to boot on an unknown key, and the key storage lookup. `security.spec.ts` also checks that the storage origin a stub relayer (`e2e/stub-relayer.mjs`) returns from `/v2/keyurl` lands in the page's `connect-src`. `tabs.spec.ts` covers the tabs and the Vaults setup hint, and `vaults-env.spec.ts` covers parsing `NEXT_PUBLIC_<NETWORK>_VAULTS`. No test renders a configured vault: that needs a deployed vault and a relayer.
 
 ## Architecture at a glance
 

@@ -2,7 +2,7 @@ import { test, expect } from "./fixtures";
 
 // Exercises the relayer proxy through Playwright's request context, which bypasses the
 // page-level abort of /api/relayer/** and hits the app server directly. Nothing reaches a
-// real relayer: rejected cases stop at the proxy, and every upstream is unreachable.
+// real relayer: rejected cases stop at the proxy, and mainnet's upstream is unreachable.
 test.describe("relayer proxy", () => {
   test("lists the networks the server can serve", async ({ request }) => {
     const { enabled } = (await (await request.get("/api/networks")).json()) as {

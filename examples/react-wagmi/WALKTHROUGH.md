@@ -34,7 +34,7 @@ page.tsx                         # wallet connect, network picker, tabs, token s
     ├── VaultsTab.tsx            # the vault picker and the chosen vault's tokens
     ├── PositionsOverview.tsx    # your shares in every vault, their value, a total per token
     ├── InProgressBatches.tsx    # every joined batch, in every vault: an exhaustive switch on its state
-    └── VaultActionCard.tsx      # the Deposit or Withdraw box: balance, decrypt, form
+    └── VaultActionCard.tsx      # the Deposit or Redeem box: balance, decrypt, form
 ```
 
 ---
@@ -449,9 +449,9 @@ If the user closes the tab between phases, `PendingUnshieldCard` recovers the st
 
 ---
 
-## 10. Confidential vault deposits and withdrawals (Vaults tab)
+## 10. Confidential vault deposits and redemptions (Vaults tab)
 
-A vault deposit or withdrawal does not settle when its transaction is mined. The amount joins
+A vault deposit or redemption does not settle when its transaction is mined. The amount joins
 a batch, the batch is sent to the vault, and the user claims the result once it settles. The
 Vaults tab shows each of those steps, following the
 [Building a vault UI](../../docs/gitbook/src/guides/vaults/building-a-ui.md) guide.
@@ -465,15 +465,18 @@ Vaults tab shows each of those steps, following the
   `NEXT_PUBLIC_<NETWORK>_VAULTS`, one `depositBatcher:redeemBatcher` pair per vault. Next.js
   inlines a `NEXT_PUBLIC_*` variable only where the code names it, so each row names its own.
   With several vaults the tab shows a picker that groups them by the token they take and names
-  each by its ERC-4626 vault, both read through the deposit batcher. Each vault is used on its own.
+  each by its ERC-4626 vault, both read through the deposit batcher. Each vault is joined on its
+  own, which keeps the example short but shows on-chain which vault was chosen. A production app
+  joins through a group: see [One vault, or a group of vaults](#one-vault-or-a-group-of-vaults).
 - **Pinned chain.** Reads go to the vault's `chainId`, and the write hooks throw
   `ChainMismatchError` when the wallet is on another chain instead of sending the transaction
   there.
 - **Positions overview.** `PositionsOverview.tsx` decrypts the share balance of every vault in
   one `useConfidentialBalances` query and values each with the ERC-4626 `convertToAssets`, with a
-  total per token. A permit holds at most 10 contracts, so `useGrantPermit` asks for one
-  signature per 10 share tokens. "Open" selects that vault below.
-- **Decrypt on click.** In the Deposit and Withdraw boxes, one `useGrantPermit` call covers the
+  total per token. A permit holds at most 10 contracts and each vault needs 4 (its two tokens
+  and two batchers), so `useGrantPermit` asks for one signature per 10 contracts. "Open" selects
+  that vault below.
+- **Decrypt on click.** In the Deposit and Redeem boxes, one `useGrantPermit` call covers the
   vault's two tokens and two batchers (for the amounts of its batches in progress).
 - **Send.** `useDeposit` and `useRedeem` return the batch the join landed in. The button
   explains why it is disabled (a paused batcher from `useOpenBatches`, no amount, above balance),
@@ -484,9 +487,9 @@ Vaults tab shows each of those steps, following the
   once in the In progress card, and a claim or a quit removes the batch.
 - **One row per batch.** `useBatch` reads a batch with the fields its state has and the
   `actions` it allows now, and `InProgressBatches.tsx` lists the batches of every vault and
-  switches on `state` exhaustively: cancel
-  while pending, settle a late batch with `useFinalize`, claim a finalized one with `useClaim`,
-  take a canceled amount back with `useQuit`.
+  switches on `state` exhaustively: cancel while pending with `useQuit`, settle a late batch with
+  `useFinalize`, claim a finalized one with `useClaim`, take a canceled amount back with
+  `useQuit`.
 
 ### One vault, or a group of vaults
 

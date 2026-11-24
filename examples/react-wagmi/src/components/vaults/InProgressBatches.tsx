@@ -61,7 +61,7 @@ export function InProgressBatches({ vaults, details, account }: InProgressBatche
           return (
             <div key={batcher} className="card-status">
               <h3 className="section-label">
-                {vaultLabel(vault, detail)} · {direction === "deposit" ? "Deposits" : "Withdrawals"}
+                {vaultLabel(vault, detail)} · {direction === "deposit" ? "Deposits" : "Redemptions"}
               </h3>
               <ul className="batch-list">
                 {batches.map((batch) => (

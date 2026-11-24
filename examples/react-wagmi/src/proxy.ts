@@ -67,7 +67,7 @@ function contentSecurityPolicy(nonce: string, keyOrigins: readonly string[]): st
 
 export async function proxy(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
-  // Cached: only the first page load after a start, or after an hour, waits for the relayers.
+  // Cached in keyStorageOrigins: only a cold or expired cache waits for the relayers.
   const csp = contentSecurityPolicy(nonce, await keyStorageOrigins());
 
   // On the request so Next.js picks the nonce up while rendering, on the response so the

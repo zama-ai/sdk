@@ -8,7 +8,7 @@ import {
   useMetadata,
 } from "@zama-fhe/react-sdk";
 import { useDeposit, useOpenBatches, useRedeem } from "@zama-fhe/react-sdk/vaults";
-import type { Address } from "@zama-fhe/sdk";
+import { matchZamaError, VaultJoinUnconfirmedError, type Address } from "@zama-fhe/sdk";
 import type { BatchRef } from "@zama-fhe/sdk/vaults";
 import { formatUnits } from "viem";
 import { MintAndShieldButton } from "@/components/MintAndShieldButton";
@@ -25,12 +25,12 @@ const COPY = {
     receive: "shares",
     paused: "Deposits are paused",
   },
-  withdraw: {
-    title: "Withdraw",
+  redeem: {
+    title: "Redeem",
     direction: "redeem",
     unit: "shares",
     receive: "assets",
-    paused: "Withdrawals are paused",
+    paused: "Redemptions are paused",
   },
 } as const;
 
@@ -39,7 +39,7 @@ interface VaultActionCardProps {
   vault: Vault;
   account: Address;
   permitContracts: Address[];
-  /** The confidential token the action spends: the asset to deposit, the share to withdraw. */
+  /** The confidential token the action spends: the asset to deposit, the share to redeem. */
   token: Address;
 }
 
@@ -76,6 +76,10 @@ export function VaultActionCard({
       }
       setAmount("");
     },
+    // The join was mined, so a retry would send the amount twice.
+    onError: (error: Error) => {
+      if (error instanceof VaultJoinUnconfirmedError) setAmount("");
+    },
   };
   const deposit = useDeposit(callbacks);
   const redeem = useRedeem(callbacks);
@@ -85,7 +89,11 @@ export function VaultActionCard({
   // Why the submit button is disabled, shown as its label; null when the form can be sent.
   const blockedReason = (): string | null => {
     if (paused === undefined) {
-      return pausedError ? "Could not read whether the batcher is paused" : "Loading…";
+      if (!pausedError) return "Loading…";
+      return (
+        matchZamaError(pausedError, { VAULT_BATCHER_PAUSED: () => copy.paused }) ??
+        "Could not read whether the batcher is paused"
+      );
     }
     if (paused) return copy.paused;
     if (parsed === 0n) return "Enter an amount";

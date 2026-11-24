@@ -132,7 +132,7 @@ export function useVaultDetails(vaults: BatchVault[]): {
   }, [vaults, targets, targetsError, resolved, reads, readsError]);
 }
 
-// Each deposit or withdrawal returns the batch it landed in, and the app needs it to read and act
+// Each deposit or redemption returns the batch it landed in, and the app needs it to read and act
 // on that batch later. This app keeps them in localStorage. A production app would rather read
 // them from an indexer of the batchers' `Joined` events, so they follow the user to another device.
 
@@ -200,13 +200,14 @@ function stored(chainId: number, account: Address, batcher: Address): BatchRef[]
 }
 
 // A change that leaves the list as it was notifies nobody, so removing a batch twice is harmless.
+// It reads storage, not the cache, so a batch another tab stored since is kept.
 function update(account: Address, batch: BatchRef, change: (current: BatchRef[]) => BatchRef[]) {
-  const current = stored(batch.chainId, account, batch.batcher);
+  const key = storageKey(batch.chainId, account, batch.batcher);
+  const current = load(key, batch.chainId, batch.batcher);
   const next = change(current);
   if (next === current) {
     return;
   }
-  const key = storageKey(batch.chainId, account, batch.batcher);
   cache.set(key, next);
   save(key, next);
   version += 1;
