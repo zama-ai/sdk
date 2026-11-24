@@ -54,21 +54,65 @@ test.describe("ENABLED_NETWORKS", () => {
   });
 });
 
-test.describe("CSP_CONNECT_SRC", () => {
-  test("adds origins to the key storage list", () => {
-    const { keyStorageOrigins } = loadRelayers({
-      CSP_CONNECT_SRC: "https://keys.example.com, http://127.0.0.1:9000",
-    });
-    expect(keyStorageOrigins).toEqual([
-      "https://zama-mpc-testnet-public-efd88e2b.s3.eu-west-1.amazonaws.com",
-      "https://keys.example.com",
-      "http://127.0.0.1:9000",
-    ]);
+test.describe("key storage origins", () => {
+  const realFetch = globalThis.fetch;
+  test.afterEach(() => {
+    globalThis.fetch = realFetch;
   });
 
-  test("rejects anything that is not an origin", () => {
-    for (const entry of ["*", "https://keys.example.com/", "keys.example.com", "https://a;b"]) {
-      expect(() => loadRelayers({ CSP_CONNECT_SRC: entry })).toThrow(/not origins/);
+  test("reads them from each enabled relayer's keyurl, with its API key", async () => {
+    const { keyStorageOrigins } = loadRelayers({
+      ENABLED_NETWORKS: "mainnet",
+      MAINNET_RELAYER_URL: "https://relayer.example",
+      MAINNET_RELAYER_API_KEY: "secret",
+    });
+    const calls: { url: string; apiKey: string | null }[] = [];
+    globalThis.fetch = async (url, init) => {
+      calls.push({ url: String(url), apiKey: new Headers(init?.headers).get("x-api-key") });
+      return Response.json({
+        response: {
+          fheKeyInfo: [{ fhePublicKey: { urls: ["https://keys.example.com/PublicKey/1"] } }],
+          crs: {
+            2048: {
+              urls: ["https://crs.example.com:8443/CRS/1", "not a url", "javascript:alert(1)"],
+            },
+          },
+        },
+      });
+    };
+    // Anything that does not parse to an http(s) origin stays out of the CSP.
+    expect(await keyStorageOrigins()).toEqual([
+      "https://keys.example.com",
+      "https://crs.example.com:8443",
+    ]);
+    expect(calls).toEqual([{ url: "https://relayer.example/v2/keyurl", apiKey: "secret" }]);
+  });
+
+  test("leaves a relayer out when its keyurl fails", async () => {
+    const { keyStorageOrigins } = loadRelayers({
+      ENABLED_NETWORKS: "mainnet",
+      MAINNET_RELAYER_URL: "https://relayer.example",
+    });
+    globalThis.fetch = async () => new Response("down", { status: 503 });
+    expect(await keyStorageOrigins()).toEqual([]);
+  });
+
+  test("keeps the last origins when a refresh fails", async () => {
+    const { keyStorageOrigins } = loadRelayers({
+      ENABLED_NETWORKS: "mainnet",
+      MAINNET_RELAYER_URL: "https://relayer.example",
+    });
+    globalThis.fetch = async () =>
+      Response.json({ response: { crs: { 2048: { urls: ["https://crs.example.com/CRS/1"] } } } });
+    expect(await keyStorageOrigins()).toEqual(["https://crs.example.com"]);
+
+    const realNow = Date.now;
+    Date.now = () => realNow() + 2 * 60 * 60 * 1000;
+    try {
+      globalThis.fetch = async () => new Response("down", { status: 503 });
+      expect(await keyStorageOrigins()).toEqual(["https://crs.example.com"]);
+    } finally {
+      Date.now = realNow;
     }
   });
 });
