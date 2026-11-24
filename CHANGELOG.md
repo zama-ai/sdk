@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.9.0-beta.15](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.14...v3.9.0-beta.15) (2026-11-24)
+
+### Features
+
+- **examples:** split react-wagmi into Tokens, Delegation and Vaults tabs ([#914](https://github.com/zama-ai/sdk/issues/914)) ([811b3bd]())
+
 ## [3.9.0-beta.14](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.13...v3.9.0-beta.14) (2026-11-24)
 
 ### Bug Fixes
