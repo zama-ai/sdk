@@ -1,6 +1,8 @@
 #!/usr/bin/env node
-// Fails when a change adds an em dash (U+2014). Only added lines are checked,
-// so existing em dashes don't block unrelated changes.
+// Fails when a change adds an em dash (U+2014) or a stand-in for one: a spaced
+// en dash, or a spaced double hyphen or hyphen in Markdown prose or a comment.
+// Only added lines are checked, so existing dashes don't block unrelated
+// changes.
 //
 //   node scripts/lint/no-em-dash.mjs                # staged changes
 //   node scripts/lint/no-em-dash.mjs <files...>     # uncommitted changes in these files (lint-staged, agent hook)
@@ -13,6 +15,66 @@ import { pathToFileURL } from "node:url";
 
 const EM_DASH = "\u2014";
 
+// Syntax that puts a dash between words: TSDoc tags (`@param name - text`),
+// lint directive reasons (`@ts-expect-error -- text`), and Go's generated-code
+// header.
+const DASH_SYNTAX = /@(?:param|typeParam|returns?|throws)\b|@ts-|(?:es|ox)lint-disable|DO NOT EDIT/;
+const COMMENT = /(?:\/\/|\/\*|^\s*\*|^\s*#)\s(.*)/;
+// `--` and ` - ` are syntax in code (`a - b`, `git log -- src`), so outside
+// Markdown prose only comments are checked for them. A comment can still quote
+// a command, so `--` before a flag, path, or variable is allowed.
+const WORD_END = /^(?!-).*[\p{L}\p{N})\]*_,.:;!?'"`]$/u;
+const SHELL_ARG = /^[-$"'<{[]|\/|\.[A-Za-z0-9]{1,5}$/;
+
+/**
+ * The line numbers of a Markdown file that sit inside a code fence.
+ *
+ * @param {string} markdown
+ * @returns {Set<number>}
+ */
+export function codeFences(markdown) {
+  const fenced = new Set();
+  let open = false;
+  markdown.split("\n").forEach((text, i) => {
+    if (/^\s*(?:```|~~~)/.test(text)) {
+      open = !open;
+    } else if (open) {
+      fenced.add(i + 1);
+    }
+  });
+  return fenced;
+}
+
+/**
+ * Whether `text`, a line of `file`, uses an em dash or a stand-in for one.
+ * Inline code spans are ignored. Pass a non-Markdown `file` name for a line in
+ * a Markdown code fence.
+ */
+export function hasDash(text, file) {
+  if (text.includes(EM_DASH)) {
+    return true;
+  }
+  const prose = text.replace(/`[^`]*`/g, "``");
+  if (/\s\u2013\s/.test(prose)) {
+    return true;
+  }
+  const comment = /\.mdx?$/.test(file) ? prose : COMMENT.exec(prose)?.[1];
+  if (comment === undefined || DASH_SYNTAX.test(comment)) {
+    return false;
+  }
+  const words = comment.trim().split(/\s+/);
+  for (let i = 1; i < words.length - 1; i++) {
+    if (words[i] === "--" && WORD_END.test(words[i - 1]) && !SHELL_ARG.test(words[i + 1])) {
+      return true;
+    }
+  }
+  return /[\p{L})] - [\p{L}(]/u.test(comment);
+}
+
+function lineContext(file, line, fences) {
+  return fences?.has(line) ? "code-fence" : file;
+}
+
 // CHANGELOG.md is built from commit messages, which this check can't see, and
 // llms*.txt is built from docs this check already covers.
 const GENERATED_FILES = [
@@ -23,10 +85,13 @@ const GENERATED_FILES = [
 
 /**
  * @param {string} diff Output of `git diff --unified=0`.
+ * @param {(file: string) => string} [readNew] Reads a file's new content, so
+ *   lines inside Markdown code fences are checked as code.
  * @returns {{ file: string, line: number, text: string }[]}
  */
-export function findAddedEmDashes(diff) {
+export function findAddedEmDashes(diff, readNew = () => "") {
   const hits = [];
+  const fences = new Map();
   let file = null;
   let line = 0;
   let inHeader = false;
@@ -50,7 +115,10 @@ export function findAddedEmDashes(diff) {
     if (inHeader || !file || !raw.startsWith("+")) {
       continue;
     }
-    if (raw.includes(EM_DASH)) {
+    if (/\.mdx?$/.test(file) && !fences.has(file)) {
+      fences.set(file, codeFences(readNew(file)));
+    }
+    if (hasDash(raw.slice(1), lineContext(file, line, fences.get(file)))) {
       hits.push({ file, line, text: raw.slice(1).trim() });
     }
     line++;
@@ -92,12 +160,25 @@ function untrackedHits(files) {
   return untracked
     .split("\n")
     .filter(Boolean)
-    .flatMap((file) =>
-      readFileSync(file, "utf8")
+    .flatMap((file) => {
+      const content = readFileSync(file, "utf8");
+      const fences = codeFences(content);
+      return content
         .split("\n")
         .map((text, i) => ({ file, line: i + 1, text: text.trim() }))
-        .filter(({ text }) => text.includes(EM_DASH)),
-    );
+        .filter(({ text, line }) => hasDash(text, lineContext(file, line, fences)));
+    });
+}
+
+// The new side of a diff: a commit, the index, or the working tree.
+function reader(rev) {
+  return (file) => {
+    try {
+      return rev === undefined ? readFileSync(file, "utf8") : git(["show", `${rev}:${file}`]);
+    } catch {
+      return "";
+    }
+  };
 }
 
 function isMerging() {
@@ -111,16 +192,16 @@ function isMerging() {
 
 function run(args) {
   if (args[0] === "--base") {
-    return findAddedEmDashes(diffAgainst([args[1], "HEAD"], [":/"]));
+    return findAddedEmDashes(diffAgainst([args[1], "HEAD"], [":/"]), reader("HEAD"));
   }
   // A merge commit stages the other branch's lines, which were reviewed there.
   if (isMerging()) {
     return [];
   }
   if (args.length === 0) {
-    return findAddedEmDashes(diffAgainst(["--cached"], [":/"]));
+    return findAddedEmDashes(diffAgainst(["--cached"], [":/"]), reader(""));
   }
-  return [...findAddedEmDashes(diffAgainst(["HEAD"], args)), ...untrackedHits(args)];
+  return [...findAddedEmDashes(diffAgainst(["HEAD"], args), reader()), ...untrackedHits(args)];
 }
 
 // realpath: Node resolves symlinks in import.meta.url but not in argv, so a
@@ -136,7 +217,7 @@ if (import.meta.url === entry) {
   }
   if (hits.length > 0) {
     console.error(
-      `\nFound ${hits.length} added em dash(es) (${EM_DASH}). Rephrase using commas, colons, parentheses, or separate sentences.`,
+      `\nFound ${hits.length} added em dash(es) (${EM_DASH}) or stand-ins (--, \u2013, or a spaced hyphen). Rewrite the sentence instead of swapping in other punctuation. Two shorter sentences usually read best.`,
     );
     process.exit(1);
   }
