@@ -61,11 +61,12 @@ describe("useUnshield", () => {
     vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
       logs: [createUnwrapRequestedLog(unwrapRequestId)],
     });
+    const alreadyFinalized = new Error(
+      'The contract reverted with custom error "InvalidUnwrapRequest".',
+    );
     vi.mocked(signer.writeContract)
       .mockResolvedValueOnce("0xtxhash") // unwrap
-      .mockRejectedValueOnce(
-        new Error('The contract reverted with custom error "InvalidUnwrapRequest".'),
-      ); // finalize
+      .mockRejectedValueOnce(alreadyFinalized); // finalize
 
     const onError = vi.fn();
     const { result, queryClient } = renderWithProviders(() =>

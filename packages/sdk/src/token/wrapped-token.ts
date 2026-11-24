@@ -365,7 +365,8 @@ export class WrappedToken extends Token {
    * @param amount - The plaintext amount to unshield.
    * @param options - Optional: `skipBalanceCheck` (default `false`), callbacks.
    * @returns The finalize transaction hash and mined receipt.
-   * @throws if another tab or account called `finalizeUnwrap` first; the funds arrived. {@link UnshieldAlreadyFinalizedError}
+   * @throws if the unwrap request was already finalized, for example by another tab or
+   *   account. The funds arrived, so treat it as completion. {@link UnshieldAlreadyFinalizedError}
    *
    * @example
    * ```ts
@@ -411,7 +412,8 @@ export class WrappedToken extends Token {
    * @param callbacks - Optional progress callbacks for each phase.
    * @returns The finalize transaction hash and mined receipt.
    * @throws if the balance is zero. {@link DecryptionFailedError}
-   * @throws if another tab or account called `finalizeUnwrap` first; the funds arrived. {@link UnshieldAlreadyFinalizedError}
+   * @throws if the unwrap request was already finalized, for example by another tab or
+   *   account. The funds arrived, so treat it as completion. {@link UnshieldAlreadyFinalizedError}
    *
    * @example
    * ```ts
