@@ -56,6 +56,11 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/stop-typecheck.mjs",
             "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/stop-llm-build.mjs",
+            "timeout": 120
           }
         ]
       }

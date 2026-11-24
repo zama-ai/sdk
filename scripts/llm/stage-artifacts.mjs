@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { isCorpusSource, LLM_ARTIFACTS } from "./lib/artifacts.mjs";
 
 function run(command, args) {
   const result = spawnSync(command, args, { encoding: "utf8", stdio: "pipe" });
@@ -21,24 +22,8 @@ function runInherit(command, args) {
   }
 }
 
-const corpusSourcePatterns = [
-  /^README\.md$/u,
-  /^packages\/(?:sdk|react-sdk)\/README\.md$/u,
-  /^clients\/(?:go|rust)\/README\.md$/u,
-  /^docs\/gitbook\/src\/.+\.md$/u,
-  /^docs\/gitbook\/\.gitbook\/includes\/.+\.md$/u,
-  /^docs\/llm\/corpus\.config\.json$/u,
-  /^examples\/[^/]+\/(?:README|WALKTHROUGH)\.md$/u,
-  /^packages\/(?:sdk|react-sdk)\/etc\/.+\.api\.md$/u,
-  /^scripts\/llm\/(?!__tests__\/).+\.mjs$/u,
-];
-
 function gitChangedFiles(args) {
   return run("git", args).split("\n").filter(Boolean);
-}
-
-function isCorpusSource(file) {
-  return corpusSourcePatterns.some((pattern) => pattern.test(file));
 }
 
 const stagedCorpusFiles = gitChangedFiles([
@@ -70,4 +55,4 @@ if (partiallyStagedCorpusFiles.length > 0) {
 
 console.log("LLM corpus source changed; regenerating llms.txt artifacts...");
 runInherit("pnpm", ["llm:build"]);
-runInherit("git", ["add", "llms.txt", "llms-full.txt", "docs/llm/corpus-manifest.json"]);
+runInherit("git", ["add", ...LLM_ARTIFACTS]);

@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -185,19 +184,11 @@ export function cleanGeneratedMarkdown(content) {
     .replace(/\n+$/u, "")}\n`;
 }
 
-function formatManifest(manifestPath) {
-  const result = spawnSync("oxfmt", [manifestPath], { stdio: "inherit" });
-  if (result.status !== 0) {
-    throw new Error(`Failed to format ${manifestPath}`);
-  }
-}
-
 export function writeLlmsArtifacts(manifest = buildCorpusManifest()) {
   const manifestDir = join(repoRoot, "docs/llm");
   const manifestPath = join(manifestDir, "corpus-manifest.json");
   mkdirSync(manifestDir, { recursive: true });
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-  formatManifest(manifestPath);
   writeFileSync(join(repoRoot, "llms.txt"), cleanGeneratedMarkdown(buildLlmsTxt(manifest)));
   writeFileSync(join(repoRoot, "llms-full.txt"), cleanGeneratedMarkdown(buildLlmsFull(manifest)));
   console.log(
