@@ -2558,6 +2558,8 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 
 **A paused group member no longer blocks its group.** `prepareDeposit`, `prepareRedeem`, `deposit` and `redeem` leave out a group member whose batchers are all paused or closed, instead of throwing `VaultBatcherPausedError` for the whole group. They still throw it when the chosen vault takes no joins. `readOpenBatches` and `useOpenBatches` leave out a group member whose batchers are all closed, and throw `VaultBatcherPausedError` when every member is closed. `legs` and `batches` then have no entry for a vault left out, so match them by `vaultId`. See [Paused batchers](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/advanced.md#paused-batchers).
 
+**A batcher whose batch ids start past 1 works from its first batch.** A batcher that continues a retired batcher's ids has no batch before its first one, and `batchState` reverts on that id. `readBatch`, `readOpenBatches` and every join now check the previous batch as the batcher's `dispatchBatch` does: a batch before it with no unwrap request does not hold it back. Before, they threw on the batcher's first batch.
+
 **`BatcherHistory` and `RetiredBatcher` are deprecated.** A history reads as the list `[...retired, latest]`, so `latest` takes joins as soon as it is open. It no longer waits for the retired batchers to pass their `lastBatchId`. Replace `{ retired, latest }` with that list. Code that reads `vault.batchers` must also handle a list.
 
 ### Chains

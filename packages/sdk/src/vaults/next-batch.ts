@@ -1,4 +1,4 @@
-import type { Address } from "viem";
+import { zeroHash, type Address } from "viem";
 import { ConfigurationError, VaultBatcherReadFailedError } from "../errors";
 import type { GenericProvider } from "../types";
 import { isContractCallError } from "../utils/error";
@@ -10,6 +10,7 @@ import {
   closedContract,
   currentBatchIdContract,
   pausedContract,
+  unwrapRequestIdContract,
 } from "./contracts";
 import type { BatchState, JoinDirection } from "./types";
 
@@ -139,9 +140,19 @@ export async function waitsOnPrevious(
   batcher: Address,
   batchId: bigint,
 ): Promise<boolean> {
+  if (batchId <= 1n) {
+    return false;
+  }
+  const previous = batchId - 1n;
+  // As `dispatchBatch` does: a batcher whose ids start past 1 has no batch before its first, and
+  // `batchState` reverts on one, while its unwrap request reads zero.
+  const unwrapRequestId = await provider.readContract({
+    ...unwrapRequestIdContract(batcher, previous),
+    chainId,
+  });
   return (
-    batchId > 1n &&
-    (await readBatchState(provider, chainId, batcher, batchId - 1n)) === "dispatched"
+    unwrapRequestId !== zeroHash &&
+    (await readBatchState(provider, chainId, batcher, previous)) === "dispatched"
   );
 }
 
