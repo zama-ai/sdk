@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.9.0-beta.13](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.12...v3.9.0-beta.13) (2026-11-24)
+
+### Bug Fixes
+
+- **react-sdk:** refresh balances when someone else finalizes the unshield ([#984](https://github.com/zama-ai/sdk/issues/984)) ([2af12db]()), closes [#967]()
+
 ## [3.9.0-beta.12](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.11...v3.9.0-beta.12) (2026-11-23)
 
 ### Bug Fixes
