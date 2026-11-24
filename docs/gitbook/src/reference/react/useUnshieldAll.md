@@ -123,13 +123,13 @@ await unshieldAll({
 
 **Throws:**
 
-- [`UnshieldAlreadyFinalizedError`](../sdk/errors.md#unshieldalreadyfinalizederror) -- another tab or account called `finalizeUnwrap` first. The funds already arrived and the hook refreshes the balance queries, so treat it as completion
+- [`UnshieldAlreadyFinalizedError`](../sdk/errors.md#unshieldalreadyfinalizederror) -- the unwrap request was already finalized, for example by another tab or account. The funds already arrived and the hook refreshes the balance queries, so treat the error as completion
 
 ## Return Type
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.
 
-Auto-invalidates the `confidentialBalance` cache on success, and on `UnshieldAlreadyFinalizedError`.
+On success and on `UnshieldAlreadyFinalizedError`, the hook invalidates the confidential balance, underlying allowance, pending-unshield and wagmi balance queries.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 
