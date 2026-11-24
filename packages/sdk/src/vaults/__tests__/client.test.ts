@@ -1,4 +1,4 @@
-import { decodeFunctionData, getAddress, type Address, type Hex } from "viem";
+import { decodeFunctionData, getAddress, zeroHash, type Address, type Hex } from "viem";
 import { vi } from "vitest";
 import { confidentialWrapperAbi } from "../../abi/confidential-wrapper.abi";
 import {
@@ -98,6 +98,8 @@ interface BatchFacts {
   currentBatchId?: bigint;
   /** The state of the batch before the current one, defaults to finalized. */
   previousState?: number;
+  /** The batcher's first batch id; a batch before it does not exist. Defaults to 1. */
+  firstBatchId?: bigint;
   /** What `closed()` returns; `"reverts"` for a batcher deployed before it. Defaults to false. */
   closed?: boolean | "reverts";
 }
@@ -144,6 +146,9 @@ function mockChain(
       case "fromToken":
         return fromTokens[batcher];
       case "batchState":
+        if ((args[0] as bigint) < (batch?.firstBatchId ?? 1n)) {
+          throw new Error(`execution reverted: BatchNonexistent(${String(args[0])})`);
+        }
         return args[0] === current - 1n ? (batch?.previousState ?? 2) : (batch?.state ?? 0);
       case "batchCreatedAt":
         return batch?.createdAt ?? NOW - 10n;
@@ -162,7 +167,9 @@ function mockChain(
       case "currentBatchId":
         return current;
       case "unwrapRequestId":
-        return `0x${"cd".repeat(32)}`;
+        return (args[0] as bigint) < (batch?.firstBatchId ?? 1n)
+          ? zeroHash
+          : `0x${"cd".repeat(32)}`;
       case "unwrapAmount":
         return `0x${"ef".repeat(32)}`;
       default:
@@ -747,6 +754,16 @@ describe("several batchers in one direction", () => {
     expect(await nextBatcher(sdk)).toMatchObject({ batcher: LATE });
   });
 
+  test("joins the first batch of a batcher whose ids start past 1", async ({ sdk, provider }) => {
+    mockChain(provider, {
+      batches: {
+        [EARLY]: { createdAt: NOW, minAge: 100n, firstBatchId: 7n },
+        [LATE]: { createdAt: NOW, minAge: 600n },
+      },
+    });
+    expect(await nextBatcher(sdk)).toMatchObject({ batcher: EARLY });
+  });
+
   test("when every batch waits on its previous one, takes the one due first", async ({
     sdk,
     provider,
@@ -1062,6 +1079,13 @@ describe("readBatch", () => {
     const batch = await createVaultClient(sdk).readBatch(ref);
     expect(batch.actions).toStrictEqual(["dispatch"]);
     expect(batch.deposit).toBeNull();
+  });
+
+  test("reads the first batch of a batcher whose ids start past 1", async ({ sdk, provider }) => {
+    mockChain(provider, {
+      batches: { [ALPHA.depositBatcher]: { createdAt: NOW - 200n, firstBatchId: 7n } },
+    });
+    expect((await createVaultClient(sdk).readBatch(ref)).actions).toStrictEqual(["dispatch"]);
   });
 
   test("cannot be dispatched while the previous batch is in flight", async ({ sdk, provider }) => {

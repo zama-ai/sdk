@@ -7,7 +7,7 @@ A step-by-step guide to how this app integrates `@zama-fhe/react-sdk` using wagm
 ## Architecture at a glance
 
 ```
-page.tsx                         # wallet connect, network picker, token selector
+page.tsx                         # wallet connect, network picker, tabs, token selector
 ├── lib/networks.ts              # the network table: one row per chain (viem chain, FHE preset, flags)
 ├── lib/relayers.ts              # server-side: upstream relayer URL + API key per network
 ├── lib/environment.ts           # optional custom Zama environment: its Sepolia config, network ids and labels
@@ -28,7 +28,13 @@ page.tsx                         # wallet connect, network picker, token selecto
 ├── PendingUnshieldCard.tsx      # recover an interrupted unshield from IndexedDB
 ├── DelegateDecryptionCard.tsx   # grant another wallet the right to decrypt your balance
 ├── RevokeDelegationCard.tsx     # revoke that right
-└── DecryptAsCard.tsx            # decrypt another wallet's balance (as a delegate)
+├── DecryptAsCard.tsx            # decrypt another wallet's balance (as a delegate)
+├── MintAndShieldButton.tsx     # mint a test ERC-20 and shield it, on the Vaults tab
+└── vaults/                      # the Vaults tab
+    ├── VaultsTab.tsx            # the vault picker and the chosen vault's tokens
+    ├── PositionsOverview.tsx    # your shares in every vault, their value, a total per token
+    ├── InProgressBatches.tsx    # every joined batch, in every vault: an exhaustive switch on its state
+    └── VaultActionCard.tsx      # the Deposit or Redeem box: balance, decrypt, form
 ```
 
 ---
@@ -53,7 +59,7 @@ export const networks = {
     transport: "relayer",
     explorerUrl: "https://eth-sepolia.blockscout.com",
     canMint: true,
-    vault: { address, confidentialToken },
+    vaults: vaultsFromEnv("NEXT_PUBLIC_SEPOLIA_VAULTS", process.env.NEXT_PUBLIC_SEPOLIA_VAULTS),
   }),
   hoodi: defineNetwork({ label: "Hoodi · Cleartext", transport: "cleartext", ... }),
   mainnet: defineNetwork({ label: "Ethereum", transport: "relayer", canMint: false, ... }),
@@ -243,8 +249,8 @@ chain (error 4902). That covers Hoodi and Zenith, which most wallets don't ship.
 override from `NEXT_PUBLIC_<NETWORK>_RPC_URL` is applied to the viem chain too, so the
 "add network" prompt shows the same RPC the app uses.
 
-Everything that depends on the active network — explorer links, the native balance label,
-the Mint button, the vault demo — reads its row through `useNetwork()` (`src/lib/hooks.ts`)
+Everything that depends on the active network (explorer links, the native balance label,
+the Mint button, the Vaults tab's batchers) reads its row through `useNetwork()` (`src/lib/hooks.ts`)
 rather than a hardcoded constant.
 
 **Screen 2 is passive**: there is no `isInitializing` guard (unlike the ethers/viem examples)
@@ -416,7 +422,7 @@ no default and are hidden until set.
 The proxy fails closed and is deliberately narrow:
 
 - unknown or unconfigured network → `404`, never a default upstream
-- `Origin` not the app's own, or not in `RELAYER_PROXY_ALLOWED_ORIGINS` when that is set (it replaces the default) → `403`
+- `Origin` host not the one the browser asked for (`X-Forwarded-Host` behind a reverse proxy, else `Host`) → `403`
 - only the relayer routes `web()` calls, and their `<route>/<job id>` polling paths, are forwarded; any other path → `404`
 - request bodies are never logged
 
@@ -443,55 +449,87 @@ If the user closes the tab between phases, `PendingUnshieldCard` recovers the st
 
 ---
 
-## 10. Deposit into a reacting contract (`confidentialTransferAndCall`)
+## 10. Confidential vault deposits and redemptions (Vaults tab)
 
-The `Reacting contract — ConfidentialVault` section demonstrates the ERC-7984
-`confidentialTransferAndCall` pattern: a confidential transfer that also invokes the
-recipient contract's `onConfidentialTransferReceived` hook **in the same transaction**, so
-value moves and the receiver reacts atomically — no two-step transfer-then-notify race.
+A vault deposit or redemption does not settle when its transaction is mined. The amount joins
+a batch, the batch is sent to the vault, and the user claims the result once it settles. The
+Vaults tab shows each of those steps, following the
+[Building a vault UI](../../docs/gitbook/src/guides/vaults/building-a-ui.md) guide.
 
-The receiver is a minimal confidential escrow, [`contracts/src/ConfidentialVault.sol`](../../contracts/src/ConfidentialVault.sol),
-deployed on Sepolia and bound to one confidential token (cUSDC). The cards only render when
-that token is selected on Sepolia: the binding is the `vault` field of the Sepolia row in
-`src/lib/networks.ts`, configurable via `NEXT_PUBLIC_VAULT_ADDRESS` and
-`NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN`. Deploy your own with
-[`contracts/script/DeployVault.s.sol`](../../contracts/script/DeployVault.s.sol).
+- **Vault.** `src/lib/vaults.ts` builds the vault with `defineVault`: a single vault, so a join
+  has a single leg and lands in a single batch. `useVaultDetails` reads the vault's asset and
+  share from the deposit batcher, then their names, decimals and rates with the SDK's
+  `nameContract`, `symbolContract`, `decimalsContract` and `rateContract`, so the only
+  configuration is the two batcher addresses.
+- **Vaults per network.** Each row of `src/lib/networks.ts` reads its vaults from
+  `NEXT_PUBLIC_<NETWORK>_VAULTS`, one `depositBatcher:redeemBatcher` pair per vault. Next.js
+  inlines a `NEXT_PUBLIC_*` variable only where the code names it, so each row names its own.
+  With several vaults the tab shows a picker that groups them by the token they take and names
+  each by its ERC-4626 vault, both read through the deposit batcher. Each vault is joined on its
+  own, which keeps the example short but shows on-chain which vault was chosen. A production app
+  joins through a group: see [One vault, or a group of vaults](#one-vault-or-a-group-of-vaults).
+- **Pinned chain.** Reads go to the vault's `chainId`, and the write hooks throw
+  `ChainMismatchError` when the wallet is on another chain instead of sending the transaction
+  there.
+- **Positions overview.** `PositionsOverview.tsx` decrypts the share balance of every vault in
+  one `useConfidentialBalances` query and values each with the ERC-4626 `convertToAssets`, with a
+  total per token. A permit holds at most 10 contracts and each vault needs 4 (its two tokens
+  and two batchers), so `useGrantPermit` asks for one signature per 10 contracts. "Open" selects
+  that vault below.
+- **Decrypt on click.** In the Deposit and Redeem boxes, one `useGrantPermit` call covers the
+  vault's two tokens and two batchers (for the amounts of its batches in progress).
+- **Send.** `useDeposit` and `useRedeem` return the batch the join landed in. The button
+  explains why it is disabled (a paused batcher from `useOpenBatches`, no amount, above balance),
+  and `onJoinSubmitted` tells "confirm in your wallet" from "waiting for the transaction".
+- **Joined batches.** The app needs each batch to read and act on it later, so
+  `src/lib/vaults.ts` keeps them in localStorage, with the bigint batch ids stored as strings, in
+  one store that every view reads (`useSyncExternalStore`): a join in a vault's box shows at
+  once in the In progress card, and a claim or a quit removes the batch.
+- **One row per batch.** `useBatch` reads a batch with the fields its state has and the
+  `actions` it allows now, and `InProgressBatches.tsx` lists the batches of every vault and
+  switches on `state` exhaustively: cancel while pending with `useQuit`, settle a late batch with
+  `useFinalize`, claim a finalized one with `useClaim`, take a canceled amount back with
+  `useQuit`.
 
-**Deposit (`VaultDepositCard.tsx`).** The `data` payload carries a real domain message — the
-beneficiary to credit — not an opaque blob. The contract decodes and routes the credit on it:
+### One vault, or a group of vaults
+
+The app configures one vault, so it uses `defineVault` and joins with `{ vault }`:
 
 ```ts
-const deposit = useConfidentialTransferAndCall({ address: tokenAddress }, { onSuccess });
-
-// The vault decodes `data` as the beneficiary address to credit.
-const data = encodeAbiParameters([{ type: "address" }], [beneficiary]);
-deposit.mutate({ to: vaultAddress, amount: parsedAmount, data });
-```
-
-**Position + withdraw (`VaultPositionCard.tsx`).** The vault stores an `euint64` share per
-beneficiary and grants that beneficiary FHE decrypt rights. Reading the position needs a
-permit scoped to the **vault** address — distinct from the confidential-token permits the main
-page grants:
-
-```ts
-const { data: handle } = useReadContract({
-  address: vaultAddress,
-  abi: VAULT_ABI,
-  functionName: "sharesOf",
-  args: [connectedAddress],
+const MAIN = defineVault({
+  id: "main",
+  chainId: sepolia.id,
+  batchers: { deposit: "0xMainDeposit", redeem: "0xMainRedeem" },
 });
 
-await grantPermit.mutateAsync([vaultAddress]); // permit scoped to the vault
-const shares = useDecryptValues([{ encryptedValue: handle, contractAddress: vaultAddress }]);
+deposit.mutate({ vault: MAIN, amount });
 ```
 
-Withdraw calls the vault's `withdraw()` directly (`signer.writeContract`) — it is a custom
-contract method, not part of the `Token` surface. The vault transfers the caller's full
-confidential balance back via `confidentialTransfer`.
+Several vaults that take the same asset form a group. Every join then sends a leg to each vault
+of the group, the chosen one with the amount and the others with an encrypted zero, so nobody can
+tell which vault the user picked. Name the chosen vault with `vaultId`:
 
-> Depositing with `beneficiary == address(0)` makes the vault return an encrypted `false` from
-> the hook, and the token **refunds the transfer atomically** — a useful safety property of the
-> receiver-callback pattern.
+```ts
+const ALPHA = defineVault({
+  id: "alpha",
+  chainId: sepolia.id,
+  batchers: { deposit: "0xAlphaDeposit", redeem: "0xAlphaRedeem" },
+});
+const BETA = defineVault({
+  id: "beta",
+  chainId: sepolia.id,
+  batchers: { deposit: "0xBetaDeposit", redeem: "0xBetaRedeem" },
+});
+const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
+
+deposit.mutate({ group: STABLE, vaultId: "beta", amount });
+```
+
+A group join returns one batch per vault, decoys included. Store every one of them, and quit every
+one to take a deposit back, or the quits show which vault was picked. The read hooks, such as
+`useOpenBatches`, take either a vault or a group. See
+[Advanced vault integration](../../docs/gitbook/src/guides/vaults/advanced.md) for the privacy
+rules and the wallet prompts of a group.
 
 ---
 
@@ -523,9 +561,9 @@ The directives that are specific to this app:
 - `connect-src`: this origin (the proxy, `/api/networks`, WASM and worker files), the
   RPC origin of every network in the table (the SDK probes the wallet's chain on connect,
   served or not), the storage each relayer's `keyurl` points the browser at for the FHE
-  public key and CRS (the public testnet bucket is built in; `CSP_CONNECT_SRC` for any other
-  relayer, each entry checked to be an origin when `relayers.ts` loads at boot), and `data:`
-  URLs (the FHE runtime compiles its WASM from one).
+  public key and CRS (the server asks each enabled relayer's `keyurl` and caches the answer
+  for an hour), and `data:` URLs (the FHE runtime
+  compiles its WASM from one).
 - `script-src 'wasm-unsafe-eval'` and `worker-src 'self' blob:`: what the FHE runtime
   needs to compile WASM and spawn its thread pool. See the SDK's security model docs.
 - `'unsafe-eval'` and inline styles are allowed under `next dev` only.
