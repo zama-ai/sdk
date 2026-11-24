@@ -30,10 +30,12 @@ If the snippet you're about to generate composes the underlying contract calls f
 
 ## Rules and what enforces them
 
-| Rule                                                                                                                          | Enforced by                                                                                                |
-| ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Check a saved tx hash with `lookUpReceipt` (`utils/receipt-lookup.ts`). Wait for a receipt only on a hash you just submitted. | ast-grep rule `no-receipt-wait-on-saved-hash` (`pnpm lint`)                                                |
-| Reading pending unshields never writes storage.                                                                               | `loadPendingUnshields` in `packages/sdk/src/token/pending-unshield.ts` takes `Pick<GenericStorage, "get">` |
+| Rule                                                                                                                                    | Enforced by                                                                                                       |
+| --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Check a saved tx hash with `lookUpReceipt` (`utils/receipt-lookup.ts`). Wait for a receipt only on a hash you just submitted.           | ast-grep rule `no-receipt-wait-on-saved-hash` (`pnpm lint`)                                                       |
+| Reading pending unshields never writes storage.                                                                                         | `loadPendingUnshields` in `packages/sdk/src/token/pending-unshield.ts` takes `Pick<GenericStorage, "get">`        |
+| Examples call the SDK's contract builders (`decimalsContract`, `balanceOfContract`, ...), not hand-written ABI fragments.               | ast-grep rule `examples-use-sdk-contract-builders` (`pnpm lint`)                                                  |
+| An example that joins a vault handles `VaultJoinUnconfirmedError`, and one that reads `useOpenBatches`' error handles a paused batcher. | ast-grep rules `examples-vault-join-handles-unconfirmed` and `examples-open-batches-handles-paused` (`pnpm lint`) |
 
 ## Further reading
 

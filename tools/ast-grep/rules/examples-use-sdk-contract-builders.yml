@@ -1,0 +1,29 @@
+# Two copies of one rule: ast-grep picks the parser by file extension, so .ts and .tsx each need
+# their own `language`. Keep the message, files and rule of both in step.
+id: examples-use-sdk-contract-builders
+language: TypeScript
+severity: error
+message: >-
+  This ABI fragment hand-writes a call that @zama-fhe/sdk already builds. Use the matching
+  builder from @zama-fhe/sdk instead: `decimalsContract(token)`, `balanceOfContract(token, account)`,
+  and so on (packages/sdk/src/contracts). Calls with no builder, such as a test token's `mint`,
+  can stay as ABI fragments.
+files:
+  - examples/**/*.ts
+rule:
+  kind: string_fragment
+  regex: ^function (name|symbol|decimals|totalSupply|balanceOf|allowance|approve|rate|underlying|wrap|unwrap|setOperator|isOperator|supportsInterface|transferAndCall|confidentialTransfer|confidentialBalanceOf)\(
+---
+id: examples-use-sdk-contract-builders-tsx
+language: Tsx
+severity: error
+message: >-
+  This ABI fragment hand-writes a call that @zama-fhe/sdk already builds. Use the matching
+  builder from @zama-fhe/sdk instead: `decimalsContract(token)`, `balanceOfContract(token, account)`,
+  and so on (packages/sdk/src/contracts). Calls with no builder, such as a test token's `mint`,
+  can stay as ABI fragments.
+files:
+  - examples/**/*.tsx
+rule:
+  kind: string_fragment
+  regex: ^function (name|symbol|decimals|totalSupply|balanceOf|allowance|approve|rate|underlying|wrap|unwrap|setOperator|isOperator|supportsInterface|transferAndCall|confidentialTransfer|confidentialBalanceOf)\(
