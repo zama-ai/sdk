@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.9.0-beta.14](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.13...v3.9.0-beta.14) (2026-11-24)
+
+### Bug Fixes
+
+- **vaults:** read the batch before a batcher's first one as the contract does ([#998](https://github.com/zama-ai/sdk/issues/998)) ([13b0283]()), closes [zama-ai/super-app#874]()
+
 ## [3.9.0-beta.13](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.12...v3.9.0-beta.13) (2026-11-24)
 
 ### Bug Fixes
