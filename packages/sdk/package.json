@@ -202,7 +202,7 @@
   "devDependencies": {
     "@dfns/sdk": "^0.8.20",
     "@dfns/sdk-keysigner": "^0.8.20",
-    "@tanstack/query-core": "^5.107.0",
+    "@tanstack/query-core": "^5.108.2",
     "comlink": "^4.4.2"
   },
   "peerDependencies": {
