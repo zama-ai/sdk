@@ -2542,6 +2542,8 @@ This changelog section covers `main` and `beta` — the two lines with real depl
 
 ### Unshield
 
+**Unshield hooks refresh balances when the unwrap was already finalized.** Any account can call `finalizeUnwrap`. When another tab or another account finalizes the request first, `useUnshield` and `useUnshieldAll` now refresh the balance queries on `UnshieldAlreadyFinalizedError`, as `useResumeUnshield` already did. Treat the error as completion. See [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields).
+
 **Interrupted unshields stay recoverable.** The SDK now saves the unwrap transaction hash as soon as the wallet returns it, instead of after the receipt, and keeps one entry per unshield, so a second unshield on the same token no longer overwrites the first. `getPendingUnshield()` / `usePendingUnshield` return the oldest pending one; after resuming it, the next one is returned. An entry whose unwrap reverted, or was replaced or cancelled in the wallet, is cleared instead of being reported, and an unwrap that is not mined yet no longer stalls `getPendingUnshield()`. `resumeUnshield()` no longer waits for such an unwrap: it throws the new `UnwrapNotMinedError` (`UNWRAP_NOT_MINED`) at once and keeps the entry. Entries move to a new storage key, so an older SDK still open in another tab cannot delete them. See [Unshield tokens](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/unshield-tokens.md#4-handle-interrupted-unshields).
 
 **`GenericProvider.getTransactionReceipt`.** An optional method that returns a mined receipt, or `null`, without waiting. `ViemProvider`, `EthersProvider` and `WagmiProvider` implement it. See [GenericProvider](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/GenericProvider.md#gettransactionreceipt).
@@ -5562,7 +5564,7 @@ The flow is:
 
 
 > [!WARNING]
-> **A resume can lose the race.** Another tab, a double click, or a third party can finalize the same request first. `resumeUnshield` then clears the persisted state and throws `UnshieldAlreadyFinalizedError` instead of broadcasting a transaction that would revert. Treat the error as completion: the funds already arrived, so dismiss the prompt and refresh balances. `useResumeUnshield` refreshes the affected queries automatically. See [UnshieldAlreadyFinalizedError](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror).
+> **The unwrap request can be finalized before the SDK finalizes it.** Any account can call `finalizeUnwrap`, so another tab or another account can finalize the same request first. A double click on a resume prompt has the same effect. `unshield`, `unshieldAll` and `resumeUnshield` then clear the persisted state and throw `UnshieldAlreadyFinalizedError`. Treat the error as completion: the funds already arrived, so show the unshield as complete, dismiss any resume prompt, and refresh balances. `useUnshield`, `useUnshieldAll` and `useResumeUnshield` refresh the affected queries automatically. See [UnshieldAlreadyFinalizedError](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror).
 >
 > **An unwrap may not be mined yet.** If the unwrap has no receipt (still pending, or dropped or replaced so this hash is never mined), `resumeUnshield` throws `UnwrapNotMinedError` at once and keeps the entry. Show the unshield as not confirmed and offer the resume again later. See [UnwrapNotMinedError](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unwrapnotminederror).
 
@@ -6306,50 +6308,50 @@ All errors thrown by `@zama-fhe/sdk` and `@zama-fhe/react-sdk` extend `ZamaError
 
 Every SDK error is an instance of `ZamaError`, which extends the native `Error` class. Each subclass has a unique `.code` property:
 
-| Code                                     | TypeScript error class                    | What happened                                                                                                    |
-| ---------------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `SIGNING_REJECTED`                       | `SigningRejectedError`                    | User rejected the wallet signature                                                                               |
-| `SIGNING_FAILED`                         | `SigningFailedError`                      | Wallet signature failed (connectivity or firmware issue)                                                         |
-| `ENCRYPTION_FAILED`                      | `EncryptionFailedError`                   | FHE encryption failed in the WASM runtime                                                                        |
-| `DECRYPTION_FAILED`                      | `DecryptionFailedError`                   | FHE decryption failed                                                                                            |
-| `TRANSACTION_REVERTED`                   | `TransactionRevertedError`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                   |
-| `HCU_BLOCK_LIMIT_EXCEEDED`               | `HcuBlockLimitExceededError`              | Gas estimation found too little FHE compute (HCU) left in the block (retryable)                                  |
-| `HCU_TRANSACTION_LIMIT_EXCEEDED`         | `HcuTransactionLimitExceededError`        | The transaction needs more FHE compute (HCU) than one transaction may use                                        |
-| `UNSHIELD_ALREADY_FINALIZED`             | `UnshieldAlreadyFinalizedError`           | `resumeUnshield()` called for an unwrap that was already finalized -- funds already arrived, nothing to resume   |
-| `UNWRAP_NOT_MINED`                       | `UnwrapNotMinedError`                     | `resumeUnshield()` called for an unwrap that is not mined yet -- the entry is kept, retry later (retryable)      |
-| `INVALID_KEYPAIR`                        | `InvalidTransportKeyPairError`            | Relayer rejected transport key pair (stale or malformed)                                                         |
-| `KEYPAIR_EXPIRED`                        | `TransportKeyPairExpiredError`            | Transport key pair expired -- user needs to re-sign                                                              |
-| `REVOKED_KMS_CONTEXT`                    | `RevokedKmsContextError`                  | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                  |
-| `NO_CIPHERTEXT`                          | `NoCiphertextError`                       | No encrypted balance exists for this account                                                                     |
-| `RELAYER_REQUEST_FAILED`                 | `RelayerRequestFailedError`               | Relayer HTTP request failed (check `.statusCode`); retryable on back-pressure (429)                              |
-| `NOT_ENTITLED`                           | `NotEntitledError`                        | Actor lacks the on-chain ACL grant to decrypt this value — terminal, don't retry                                 |
-| `RPC_RATE_LIMITED`                       | `RpcRateLimitError`                       | Consumer's RPC provider rate-limited an on-chain read (retryable)                                                |
-| `CONFIGURATION`                          | `ConfigurationError`                      | Invalid SDK config or FHE runtime failed to initialize                                                           |
-| `INSUFFICIENT_CONFIDENTIAL_BALANCE`      | `InsufficientConfidentialBalanceError`    | Confidential balance too low for transfer or unshield                                                            |
-| `INSUFFICIENT_ERC20_BALANCE`             | `InsufficientERC20BalanceError`           | ERC-20 balance too low for shield                                                                                |
-| `INSUFFICIENT_ALLOWANCE`                 | `InsufficientAllowanceError`              | ERC-20 allowance too low for a manual `wrap` (approve first)                                                     |
-| `BALANCE_CHECK_UNAVAILABLE`              | `BalanceCheckUnavailableError`            | Balance check impossible (no stored permits)                                                                     |
-| `ERC20_READ_FAILED`                      | `ERC20ReadFailedError`                    | Public ERC-20 read failed (network or contract error)                                                            |
-| `DELEGATION_SELF_NOT_ALLOWED`            | `DelegationSelfNotAllowedError`           | Delegation cannot target self                                                                                    |
-| `DELEGATION_COOLDOWN`                    | `DelegationCooldownError`                 | Only one delegate/revoke per tuple per block (retryable)                                                         |
-| `DELEGATION_NOT_FOUND`                   | `DelegationNotFoundError`                 | No active delegation for this tuple                                                                              |
-| `SIGNER_REQUIRED`                        | `SignerRequiredError`                     | Write/sign/decrypt called without a signer                                                                       |
-| `DELEGATION_EXPIRED`                     | `DelegationExpiredError`                  | The delegation has expired                                                                                       |
-| `SIGNER_NOT_CONFIGURED`                  | `SignerNotConfiguredError`                | SDK operation needs a signer but none is configured (subclass of `SignerRequiredError`)                          |
-| `WALLET_NOT_CONNECTED`                   | `WalletNotConnectedError`                 | Signer exists but has no connected wallet account (subclass of `SignerRequiredError`)                            |
-| `WALLET_ACCOUNT_NOT_READY`               | `WalletAccountNotReadyError`              | Async signer adapter hasn't resolved its account yet (subclass of `SignerRequiredError`, retryable)              |
-| `CHAIN_MISMATCH`                         | `ChainMismatchError`                      | Signer and provider are on different chains, or the signer is not on the vault group's or batch's `chainId`      |
-| `DELEGATION_CONTRACT_IS_SELF`            | `DelegationContractIsSelfError`           | Delegation contract address equals the caller                                                                    |
-| `DELEGATION_DELEGATE_EQUALS_CONTRACT`    | `DelegationDelegateEqualsContractError`   | Delegate equals the contract address                                                                             |
-| `DELEGATION_DELEGATE_CANNOT_BE_WILDCARD` | `DelegationDelegateCannotBeWildcardError` | Delegate address is the wildcard address                                                                         |
-| `DELEGATION_EXPIRATION_TOO_SOON`         | `DelegationExpirationTooSoonError`        | Expiration date less than 1 hour in the future                                                                   |
-| `DELEGATION_EXPIRY_UNCHANGED`            | `DelegationExpiryUnchangedError`          | New expiry matches the current value                                                                             |
-| `DELEGATION_NOT_PROPAGATED`              | `DelegationNotPropagatedError`            | Delegated decrypt failed transiently (gateway not synced, or delegator ACL read stale) — retry                   |
-| `ACL_PAUSED`                             | `AclPausedError`                          | The ACL contract is paused                                                                                       |
-| `VAULT_BATCHER_PAUSED`                   | `VaultBatcherPausedError`                 | Every batcher of the chosen vault is paused or closed, so the join would revert                                  |
-| `VAULT_BATCHER_READ_FAILED`              | `VaultBatcherReadFailedError`             | A batcher of a vault could not be read, so the SDK cannot tell which batch a join reaches                        |
-| `VAULT_BATCH_NOT_DISPATCHED`             | `VaultBatchNotDispatchedError`            | A vault batch cannot be finalized because it is not dispatched (still pending, or already finalized or canceled) |
-| `VAULT_JOIN_UNCONFIRMED`                 | `VaultJoinUnconfirmedError`               | A vault join was mined, but its receipt doesn't confirm every leg                                                |
+| Code                                     | TypeScript error class                    | What happened                                                                                                                                     |
+| ---------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SIGNING_REJECTED`                       | `SigningRejectedError`                    | User rejected the wallet signature                                                                                                                |
+| `SIGNING_FAILED`                         | `SigningFailedError`                      | Wallet signature failed (connectivity or firmware issue)                                                                                          |
+| `ENCRYPTION_FAILED`                      | `EncryptionFailedError`                   | FHE encryption failed in the WASM runtime                                                                                                         |
+| `DECRYPTION_FAILED`                      | `DecryptionFailedError`                   | FHE decryption failed                                                                                                                             |
+| `TRANSACTION_REVERTED`                   | `TransactionRevertedError`                | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                                    |
+| `HCU_BLOCK_LIMIT_EXCEEDED`               | `HcuBlockLimitExceededError`              | Gas estimation found too little FHE compute (HCU) left in the block (retryable)                                                                   |
+| `HCU_TRANSACTION_LIMIT_EXCEEDED`         | `HcuTransactionLimitExceededError`        | The transaction needs more FHE compute (HCU) than one transaction may use                                                                         |
+| `UNSHIELD_ALREADY_FINALIZED`             | `UnshieldAlreadyFinalizedError`           | The unwrap request was already finalized (by another tab or account, or by an earlier attempt) -- funds already arrived, nothing left to finalize |
+| `UNWRAP_NOT_MINED`                       | `UnwrapNotMinedError`                     | `resumeUnshield()` called for an unwrap that is not mined yet -- the entry is kept, retry later (retryable)                                       |
+| `INVALID_KEYPAIR`                        | `InvalidTransportKeyPairError`            | Relayer rejected transport key pair (stale or malformed)                                                                                          |
+| `KEYPAIR_EXPIRED`                        | `TransportKeyPairExpiredError`            | Transport key pair expired -- user needs to re-sign                                                                                               |
+| `REVOKED_KMS_CONTEXT`                    | `RevokedKmsContextError`                  | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                                                   |
+| `NO_CIPHERTEXT`                          | `NoCiphertextError`                       | No encrypted balance exists for this account                                                                                                      |
+| `RELAYER_REQUEST_FAILED`                 | `RelayerRequestFailedError`               | Relayer HTTP request failed (check `.statusCode`); retryable on back-pressure (429)                                                               |
+| `NOT_ENTITLED`                           | `NotEntitledError`                        | Actor lacks the on-chain ACL grant to decrypt this value: terminal, don't retry                                                                   |
+| `RPC_RATE_LIMITED`                       | `RpcRateLimitError`                       | Consumer's RPC provider rate-limited an on-chain read (retryable)                                                                                 |
+| `CONFIGURATION`                          | `ConfigurationError`                      | Invalid SDK config or FHE runtime failed to initialize                                                                                            |
+| `INSUFFICIENT_CONFIDENTIAL_BALANCE`      | `InsufficientConfidentialBalanceError`    | Confidential balance too low for transfer or unshield                                                                                             |
+| `INSUFFICIENT_ERC20_BALANCE`             | `InsufficientERC20BalanceError`           | ERC-20 balance too low for shield                                                                                                                 |
+| `INSUFFICIENT_ALLOWANCE`                 | `InsufficientAllowanceError`              | ERC-20 allowance too low for a manual `wrap` (approve first)                                                                                      |
+| `BALANCE_CHECK_UNAVAILABLE`              | `BalanceCheckUnavailableError`            | Balance check impossible (no stored permits)                                                                                                      |
+| `ERC20_READ_FAILED`                      | `ERC20ReadFailedError`                    | Public ERC-20 read failed (network or contract error)                                                                                             |
+| `DELEGATION_SELF_NOT_ALLOWED`            | `DelegationSelfNotAllowedError`           | Delegation cannot target self                                                                                                                     |
+| `DELEGATION_COOLDOWN`                    | `DelegationCooldownError`                 | Only one delegate/revoke per tuple per block (retryable)                                                                                          |
+| `DELEGATION_NOT_FOUND`                   | `DelegationNotFoundError`                 | No active delegation for this tuple                                                                                                               |
+| `SIGNER_REQUIRED`                        | `SignerRequiredError`                     | Write/sign/decrypt called without a signer                                                                                                        |
+| `DELEGATION_EXPIRED`                     | `DelegationExpiredError`                  | The delegation has expired                                                                                                                        |
+| `SIGNER_NOT_CONFIGURED`                  | `SignerNotConfiguredError`                | SDK operation needs a signer but none is configured (subclass of `SignerRequiredError`)                                                           |
+| `WALLET_NOT_CONNECTED`                   | `WalletNotConnectedError`                 | Signer exists but has no connected wallet account (subclass of `SignerRequiredError`)                                                             |
+| `WALLET_ACCOUNT_NOT_READY`               | `WalletAccountNotReadyError`              | Async signer adapter hasn't resolved its account yet (subclass of `SignerRequiredError`, retryable)                                               |
+| `CHAIN_MISMATCH`                         | `ChainMismatchError`                      | Signer and provider are on different chains, or the signer is not on the vault group's or batch's `chainId`                                       |
+| `DELEGATION_CONTRACT_IS_SELF`            | `DelegationContractIsSelfError`           | Delegation contract address equals the caller                                                                                                     |
+| `DELEGATION_DELEGATE_EQUALS_CONTRACT`    | `DelegationDelegateEqualsContractError`   | Delegate equals the contract address                                                                                                              |
+| `DELEGATION_DELEGATE_CANNOT_BE_WILDCARD` | `DelegationDelegateCannotBeWildcardError` | Delegate address is the wildcard address                                                                                                          |
+| `DELEGATION_EXPIRATION_TOO_SOON`         | `DelegationExpirationTooSoonError`        | Expiration date less than 1 hour in the future                                                                                                    |
+| `DELEGATION_EXPIRY_UNCHANGED`            | `DelegationExpiryUnchangedError`          | New expiry matches the current value                                                                                                              |
+| `DELEGATION_NOT_PROPAGATED`              | `DelegationNotPropagatedError`            | Delegated decrypt failed transiently (gateway not synced, or delegator ACL read stale); retry                                                     |
+| `ACL_PAUSED`                             | `AclPausedError`                          | The ACL contract is paused                                                                                                                        |
+| `VAULT_BATCHER_PAUSED`                   | `VaultBatcherPausedError`                 | Every batcher of the chosen vault is paused or closed, so the join would revert                                                                   |
+| `VAULT_BATCHER_READ_FAILED`              | `VaultBatcherReadFailedError`             | A batcher of a vault could not be read, so the SDK cannot tell which batch a join reaches                                                         |
+| `VAULT_BATCH_NOT_DISPATCHED`             | `VaultBatchNotDispatchedError`            | A vault batch cannot be finalized because it is not dispatched (still pending, or already finalized or canceled)                                  |
+| `VAULT_JOIN_UNCONFIRMED`                 | `VaultJoinUnconfirmedError`               | A vault join was mined, but its receipt doesn't confirm every leg                                                                                 |
 
 ### 2. Catch with instanceof
 
@@ -6579,18 +6581,18 @@ When `matchZamaError` returns `undefined` (because the error is not a `ZamaError
 
 ### 7. Common problems troubleshooting
 
-| What you see                                                             | Why                                                          | Fix                                                                                                                                                                                                                   |
-| ------------------------------------------------------------------------ | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SigningRejectedError` (`SIGNING_REJECTED`) on every decrypt             | Wallet rejected the EIP-712 signature                        | Make sure the wallet supports `eth_signTypedData_v4`. Some hardware wallets need a firmware update.                                                                                                                   |
-| Balance always `undefined`                                               | Encrypted value is zero (never shielded)                     | Check if the user has shielded tokens first. Catch `NoCiphertextError` (`NO_CIPHERTEXT`).                                                                                                                             |
-| `ConfigurationError` (`CONFIGURATION`) on first operation                | FHE runtime failed to initialize                             | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`. Check transport config.                                                                                                                           |
-| `EncryptionFailedError` (`ENCRYPTION_FAILED`)                            | FHE encryption failed during an operation                    | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`.                                                                                                                                                   |
-| `DecryptionFailedError` (`DECRYPTION_FAILED`) after page reload          | Unshield was interrupted                                     | Use `getPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.                                                                                                                                  |
-| `UnshieldAlreadyFinalizedError` (`UNSHIELD_ALREADY_FINALIZED`) on resume | Unwrap was already finalized before the resume attempt       | Funds already arrived -- treat as completion, not failure. `useResumeUnshield` refreshes balances automatically; if calling `resumeUnshield()` directly, catch this error and dismiss the prompt instead of retrying. |
-| `UnwrapNotMinedError` (`UNWRAP_NOT_MINED`) on resume                     | The unwrap has no receipt yet: still pending, or dropped     | The entry is kept. Show the unshield as not confirmed and offer the resume again later.                                                                                                                               |
-| `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`)                   | Relayer URL wrong or auth missing                            | Verify `relayerUrl` in your transport config. If using API key auth, check the `auth` option.                                                                                                                         |
-| Go or Rust error with no SDK code                                        | The daemon connection or a callback channel failed           | Follow [Monitor and troubleshoot](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md) and [Recover from disconnections](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/recover-from-disconnections.md).                                               |
-| Go or Rust error with a daemon code, such as `CONTEXT_NOT_FOUND`         | The daemon rejected the request or closed a callback channel | Look up the code in [Daemon error codes](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/error-codes.md).                                                                                                                                         |
+| What you see                                                     | Why                                                          | Fix                                                                                                                                                                                                                                                           |
+| ---------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SigningRejectedError` (`SIGNING_REJECTED`) on every decrypt     | Wallet rejected the EIP-712 signature                        | Make sure the wallet supports `eth_signTypedData_v4`. Some hardware wallets need a firmware update.                                                                                                                                                           |
+| Balance always `undefined`                                       | Encrypted value is zero (never shielded)                     | Check if the user has shielded tokens first. Catch `NoCiphertextError` (`NO_CIPHERTEXT`).                                                                                                                                                                     |
+| `ConfigurationError` (`CONFIGURATION`) on first operation        | FHE runtime failed to initialize                             | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`. Check transport config.                                                                                                                                                                   |
+| `EncryptionFailedError` (`ENCRYPTION_FAILED`)                    | FHE encryption failed during an operation                    | Check your CSP headers -- the FHE runtime needs `wasm-unsafe-eval`.                                                                                                                                                                                           |
+| `DecryptionFailedError` (`DECRYPTION_FAILED`) after page reload  | Unshield was interrupted                                     | Use `getPendingUnshield()` on mount to detect and `resumeUnshield()` to complete it.                                                                                                                                                                          |
+| `UnshieldAlreadyFinalizedError` (`UNSHIELD_ALREADY_FINALIZED`)   | The unwrap request was already finalized                     | Funds already arrived -- treat as completion, not failure. `useUnshield`, `useUnshieldAll` and `useResumeUnshield` refresh balances automatically; if calling the `WrappedToken` methods directly, catch this error and refresh balances instead of retrying. |
+| `UnwrapNotMinedError` (`UNWRAP_NOT_MINED`) on resume             | The unwrap has no receipt yet: still pending, or dropped     | The entry is kept. Show the unshield as not confirmed and offer the resume again later.                                                                                                                                                                       |
+| `RelayerRequestFailedError` (`RELAYER_REQUEST_FAILED`)           | Relayer URL wrong or auth missing                            | Verify `relayerUrl` in your transport config. If using API key auth, check the `auth` option.                                                                                                                                                                 |
+| Go or Rust error with no SDK code                                | The daemon connection or a callback channel failed           | Follow [Monitor and troubleshoot](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/operations/monitor-and-troubleshoot.md) and [Recover from disconnections](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/guides/recover-from-disconnections.md).                                                                                       |
+| Go or Rust error with a daemon code, such as `CONTEXT_NOT_FOUND` | The daemon rejected the request or closed a callback channel | Look up the code in [Daemon error codes](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/native/reference/error-codes.md).                                                                                                                                                                                 |
 
 ### 8. Retry transient failures
 
@@ -11693,7 +11695,7 @@ Every event extends a common shape (an optional `tokenAddress`, a `timestamp`, a
 | `DelegationSubmitted` / `RevokeDelegationSubmitted`                                                                                                                                  | A delegation grant or revoke transaction is submitted — see [Delegation events](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/delegation.md#events).                                                                                                                                                                                                                                                                                        |
 | `UnshieldPhase1Submitted` / `UnshieldPhase2Started` / `UnshieldPhase2Submitted`                                                                                                      | The two-phase unshield flow's request and finalize steps progress.                                                                                                                                                                                                                                                                                                                              |
 
-`TransactionError` and `PermitError` usually carry the same classified error your `await` also throws or rejects with, so you can wire similar handling into telemetry — but don't assume they always match exactly. One documented exception: finalizing an already-finalized unshield concurrently (two tabs, a double click) emits `TransactionError` with the raw `TransactionRevertedError` from the losing finalize attempt, then `unshield()`/`unshieldAll()`/`resumeUnshield()` translates that into the more specific [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror) before it reaches your `await`.
+`TransactionError` and `PermitError` usually carry the same classified error your `await` also throws or rejects with, so you can wire similar handling into telemetry, but don't assume they always match exactly. One documented exception: the unwrap request was already finalized, for example by another tab or account. The SDK then emits `TransactionError` with the raw `TransactionRevertedError` from the failed finalize. `unshield()`, `unshieldAll()` and `resumeUnshield()` translate it into the more specific [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror) before it reaches your `await`.
 
 ```ts
 import { ZamaSDKEvents, type TransactionErrorEvent, type PermitErrorEvent } from "@zama-fhe/sdk";
@@ -12478,6 +12480,8 @@ The returned `txHash` and `receipt` are for the finalization transaction.
 const { txHash, receipt } = await wrappedToken.unshield(500n);
 ```
 
+If the unwrap request was already finalized, for example by another tab or account, `unshield` clears the persisted pending state and throws [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror). The funds already arrived, so treat the error as completion.
+
 Options:
 
 | Option                | Type                    | Default | Description                                    |
@@ -12491,7 +12495,7 @@ Options:
 
 `(callbacks?: UnshieldCallbacks) => Promise<TransactionResult>`
 
-Unshields the entire confidential balance by using the on-chain encrypted balance handle directly.
+Unshields the entire confidential balance by using the on-chain encrypted balance handle directly. If the unwrap request was already finalized, it behaves the same way as `unshield`.
 
 ```ts
 await wrappedToken.unshieldAll({
@@ -14499,54 +14503,54 @@ Exactly seven error classes are retryable today: `RpcRateLimitError`, `RelayerRe
 
 ## Error summary
 
-| Error class                               | Code                                     | Description                                                                                                                       |
-| ----------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `SigningRejectedError`                    | `SIGNING_REJECTED`                       | User rejected the wallet signature                                                                                                |
-| `SigningFailedError`                      | `SIGNING_FAILED`                         | Wallet signature failed (connectivity, firmware)                                                                                  |
-| `EncryptionFailedError`                   | `ENCRYPTION_FAILED`                      | FHE encryption failed in the WASM runtime                                                                                         |
-| `EncryptOffloadUnavailableError`          | `ENCRYPT_OFFLOAD_UNAVAILABLE`            | `offloadEncrypt: true` required the encrypt worker, which is unavailable                                                          |
-| `DecryptionFailedError`                   | `DECRYPTION_FAILED`                      | FHE decryption failed                                                                                                             |
-| `TransactionRevertedError`                | `TRANSACTION_REVERTED`                   | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
-| `HcuBlockLimitExceededError`              | `HCU_BLOCK_LIMIT_EXCEEDED`               | Gas estimation found too little FHE compute (HCU) left in the block; retry in the next block (retryable)                          |
-| `HcuTransactionLimitExceededError`        | `HCU_TRANSACTION_LIMIT_EXCEEDED`         | The transaction needs more FHE compute (HCU), in total or in one sequential chain, than one transaction may use                   |
-| `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
-| `UnwrapNotMinedError`                     | `UNWRAP_NOT_MINED`                       | The unwrap behind a resumed unshield is not mined yet; its entry is kept (retryable)                                              |
-| `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | Every batcher of the chosen vault is paused or closed, so the join would revert                                                   |
-| `VaultBatcherReadFailedError`             | `VAULT_BATCHER_READ_FAILED`              | A batcher of a vault could not be read, so the SDK cannot tell which batch a join reaches                                         |
-| `VaultBatchNotDispatchedError`            | `VAULT_BATCH_NOT_DISPATCHED`             | A vault batch cannot be finalized because it is not dispatched: it is still pending, or it was already finalized or canceled      |
-| `VaultJoinUnconfirmedError`               | `VAULT_JOIN_UNCONFIRMED`                 | A vault join was mined, but its receipt has no matching `Joined` event for at least one leg                                       |
-| `InvalidTransportKeyPairError`            | `INVALID_KEYPAIR`                        | Relayer rejected transport key pair (stale or malformed)                                                                          |
-| `TransportKeyPairExpiredError`            | `KEYPAIR_EXPIRED`                        | Transport key pair expired — user must re-sign                                                                                    |
-| `RevokedKmsContextError`                  | `REVOKED_KMS_CONTEXT`                    | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                                   |
-| `NoCiphertextError`                       | `NO_CIPHERTEXT`                          | No encrypted balance for this account                                                                                             |
-| `KeyWrappingError`                        | `KEY_WRAPPING_FAILED`                    | At-rest encryption or decryption of the transport private key failed (`transportKeyPairDerivationSecret`)                         |
-| `TransportKeyPairChangedError`            | `TRANSPORT_KEY_PAIR_CHANGED`             | Transport key pair changed between `preparePermit` and `registerPermit`                                                           |
-| `PreparedPermitChainMismatchError`        | `PREPARED_PERMIT_CHAIN_MISMATCH`         | The chain embedded in `prepared.eip712` doesn't match the chain `registerPermit` is running against                               |
-| `PreparedPermitExpiredError`              | `PREPARED_PERMIT_EXPIRED`                | A prepared permit's validity window elapsed before its signature was registered                                                   |
-| `RelayerRequestFailedError`               | `RELAYER_REQUEST_FAILED`                 | Relayer HTTP request failed                                                                                                       |
-| `NotEntitledError`                        | `NOT_ENTITLED`                           | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`) |
-| `RpcRateLimitError`                       | `RPC_RATE_LIMITED`                       | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)                                                  |
-| `ConfigurationError`                      | `CONFIGURATION`                          | Invalid SDK configuration or FHE runtime failed to initialize                                                                     |
-| `InsufficientConfidentialBalanceError`    | `INSUFFICIENT_CONFIDENTIAL_BALANCE`      | Confidential balance too low for transfer or unshield                                                                             |
-| `InsufficientERC20BalanceError`           | `INSUFFICIENT_ERC20_BALANCE`             | ERC-20 balance too low for shield                                                                                                 |
-| `InsufficientAllowanceError`              | `INSUFFICIENT_ALLOWANCE`                 | ERC-20 allowance too low for a manual `wrap` (approve first)                                                                      |
-| `BalanceCheckUnavailableError`            | `BALANCE_CHECK_UNAVAILABLE`              | Balance validation impossible (no stored permits)                                                                                 |
-| `ERC20ReadFailedError`                    | `ERC20_READ_FAILED`                      | Public ERC-20 read failed (network or contract error)                                                                             |
-| `DelegationSelfNotAllowedError`           | `DELEGATION_SELF_NOT_ALLOWED`            | Delegate equals connected wallet                                                                                                  |
-| `DelegationDelegateEqualsContractError`   | `DELEGATION_DELEGATE_EQUALS_CONTRACT`    | Delegate equals contract address                                                                                                  |
-| `DelegationDelegateCannotBeWildcardError` | `DELEGATION_DELEGATE_CANNOT_BE_WILDCARD` | Delegate address is the wildcard address                                                                                          |
-| `DelegationExpiryUnchangedError`          | `DELEGATION_EXPIRY_UNCHANGED`            | New expiry matches the current value                                                                                              |
-| `DelegationNotFoundError`                 | `DELEGATION_NOT_FOUND`                   | No active delegation exists                                                                                                       |
-| `DelegationExpiredError`                  | `DELEGATION_EXPIRED`                     | Delegation has expired                                                                                                            |
-| `DelegationCooldownError`                 | `DELEGATION_COOLDOWN`                    | Same-block delegate/revoke not allowed                                                                                            |
-| `DelegationContractIsSelfError`           | `DELEGATION_CONTRACT_IS_SELF`            | Contract address equals caller                                                                                                    |
-| `DelegationExpirationTooSoonError`        | `DELEGATION_EXPIRATION_TOO_SOON`         | Expiration date less than 1 hour in the future                                                                                    |
-| `DelegationNotPropagatedError`            | `DELEGATION_NOT_PROPAGATED`              | Delegated decrypt failed transiently (gateway not synced yet, or delegator ACL read stale) — retry                                |
-| `SignerNotConfiguredError`                | `SIGNER_NOT_CONFIGURED`                  | SDK operation needs a signer but none is configured                                                                               |
-| `WalletNotConnectedError`                 | `WALLET_NOT_CONNECTED`                   | Signer exists but has no connected wallet account                                                                                 |
-| `WalletAccountNotReadyError`              | `WALLET_ACCOUNT_NOT_READY`               | Async signer adapter has not resolved its account yet                                                                             |
-| `ChainMismatchError`                      | `CHAIN_MISMATCH`                         | Signer and provider are on different chains, or the signer is not on the vault group's or batch's `chainId`                       |
-| `AclPausedError`                          | `ACL_PAUSED`                             | ACL contract is paused                                                                                                            |
+| Error class                               | Code                                     | Description                                                                                                                               |
+| ----------------------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `SigningRejectedError`                    | `SIGNING_REJECTED`                       | User rejected the wallet signature                                                                                                        |
+| `SigningFailedError`                      | `SIGNING_FAILED`                         | Wallet signature failed (connectivity, firmware)                                                                                          |
+| `EncryptionFailedError`                   | `ENCRYPTION_FAILED`                      | FHE encryption failed in the WASM runtime                                                                                                 |
+| `EncryptOffloadUnavailableError`          | `ENCRYPT_OFFLOAD_UNAVAILABLE`            | `offloadEncrypt: true` required the encrypt worker, which is unavailable                                                                  |
+| `DecryptionFailedError`                   | `DECRYPTION_FAILED`                      | FHE decryption failed                                                                                                                     |
+| `TransactionRevertedError`                | `TRANSACTION_REVERTED`                   | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                            |
+| `HcuBlockLimitExceededError`              | `HCU_BLOCK_LIMIT_EXCEEDED`               | Gas estimation found too little FHE compute (HCU) left in the block; retry in the next block (retryable)                                  |
+| `HcuTransactionLimitExceededError`        | `HCU_TRANSACTION_LIMIT_EXCEEDED`         | The transaction needs more FHE compute (HCU), in total or in one sequential chain, than one transaction may use                           |
+| `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request was already finalized (by another tab or account, or by an earlier attempt): funds delivered, nothing left to finalize |
+| `UnwrapNotMinedError`                     | `UNWRAP_NOT_MINED`                       | The unwrap behind a resumed unshield is not mined yet; its entry is kept (retryable)                                                      |
+| `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | Every batcher of the chosen vault is paused or closed, so the join would revert                                                           |
+| `VaultBatcherReadFailedError`             | `VAULT_BATCHER_READ_FAILED`              | A batcher of a vault could not be read, so the SDK cannot tell which batch a join reaches                                                 |
+| `VaultBatchNotDispatchedError`            | `VAULT_BATCH_NOT_DISPATCHED`             | A vault batch cannot be finalized because it is not dispatched: it is still pending, or it was already finalized or canceled              |
+| `VaultJoinUnconfirmedError`               | `VAULT_JOIN_UNCONFIRMED`                 | A vault join was mined, but its receipt has no matching `Joined` event for at least one leg                                               |
+| `InvalidTransportKeyPairError`            | `INVALID_KEYPAIR`                        | Relayer rejected transport key pair (stale or malformed)                                                                                  |
+| `TransportKeyPairExpiredError`            | `KEYPAIR_EXPIRED`                        | Transport key pair expired; user must re-sign                                                                                             |
+| `RevokedKmsContextError`                  | `REVOKED_KMS_CONTEXT`                    | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                                           |
+| `NoCiphertextError`                       | `NO_CIPHERTEXT`                          | No encrypted balance for this account                                                                                                     |
+| `KeyWrappingError`                        | `KEY_WRAPPING_FAILED`                    | At-rest encryption or decryption of the transport private key failed (`transportKeyPairDerivationSecret`)                                 |
+| `TransportKeyPairChangedError`            | `TRANSPORT_KEY_PAIR_CHANGED`             | Transport key pair changed between `preparePermit` and `registerPermit`                                                                   |
+| `PreparedPermitChainMismatchError`        | `PREPARED_PERMIT_CHAIN_MISMATCH`         | The chain embedded in `prepared.eip712` doesn't match the chain `registerPermit` is running against                                       |
+| `PreparedPermitExpiredError`              | `PREPARED_PERMIT_EXPIRED`                | A prepared permit's validity window elapsed before its signature was registered                                                           |
+| `RelayerRequestFailedError`               | `RELAYER_REQUEST_FAILED`                 | Relayer HTTP request failed                                                                                                               |
+| `NotEntitledError`                        | `NOT_ENTITLED`                           | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`)         |
+| `RpcRateLimitError`                       | `RPC_RATE_LIMITED`                       | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)                                                          |
+| `ConfigurationError`                      | `CONFIGURATION`                          | Invalid SDK configuration or FHE runtime failed to initialize                                                                             |
+| `InsufficientConfidentialBalanceError`    | `INSUFFICIENT_CONFIDENTIAL_BALANCE`      | Confidential balance too low for transfer or unshield                                                                                     |
+| `InsufficientERC20BalanceError`           | `INSUFFICIENT_ERC20_BALANCE`             | ERC-20 balance too low for shield                                                                                                         |
+| `InsufficientAllowanceError`              | `INSUFFICIENT_ALLOWANCE`                 | ERC-20 allowance too low for a manual `wrap` (approve first)                                                                              |
+| `BalanceCheckUnavailableError`            | `BALANCE_CHECK_UNAVAILABLE`              | Balance validation impossible (no stored permits)                                                                                         |
+| `ERC20ReadFailedError`                    | `ERC20_READ_FAILED`                      | Public ERC-20 read failed (network or contract error)                                                                                     |
+| `DelegationSelfNotAllowedError`           | `DELEGATION_SELF_NOT_ALLOWED`            | Delegate equals connected wallet                                                                                                          |
+| `DelegationDelegateEqualsContractError`   | `DELEGATION_DELEGATE_EQUALS_CONTRACT`    | Delegate equals contract address                                                                                                          |
+| `DelegationDelegateCannotBeWildcardError` | `DELEGATION_DELEGATE_CANNOT_BE_WILDCARD` | Delegate address is the wildcard address                                                                                                  |
+| `DelegationExpiryUnchangedError`          | `DELEGATION_EXPIRY_UNCHANGED`            | New expiry matches the current value                                                                                                      |
+| `DelegationNotFoundError`                 | `DELEGATION_NOT_FOUND`                   | No active delegation exists                                                                                                               |
+| `DelegationExpiredError`                  | `DELEGATION_EXPIRED`                     | Delegation has expired                                                                                                                    |
+| `DelegationCooldownError`                 | `DELEGATION_COOLDOWN`                    | Same-block delegate/revoke not allowed                                                                                                    |
+| `DelegationContractIsSelfError`           | `DELEGATION_CONTRACT_IS_SELF`            | Contract address equals caller                                                                                                            |
+| `DelegationExpirationTooSoonError`        | `DELEGATION_EXPIRATION_TOO_SOON`         | Expiration date less than 1 hour in the future                                                                                            |
+| `DelegationNotPropagatedError`            | `DELEGATION_NOT_PROPAGATED`              | Delegated decrypt failed transiently (gateway not synced yet, or delegator ACL read stale); retry                                         |
+| `SignerNotConfiguredError`                | `SIGNER_NOT_CONFIGURED`                  | SDK operation needs a signer but none is configured                                                                                       |
+| `WalletNotConnectedError`                 | `WALLET_NOT_CONNECTED`                   | Signer exists but has no connected wallet account                                                                                         |
+| `WalletAccountNotReadyError`              | `WALLET_ACCOUNT_NOT_READY`               | Async signer adapter has not resolved its account yet                                                                                     |
+| `ChainMismatchError`                      | `CHAIN_MISMATCH`                         | Signer and provider are on different chains, or the signer is not on the vault group's or batch's `chainId`                               |
+| `AclPausedError`                          | `ACL_PAUSED`                             | ACL contract is paused                                                                                                                    |
 
 ## Error details
 
@@ -14674,7 +14678,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Inspect the revert reason. Common causes: insufficient balance or an expired operator approval. Finalizing an already-finalized unwrap through `resumeUnshield()` or `unshield()` throws the more specific `UnshieldAlreadyFinalizedError` instead, and a revert from the protocol's FHE compute limits throws `HcuBlockLimitExceededError` or `HcuTransactionLimitExceededError`.
+**How to handle:** Inspect the revert reason. Common causes: insufficient balance or an expired operator approval. Finalizing an already-finalized unwrap through `unshield()`, `unshieldAll()` or `resumeUnshield()` throws the more specific `UnshieldAlreadyFinalizedError` instead, and a revert from the protocol's FHE compute limits throws `HcuBlockLimitExceededError` or `HcuTransactionLimitExceededError`.
 
 ### HcuBlockLimitExceededError
 
@@ -14709,15 +14713,15 @@ matchZamaError(error, {
 
 **Code:** `UNSHIELD_ALREADY_FINALIZED`
 
-Thrown by `resumeUnshield()` when the unwrap request no longer exists on-chain: it was already finalized, so the underlying ERC-20 tokens were delivered. `unshield()` and `unshieldAll()` throw it too when a concurrent finalize wins the race. The SDK clears the matching entry before throwing, so `getPendingUnshield()` no longer returns this `unwrapTxHash`. The error carries `unwrapTxHash` and `unwrapRequestId`.
+Thrown by `resumeUnshield()` when the unwrap request no longer exists on-chain: it was already finalized, so the underlying ERC-20 tokens were delivered. `unshield()` and `unshieldAll()` throw it too when the unwrap request was already finalized, for example by another tab or account. The SDK clears the matching entry before throwing, so `getPendingUnshield()` no longer returns this `unwrapTxHash`. The error carries `unwrapTxHash` and `unwrapRequestId`.
 
 ```ts
 matchZamaError(error, {
-  UNSHIELD_ALREADY_FINALIZED: () => dismissResumePrompt(), // the funds already arrived
+  UNSHIELD_ALREADY_FINALIZED: () => markUnshieldComplete(), // the funds already arrived
 });
 ```
 
-**How to handle:** Treat it as completion, not a failure: dismiss the "resume unshield" prompt and refresh balances. `useResumeUnshield` invalidates the affected queries automatically. Do not retry; nothing is left to finalize.
+**How to handle:** Treat it as completion, not a failure: show the unshield as complete (or dismiss the resume prompt) and refresh balances. `useUnshield`, `useUnshieldAll` and `useResumeUnshield` invalidate the affected queries automatically. Do not retry; nothing is left to finalize.
 
 ### UnwrapNotMinedError
 
@@ -18464,6 +18468,7 @@ await unshield({
 
 - `InsufficientConfidentialBalanceError` -- if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
 - `BalanceCheckUnavailableError` -- if balance validation is required but decryption is not possible (no stored permits). Grant a permit first with `useGrantPermit`, or use `skipBalanceCheck: true`
+- [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror) -- the unwrap request was already finalized, for example by another tab or account. The funds already arrived and the hook refreshes the balance queries, so treat the error as completion
 
 ## Return Type
 
@@ -18473,7 +18478,7 @@ import { type UnshieldParams } from "@zama-fhe/sdk/query";
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.
 
-Auto-invalidates the `confidentialBalance` cache on success.
+On success and on `UnshieldAlreadyFinalizedError`, the hook invalidates the confidential balance, underlying allowance, pending-unshield and wagmi balance queries.
 
 ### `mutate`
 
@@ -18677,11 +18682,15 @@ await unshieldAll({
 });
 ```
 
+**Throws:**
+
+- [`UnshieldAlreadyFinalizedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#unshieldalreadyfinalizederror) -- the unwrap request was already finalized, for example by another tab or account. The funds already arrived and the hook refreshes the balance queries, so treat the error as completion
+
 ## Return Type
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.
 
-Auto-invalidates the `confidentialBalance` cache on success.
+On success and on `UnshieldAlreadyFinalizedError`, the hook invalidates the confidential balance, underlying allowance, pending-unshield and wagmi balance queries.
 
 ### `mutate`
 
@@ -18893,7 +18902,7 @@ Run this check on mount to handle any session that was interrupted. Resuming is 
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.
 
-Auto-invalidates the `confidentialBalance` cache on success.
+On success and on `UnshieldAlreadyFinalizedError`, the hook invalidates the confidential balance, underlying allowance, pending-unshield and wagmi balance queries.
 
 ### `mutate`
 

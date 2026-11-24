@@ -1,5 +1,6 @@
 import type { Address } from "viem";
 import { z } from "zod/mini";
+import { UnshieldAlreadyFinalizedError } from "../errors";
 import { zamaQueryKeys } from "./query-keys";
 
 /** Minimal query shape read by the invalidation predicates. */
@@ -89,6 +90,19 @@ export function invalidateAfterUnshieldSettled(
   tokenAddress: Address,
 ): void {
   invalidatePendingUnshieldQueries(queryClient, tokenAddress);
+}
+
+/** Invalidates the caches a failed unshield touched; `UnshieldAlreadyFinalizedError` counts as completion. */
+export function invalidateAfterUnshieldError(
+  queryClient: QueryClientLike,
+  tokenAddress: Address,
+  error: unknown,
+): void {
+  if (error instanceof UnshieldAlreadyFinalizedError) {
+    invalidateAfterUnshield(queryClient, tokenAddress);
+  } else {
+    invalidateAfterUnshieldSettled(queryClient, tokenAddress);
+  }
 }
 
 /** Invalidates the confidential balance caches affected by a transfer. */

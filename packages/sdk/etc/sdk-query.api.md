@@ -577,6 +577,9 @@ export function invalidateAfterTransfer(queryClient: QueryClientLike, tokenAddre
 export function invalidateAfterUnshield(queryClient: QueryClientLike, tokenAddress: Address): void;
 
 // @public
+export function invalidateAfterUnshieldError(queryClient: QueryClientLike, tokenAddress: Address, error: unknown): void;
+
+// @public
 export function invalidateAfterUnshieldSettled(queryClient: QueryClientLike, tokenAddress: Address): void;
 
 // @public
