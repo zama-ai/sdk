@@ -10,3 +10,4 @@
 
 # libssl3t64: memory leak in QUIC stream handling (DoS), no Debian 13 fix yet. The daemon serves gRPC over HTTP/2 and opens no QUIC connection; Node's QUIC is experimental and off without --experimental-quic.
 CVE-2026-124709 exp:2026-12-19
+CVE-2026-107494 exp:2026-12-19
