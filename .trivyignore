@@ -1,3 +1,4 @@
 # Risk-accepted CVEs for the daemon image. Only CVE IDs and `exp:` dates (under 45 days) go here; each entry needs
 # @zama-ai/security-team approval.
 CVE-2026-124709 exp:2026-12-19
+CVE-2026-107494 exp:2026-12-19
