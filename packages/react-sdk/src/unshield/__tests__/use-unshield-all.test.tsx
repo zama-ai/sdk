@@ -1,5 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { act } from "@testing-library/react";
+import { UnshieldAlreadyFinalizedError } from "@zama-fhe/sdk";
 import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import { describe, expect, test, vi } from "../../test-fixtures";
 import { useUnshieldAll } from "../use-unshield-all";
@@ -47,6 +48,53 @@ describe("useUnshieldAll", () => {
     expect(queryClient).toHaveCacheInvalidated(wagmiBalanceKey);
     expect(queryClient).toHaveCacheUntouched(otherBalanceKey, 777n);
     expect(queryClient).toHaveCacheUntouched(otherAllowanceKey, 333n);
+  });
+
+  test("cache: invalidates balance, allowance, and wagmi when another account finalized first", async ({
+    renderWithProviders,
+    provider,
+    signer,
+    unwrapRequestId,
+    tokenAddress,
+    userAddress,
+    wagmiBalanceKey,
+    createUnwrapRequestedLog,
+  }) => {
+    vi.mocked(provider.waitForTransactionReceipt).mockResolvedValue({
+      logs: [createUnwrapRequestedLog(unwrapRequestId)],
+    });
+    const alreadyFinalized = new Error(
+      'The contract reverted with custom error "InvalidUnwrapRequest".',
+    );
+    vi.mocked(signer.writeContract)
+      .mockResolvedValueOnce("0xtxhash") // unwrap
+      .mockRejectedValueOnce(alreadyFinalized); // finalize
+
+    const onError = vi.fn();
+    const { result, queryClient } = renderWithProviders(() =>
+      useUnshieldAll(tokenAddress, { onError }),
+    );
+
+    const balanceKey = zamaQueryKeys.confidentialBalance.owner(tokenAddress, userAddress);
+    const allowanceKey = zamaQueryKeys.underlyingAllowance.token(tokenAddress);
+    queryClient.setQueryData(balanceKey, 3000n);
+    queryClient.setQueryData(allowanceKey, 500n);
+    queryClient.setQueryData(wagmiBalanceKey, 2000n);
+
+    await act(async () => {
+      await expect(result.current.mutateAsync()).rejects.toBeInstanceOf(
+        UnshieldAlreadyFinalizedError,
+      );
+    });
+
+    expect(onError).toHaveBeenCalledWith(
+      expect.any(UnshieldAlreadyFinalizedError),
+      undefined,
+      undefined,
+      expect.anything(),
+    );
+    expect(queryClient).toHaveInvalidatedQueries([balanceKey, allowanceKey]);
+    expect(queryClient).toHaveCacheInvalidated(wagmiBalanceKey);
   });
 
   test("behavior: forwards onSuccess callback", async ({

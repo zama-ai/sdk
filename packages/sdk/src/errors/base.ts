@@ -96,7 +96,7 @@ export const ZamaErrorCode = {
   PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH",
   /** A prepared permit's validity window elapsed before its signature was registered. */
   PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED",
-  /** The unwrap request was already finalized on-chain; there is nothing left to resume. */
+  /** The unwrap request was already finalized on-chain; there is nothing left to finalize. */
   UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED",
   /** The unwrap behind a resumed unshield is not mined yet; its entry is kept. */
   UnwrapNotMined: "UNWRAP_NOT_MINED",

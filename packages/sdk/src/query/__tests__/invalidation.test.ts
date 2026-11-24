@@ -6,12 +6,14 @@ import {
   invalidateAfterShield,
   invalidateAfterTransfer,
   invalidateAfterUnshield,
+  invalidateAfterUnshieldError,
   invalidateAfterUnwrap,
   invalidateBalanceQueries,
   invalidateWalletLifecycleQueries,
   invalidateWagmiBalanceQueries,
 } from "../invalidation";
 import { zamaQueryKeys } from "../query-keys";
+import { UnshieldAlreadyFinalizedError } from "../../errors";
 
 const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a";
 const OTHER_TOKEN = "0x2b2B2B2b2B2b2B2b2B2b2b2b2B2B2b2b2B2b2B2B";
@@ -109,6 +111,52 @@ describe("invalidation", () => {
 
     for (const key of keys) {
       expect(qc.getQueryState(key)?.isInvalidated).toBe(true);
+    }
+  });
+
+  test("invalidateAfterUnshieldError treats UnshieldAlreadyFinalizedError as completion", () => {
+    const qc = createQueryClient();
+    const wagmiKey = ["readContract", { functionName: "balanceOf" }];
+    const keys = [
+      zamaQueryKeys.confidentialBalance.token(TOKEN),
+      zamaQueryKeys.confidentialBalances.all,
+      zamaQueryKeys.underlyingAllowance.token(TOKEN),
+      zamaQueryKeys.pendingUnshield.token(TOKEN),
+      wagmiKey,
+    ];
+
+    for (const key of keys) {
+      qc.setQueryData(key, { seeded: true });
+    }
+    const error = new UnshieldAlreadyFinalizedError("already finalized", {
+      unwrapTxHash: `0x${"ab".repeat(32)}`,
+      unwrapRequestId: `0x${"ff".repeat(32)}`,
+    });
+    invalidateAfterUnshieldError(qc, TOKEN, error);
+
+    for (const key of keys) {
+      expect(qc.getQueryState(key)?.isInvalidated).toBe(true);
+    }
+  });
+
+  test("invalidateAfterUnshieldError invalidates only pendingUnshield on other errors", () => {
+    const qc = createQueryClient();
+    const pendingKey = zamaQueryKeys.pendingUnshield.token(TOKEN);
+    const untouched = [
+      zamaQueryKeys.confidentialBalance.token(TOKEN),
+      zamaQueryKeys.confidentialBalances.all,
+      zamaQueryKeys.underlyingAllowance.token(TOKEN),
+      ["readContract", { functionName: "balanceOf" }],
+    ];
+
+    for (const key of [pendingKey, ...untouched]) {
+      qc.setQueryData(key, { seeded: true });
+    }
+    invalidateAfterUnshieldError(qc, TOKEN, new Error("boom"));
+
+    expect(qc.getQueryState(pendingKey)?.isInvalidated).toBe(true);
+    for (const key of untouched) {
+      expect(qc.getQueryState(key)?.isInvalidated).toBe(false);
     }
   });
 
