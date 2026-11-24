@@ -3,10 +3,9 @@
 import type { UseMutationOptions } from "@tanstack/react-query";
 import { useMutation } from "@tanstack/react-query";
 import type { Address, TransactionResult } from "@zama-fhe/sdk";
-import { UnshieldAlreadyFinalizedError } from "@zama-fhe/sdk";
 import {
   invalidateAfterUnshield,
-  invalidateAfterUnshieldSettled,
+  invalidateAfterUnshieldError,
   type ResumeUnshieldParams,
   resumeUnshieldMutationOptions,
 } from "@zama-fhe/sdk/query";
@@ -52,15 +51,7 @@ export function useResumeUnshield(
     },
     onError: (error, variables, onMutateResult, context) => {
       options?.onError?.(error, variables, onMutateResult, context);
-      // Unlike other errors, this one means the unshield settled: refresh so
-      // the pending-unshield banner and balances converge.
-      if (error instanceof UnshieldAlreadyFinalizedError) {
-        invalidateAfterUnshield(context.client, token.address);
-      } else {
-        // The SDK may have cleared the entry (e.g. its unwrap reverted), so the
-        // banner moves on to the next pending unshield.
-        invalidateAfterUnshieldSettled(context.client, token.address);
-      }
+      invalidateAfterUnshieldError(context.client, token.address, error);
     },
   });
 }
