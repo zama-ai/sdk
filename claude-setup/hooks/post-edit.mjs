@@ -22,19 +22,28 @@ if (!file) {
 const root = spawnSync("git", ["-C", path.dirname(file), "rev-parse", "--show-toplevel"], {
   encoding: "utf8",
 }).stdout?.trim();
-const bin = root && path.join(root, "node_modules", ".bin");
-const config = root && path.join(root, "lint-staged.config.mjs");
-if (!root || !existsSync(bin) || !existsSync(config)) {
+if (!root) {
+  process.exit(0);
+}
+
+// Recorded before the node_modules check: the LLM build needs only Node.
+const llm = path.join(root, "scripts/llm/lib/artifacts.mjs");
+if (existsSync(llm)) {
+  const { isCorpusSource } = await import(pathToFileURL(llm).href);
+  if (isCorpusSource(path.relative(root, file).split(path.sep).join("/"))) {
+    appendFileSync(path.join(tmpdir(), `claude-llm-${input.session_id}`), `${root}\n`);
+  }
+}
+
+const bin = path.join(root, "node_modules", ".bin");
+const config = path.join(root, "lint-staged.config.mjs");
+if (!existsSync(bin) || !existsSync(config)) {
   process.exit(0);
 }
 
 const name = path.basename(file);
 if (/\.[cm]?tsx?$/.test(name)) {
   appendFileSync(path.join(tmpdir(), `claude-typecheck-${input.session_id}`), `${root}\n`);
-}
-// Broader than the corpus sources in scripts/llm/stage-artifacts.mjs: a rebuild that changes nothing is harmless.
-if (name.endsWith(".md") || /(^|\/)(scripts|docs)\/llm\//.test(path.relative(root, file))) {
-  appendFileSync(path.join(tmpdir(), `claude-llm-${input.session_id}`), `${root}\n`);
 }
 
 const { default: tasks } = await import(pathToFileURL(config).href);

@@ -17,6 +17,7 @@
     "*.tsbuildinfo",
     "hardhat",
     "docs/gitbook/build",
+    "docs/llm/corpus-manifest.json",
     "packages/sdk/etc",
     "packages/react-sdk/etc",
     "contracts/lib",
