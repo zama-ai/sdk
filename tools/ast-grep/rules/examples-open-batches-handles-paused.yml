@@ -1,0 +1,43 @@
+id: examples-open-batches-handles-paused
+language: Tsx
+severity: error
+message: >-
+  useOpenBatches throws VaultBatcherPausedError when every batcher of the vault is closed. A
+  component that reads its `error` must show that case as "paused", not as a failed read: match it
+  with `matchZamaError(error, { VAULT_BATCHER_PAUSED })` or `instanceof VaultBatcherPausedError`
+  (both from @zama-fhe/sdk).
+files:
+  - examples/**/*.tsx
+rule:
+  kind: variable_declarator
+  all:
+    - has:
+        field: value
+        kind: call_expression
+        has:
+          field: function
+          regex: ^useOpenBatches$
+    - has:
+        field: name
+        kind: object_pattern
+        has:
+          any:
+            - kind: shorthand_property_identifier_pattern
+              regex: ^error$
+            - kind: pair_pattern
+              has:
+                field: key
+                regex: ^error$
+  not:
+    inside:
+      stopBy: end
+      any:
+        - kind: function_declaration
+        - kind: arrow_function
+      has:
+        stopBy: end
+        any:
+          - kind: identifier
+            regex: ^VaultBatcherPausedError$
+          - kind: property_identifier
+            regex: ^VAULT_BATCHER_PAUSED$

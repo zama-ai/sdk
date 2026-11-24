@@ -1,0 +1,26 @@
+id: examples-vault-join-handles-unconfirmed
+language: Tsx
+severity: error
+message: >-
+  A component that joins a vault with useDeposit or useRedeem must handle VaultJoinUnconfirmedError
+  (from @zama-fhe/sdk) in onError, for example by clearing the amount. The join was mined, so a
+  plain retry deposits twice.
+note: >-
+  See docs/gitbook/src/reference/sdk/errors.md#vaultjoinunconfirmederror.
+files:
+  - examples/**/*.tsx
+rule:
+  kind: call_expression
+  has:
+    field: function
+    regex: ^use(Deposit|Redeem)$
+  not:
+    inside:
+      stopBy: end
+      any:
+        - kind: function_declaration
+        - kind: arrow_function
+      has:
+        stopBy: end
+        kind: identifier
+        regex: ^VaultJoinUnconfirmedError$

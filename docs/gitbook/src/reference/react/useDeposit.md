@@ -21,11 +21,19 @@ import { useDeposit } from "@zama-fhe/react-sdk/vaults";
 {% tab title="DepositButton.tsx" %}
 
 ```tsx
+import { matchZamaError } from "@zama-fhe/sdk";
 import { useDeposit } from "@zama-fhe/react-sdk/vaults";
 import { STABLE } from "./vaults";
 
 function DepositButton() {
-  const deposit = useDeposit({ onSuccess: ({ batches }) => saveBatches(batches) });
+  const deposit = useDeposit({
+    onSuccess: ({ batches }) => saveBatches(batches),
+    // The join was mined, so a retry would deposit twice: show the transaction instead.
+    onError: (error) =>
+      matchZamaError(error, {
+        VAULT_JOIN_UNCONFIRMED: (e) => showUnconfirmedJoin(e.txHash, e.unconfirmedVaultIds),
+      }),
+  });
 
   return (
     <button
