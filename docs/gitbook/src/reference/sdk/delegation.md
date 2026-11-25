@@ -68,18 +68,18 @@ When no `expirationDate` is provided, the SDK uses `MAX_UINT64` (`2^64 - 1`, eff
 
 **Throws:**
 
-- `SignerNotConfiguredError` — no signer configured
-- `ChainMismatchError` — signer and provider are on different chains
-- `WalletNotConnectedError` — wallet is not connected
-- `WalletAccountNotReadyError` — wallet account is not ready
-- `DelegationExpirationTooSoonError` — expiration date less than 1 hour in the future
-- `DelegationSelfNotAllowedError` — delegate address equals the connected wallet
-- `DelegationDelegateEqualsContractError` — delegate address equals the contract address
-- `DelegationDelegateCannotBeWildcardError` — delegate address is the wildcard address
-- `DelegationExpiryUnchangedError` — new expiry matches the current on-chain expiry
-- `DelegationCooldownError` — only one delegate/revoke per `(delegator, delegate, contract)` per block
-- `AclPausedError` — the ACL contract is paused
-- `TransactionRevertedError` — on-chain revert for an unmapped reason
+- [`SignerNotConfiguredError`](errors.md#signernotconfigurederror): no signer configured
+- [`ChainMismatchError`](errors.md#chainmismatcherror): signer and provider are on different chains
+- [`WalletNotConnectedError`](errors.md#walletnotconnectederror): wallet is not connected
+- [`WalletAccountNotReadyError`](errors.md#walletaccountnotreadyerror): wallet account is not ready
+- [`DelegationExpirationTooSoonError`](errors.md#delegationexpirationtoosoonerror): expiration date less than 1 hour in the future
+- [`DelegationSelfNotAllowedError`](errors.md#delegationselfnotallowederror): delegate address equals the connected wallet
+- [`DelegationDelegateEqualsContractError`](errors.md#delegationdelegateequalscontracterror): delegate address equals the contract address
+- [`DelegationDelegateCannotBeWildcardError`](errors.md#delegationdelegatecannotbewildcarderror): delegate address is the wildcard address
+- [`DelegationExpiryUnchangedError`](errors.md#delegationexpiryunchangederror): new expiry matches the current on-chain expiry
+- [`DelegationCooldownError`](errors.md#delegationcooldownerror): only one delegate/revoke per `(delegator, delegate, contract)` per block
+- [`AclPausedError`](errors.md#aclpausederror): the ACL contract is paused
+- [`TransactionRevertedError`](errors.md#transactionrevertederror): on-chain revert for an unmapped reason
 
 ### revokeDelegation
 
@@ -98,14 +98,14 @@ Returns `{ txHash: Hex; receipt: TransactionReceipt }`.
 
 **Throws:**
 
-- `SignerNotConfiguredError` — no signer configured
-- `ChainMismatchError` — signer and provider are on different chains
-- `WalletNotConnectedError` — wallet is not connected
-- `WalletAccountNotReadyError` — wallet account is not ready
-- `DelegationNotFoundError` — no delegation exists for this `(delegator, delegate, contract)` tuple
-- `DelegationCooldownError` — only one delegate/revoke per tuple per block
-- `AclPausedError` — the ACL contract is paused
-- `TransactionRevertedError` — on-chain revert for an unmapped reason
+- [`SignerNotConfiguredError`](errors.md#signernotconfigurederror): no signer configured
+- [`ChainMismatchError`](errors.md#chainmismatcherror): signer and provider are on different chains
+- [`WalletNotConnectedError`](errors.md#walletnotconnectederror): wallet is not connected
+- [`WalletAccountNotReadyError`](errors.md#walletaccountnotreadyerror): wallet account is not ready
+- [`DelegationNotFoundError`](errors.md#delegationnotfounderror): no delegation exists for this `(delegator, delegate, contract)` tuple
+- [`DelegationCooldownError`](errors.md#delegationcooldownerror): only one delegate/revoke per tuple per block
+- [`AclPausedError`](errors.md#aclpausederror): the ACL contract is paused
+- [`TransactionRevertedError`](errors.md#transactionrevertederror): on-chain revert for an unmapped reason
 
 ### isActive
 

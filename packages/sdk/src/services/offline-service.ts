@@ -1,4 +1,5 @@
 import type { Address } from "viem";
+import { decryptPublicUint } from "../relayer/public-decrypt";
 import type { RelayerRequestOptions } from "../relayer/types";
 import type { ChainRouter } from "../chains/router";
 import {
@@ -22,7 +23,6 @@ import {
   DelegationExpirationTooSoonError,
   DelegationSelfNotAllowedError,
   EncryptionFailedError,
-  wrapDecryptError,
 } from "../errors";
 import { matchHcuRevert } from "../errors/hcu-revert";
 import type { ZamaSDKEventInput } from "../events/sdk-events";
@@ -59,7 +59,6 @@ import type {
   UnwrapRequest,
   WrapRequest,
 } from "../types";
-import { assertBigint } from "../utils/assertions";
 import { parseSchema } from "../validation";
 import type { EncryptionService } from "./encryption-service";
 
@@ -278,21 +277,16 @@ export class OfflineService {
   ): Promise<ReturnType<typeof finalizeUnwrapContract>> {
     request = parseSchema(finalizeUnwrapRequest, request);
     const options: RelayerRequestOptions = { operation: "offline-finalize-unwrap" };
-    const decrypted = await this.#router.relayer
-      .decryptPublicValuesWithSignatures({
-        encryptedValues: [request.unwrapRequestIdOrAmount],
-        options,
-      })
-      .catch((error: unknown) => {
-        throw wrapDecryptError(error, "Public decryption failed during FinalizeUnwrap");
-      });
-    const raw = decrypted.clearValues[0]?.value;
-    assertBigint(raw, "FinalizeUnwrap: decryptPublicValuesWithSignatures(handle).clearValue");
+    const { value, decryptionProof } = await decryptPublicUint(
+      this.#router.relayer,
+      request.unwrapRequestIdOrAmount,
+      options,
+    );
     return finalizeUnwrapContract(
       request.wrapper,
       request.unwrapRequestIdOrAmount,
-      raw,
-      decrypted.checkSignaturesArgs.decryptionProof,
+      value,
+      decryptionProof,
     );
   }
 

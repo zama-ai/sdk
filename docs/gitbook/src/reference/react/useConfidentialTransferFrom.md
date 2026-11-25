@@ -5,7 +5,7 @@ description: Transfer confidential tokens on behalf of an owner who approved you
 
 # useConfidentialTransferFrom
 
-Transfer confidential tokens on behalf of an owner who approved you as an operator. The sender must have been granted approval via [`useConfidentialSetOperator`](./useConfidentialSetOperator.md) before calling this hook. Automatically invalidates the [`useConfidentialBalance`](./useConfidentialBalance.md) cache on success.
+Transfer confidential tokens on behalf of an owner who approved you as an operator. The sender must have been granted approval via [`useConfidentialSetOperator`](./useConfidentialSetOperator.md) before calling this hook.
 
 ## Import
 
@@ -128,6 +128,8 @@ The `data` property (after a successful mutation) is `{ txHash: Hex, receipt: Tr
 
 - **`txHash`** -- Transaction hash submitted to the network.
 - **`receipt`** -- Confirmed transaction receipt from the chain.
+
+On success, the hook invalidates the confidential balance queries.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

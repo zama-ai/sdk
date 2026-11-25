@@ -53,12 +53,12 @@ Returns a `PreparedTransaction`. All three fields are JSON-safe, so the object c
 
 **Throws:**
 
-- `ConfigurationError` - invalid request, or the provider's chain differs from the configured chain
-- `EncryptionFailedError` - encryption produced no result (encrypting kinds)
-- `DecryptionFailedError` - fallback for an unclassified public-decryption failure (`FinalizeUnwrap`); classified failures preserve their specific [SDK error](./errors.md)
-- `DelegationExpirationTooSoonError` / `DelegationSelfNotAllowedError` / `DelegationDelegateEqualsContractError` - delegation guards (`DelegateDecryption`)
-- `TransactionRevertedError` - gas estimation reverted, for example when `Wrap` is prepared before its approval mines
-- `HcuBlockLimitExceededError` / `HcuTransactionLimitExceededError` - gas estimation hit the protocol's FHE compute (HCU) limits; see [Errors](./errors.md#hcublocklimitexceedederror)
+- [`ConfigurationError`](errors.md#configurationerror) - invalid request, or the provider's chain differs from the configured chain
+- [`EncryptionFailedError`](errors.md#encryptionfailederror) - encryption produced no result (encrypting kinds)
+- [`DecryptionFailedError`](errors.md#decryptionfailederror) - fallback for an unclassified public-decryption failure (`FinalizeUnwrap`); classified failures preserve their specific [SDK error](./errors.md)
+- [`DelegationExpirationTooSoonError`](errors.md#delegationexpirationtoosoonerror) / [`DelegationSelfNotAllowedError`](errors.md#delegationselfnotallowederror) / [`DelegationDelegateEqualsContractError`](errors.md#delegationdelegateequalscontracterror) - delegation guards (`DelegateDecryption`)
+- [`TransactionRevertedError`](errors.md#transactionrevertederror) - gas estimation reverted, for example when `Wrap` is prepared before its approval mines
+- [`HcuBlockLimitExceededError`](errors.md#hcublocklimitexceedederror) / [`HcuTransactionLimitExceededError`](errors.md#hcutransactionlimitexceedederror) - gas estimation hit the protocol's FHE compute (HCU) limits
 
 ### preparePermit
 
@@ -98,9 +98,9 @@ Returns a `PreparedPermit`. Every field is JSON-safe, so the object crosses a pr
 
 **Throws:**
 
-- `ConfigurationError` - `request.contracts` is empty or exceeds 10 addresses, `request.delegator` equals `request.signer` (self-delegation), or `request.durationDays` exceeds the V1 permit maximum of 365 days
-- `KeyWrappingError` - the transport key pair could not be wrapped or unwrapped
-- `TransportKeyPairChangedError` - a concurrent `permits.revokeTransportKeyPair()` rotated the transport key pair while this call was generating one
+- [`ConfigurationError`](errors.md#configurationerror) - `request.contracts` is empty or exceeds 10 addresses, `request.delegator` equals `request.signer` (self-delegation), or `request.durationDays` exceeds the V1 permit maximum of 365 days
+- [`KeyWrappingError`](errors.md#keywrappingerror) - the transport key pair could not be wrapped or unwrapped
+- [`TransportKeyPairChangedError`](errors.md#transportkeypairchangederror) - a concurrent `permits.revokeTransportKeyPair()` rotated the transport key pair while this call was generating one
 
 See [`permits.registerPermit`](./ZamaSDK.md#permits-registerpermit) for the second phase and its typed errors, and the [Offline signing guide](../../guides/offline.md#offline-permits) for the full workflow.
 

@@ -1024,17 +1024,25 @@ describe("batch actions", () => {
   test("prepareFinalize settles a dispatched batch with its public decryption", async ({
     sdk,
     provider,
+    relayer,
   }) => {
     mockChain(provider, { batches: { [ALPHA.depositBatcher]: { state: 1 } } });
-    const handle = `0x${"ef".repeat(32)}` as Hex;
-    vi.spyOn(sdk.decryption, "decryptPublicValues").mockResolvedValue({
-      clearValues: { [handle]: 42n },
-      decryptionProof: "0x1234",
+    vi.mocked(relayer.decryptPublicValuesWithSignatures).mockResolvedValueOnce({
+      clearValues: [{ type: "uint64", value: 42n }],
+      checkSignaturesArgs: {
+        handlesList: [`0x${"ef".repeat(32)}`],
+        abiEncodedCleartexts: "0x2a",
+        decryptionProof: "0x1234",
+      },
     } as never);
     const prepared = await createVaultClient(sdk).prepareFinalize({
       chainId: CHAIN_ID,
       batcher: ALPHA.depositBatcher,
       batchId: 3n,
+    });
+    expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
+      encryptedValues: [`0x${"ef".repeat(32)}`],
+      options: { operation: "vault-finalize" },
     });
     expect(prepared).toMatchObject({ unwrapAmountCleartext: 42n, decryptionProof: "0x1234" });
     expect(decode(prepared.call)).toMatchObject({
