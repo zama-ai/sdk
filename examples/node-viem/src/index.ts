@@ -1,7 +1,12 @@
 import { createPublicClient, createWalletClient, formatUnits, http, parseAbi } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia as viemSepolia } from "viem/chains";
-import { DelegationNotPropagatedError, MemoryStorage, ZamaSDK } from "@zama-fhe/sdk";
+import {
+  balanceOfContract,
+  DelegationNotPropagatedError,
+  MemoryStorage,
+  ZamaSDK,
+} from "@zama-fhe/sdk";
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 import { createConfig } from "@zama-fhe/sdk/viem";
 import { node } from "@zama-fhe/sdk/node";
@@ -15,10 +20,7 @@ const TRANSFER_AMOUNT = 10n * 10n ** DECIMALS; //    10 cUSDT — transferred to
 const UNSHIELD_AMOUNT = 50n * 10n ** DECIMALS; //    50 cUSDT → unshielded back to USDT
 
 // ── ERC-20 ABI fragments ──────────────────────────────────────────────────────
-const ERC20_ABI = parseAbi([
-  "function mint(address account, uint256 amount)",
-  "function balanceOf(address account) view returns (uint256)",
-]);
+const ERC20_ABI = parseAbi(["function mint(address account, uint256 amount)"]);
 
 function fmt(amount: bigint): string {
   return `${formatUnits(amount, Number(DECIMALS))} USDT`;
@@ -117,12 +119,9 @@ async function main() {
   // ──────────────────────────────────────────────────────────────────────────
   section("SECTION 2 — Mint");
 
-  const erc20BalanceBefore = await publicClient.readContract({
-    address: TOKEN_ADDRESS as Address,
-    abi: ERC20_ABI,
-    functionName: "balanceOf",
-    args: [accountA.address],
-  });
+  const erc20BalanceBefore = await publicClient.readContract(
+    balanceOfContract(TOKEN_ADDRESS as Address, accountA.address),
+  );
   console.log("ERC-20 balance before mint:", fmt(erc20BalanceBefore));
 
   console.log(`Minting ${fmt(MINT_AMOUNT)} to Account A...`);
@@ -135,12 +134,9 @@ async function main() {
   console.log("  Mint tx:", mintHash);
   await publicClient.waitForTransactionReceipt({ hash: mintHash });
 
-  const erc20BalanceAfter = await publicClient.readContract({
-    address: TOKEN_ADDRESS as Address,
-    abi: ERC20_ABI,
-    functionName: "balanceOf",
-    args: [accountA.address],
-  });
+  const erc20BalanceAfter = await publicClient.readContract(
+    balanceOfContract(TOKEN_ADDRESS as Address, accountA.address),
+  );
   console.log("ERC-20 balance after mint: ", fmt(erc20BalanceAfter));
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -194,12 +190,9 @@ async function main() {
   });
 
   const balanceA3 = await tokenA.balanceOf(accountA.address as Address);
-  const erc20BalanceFinal = await publicClient.readContract({
-    address: TOKEN_ADDRESS as Address,
-    abi: ERC20_ABI,
-    functionName: "balanceOf",
-    args: [accountA.address],
-  });
+  const erc20BalanceFinal = await publicClient.readContract(
+    balanceOfContract(TOKEN_ADDRESS as Address, accountA.address),
+  );
   console.log("\ncUSDT balance (A, final):", fmt(balanceA3));
   console.log("USDT  balance (A, final):", fmt(erc20BalanceFinal));
 

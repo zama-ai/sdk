@@ -1,5 +1,10 @@
 import { Contract, formatUnits, JsonRpcProvider, Wallet } from "ethers";
-import { DelegationNotPropagatedError, MemoryStorage, ZamaSDK } from "@zama-fhe/sdk";
+import {
+  balanceOfContract,
+  DelegationNotPropagatedError,
+  MemoryStorage,
+  ZamaSDK,
+} from "@zama-fhe/sdk";
 import { sepolia, type FheChain } from "@zama-fhe/sdk/chains";
 import { createConfig } from "@zama-fhe/sdk/ethers";
 import { node } from "@zama-fhe/sdk/node";
@@ -13,10 +18,7 @@ const TRANSFER_AMOUNT = 10n * 10n ** DECIMALS; //    10 cUSDT — transferred to
 const UNSHIELD_AMOUNT = 50n * 10n ** DECIMALS; //    50 cUSDT → unshielded back to USDT
 
 // ── ERC-20 ABI fragments ──────────────────────────────────────────────────────
-const ERC20_ABI = [
-  "function mint(address account, uint256 amount)",
-  "function balanceOf(address account) view returns (uint256)",
-] as const;
+const ERC20_ABI = ["function mint(address account, uint256 amount)"] as const;
 
 function fmt(amount: bigint): string {
   return `${formatUnits(amount, Number(DECIMALS))} USDT`;
@@ -108,9 +110,12 @@ async function main() {
 
   const erc20 = new Contract(TOKEN_ADDRESS as Address, ERC20_ABI, walletA);
   const mintFn = erc20.getFunction("mint");
-  const balanceOfFn = erc20.getFunction("balanceOf");
+  const erc20Balance = () =>
+    sdkA.provider.readContract(
+      balanceOfContract(TOKEN_ADDRESS as Address, walletA.address as Address),
+    );
 
-  const erc20BalanceBefore = (await balanceOfFn(walletA.address)) as bigint;
+  const erc20BalanceBefore = await erc20Balance();
   console.log("ERC-20 balance before mint:", fmt(erc20BalanceBefore));
 
   console.log(`Minting ${fmt(MINT_AMOUNT)} to Account A...`);
@@ -118,7 +123,7 @@ async function main() {
   console.log("  Mint tx:", mintTx.hash);
   await mintTx.wait();
 
-  const erc20BalanceAfter = (await balanceOfFn(walletA.address)) as bigint;
+  const erc20BalanceAfter = await erc20Balance();
   console.log("ERC-20 balance after mint: ", fmt(erc20BalanceAfter));
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -172,7 +177,7 @@ async function main() {
   });
 
   const balanceA3 = await tokenA.balanceOf(walletA.address as Address);
-  const erc20BalanceFinal = (await balanceOfFn(walletA.address)) as bigint;
+  const erc20BalanceFinal = await erc20Balance();
   console.log("\ncUSDT balance (A, final):", fmt(balanceA3));
   console.log("USDT  balance (A, final):", fmt(erc20BalanceFinal));
 
