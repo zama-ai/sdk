@@ -28,8 +28,7 @@ In scope:
 ## Out of Scope
 
 - Vulnerabilities in third-party dependencies (`viem`, `ethers`, `wagmi`, etc.) — please report those to the upstream projects.
-- Vulnerabilities in the underlying Zama Protocol contracts — see the [fhEVM security policy](https://github.com/zama-ai/fhevm/security/policy).
-- Vulnerabilities in `@zama-fhe/relayer-sdk` (the legacy low-level SDK) — same channels as this policy: a draft advisory on its repo if enabled, or <security@zama.ai>.
+- Vulnerabilities in the underlying Zama Protocol contracts: report them to <security@zama.ai>.
 
 ## Supported Versions
 
