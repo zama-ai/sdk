@@ -157,7 +157,7 @@ export function useDecryptBalanceAs(address: Address, options?: UseMutationOptio
 export function useDecryptPublicValues(): UseMutationResult<DecryptPublicValuesResult, Error, `0x${string}`[], unknown>;
 
 // @public
-export function useDecryptValues(encryptedInputs: DecryptInput[], options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): UseQueryResult<Readonly<Record<`0x${string}`, ClearValue>>, Error>;
+export function useDecryptValues(inputs: DecryptInput[], options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): UseQueryResult<Readonly<Record<`0x${string}`, ClearValue>>, Error>;
 
 // @public
 export type UseDecryptValuesResult = ReturnType<typeof useDecryptValues>;

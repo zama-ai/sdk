@@ -12,12 +12,12 @@ import { useWalletAccount } from "../utils/wallet-account";
  * `decryptValuesQueryOptions` with `useQuery` semantics.
  */
 export function useDecryptValues(
-  encryptedInputs: DecryptInput[],
+  inputs: DecryptInput[],
   options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
   const walletAccount = useWalletAccount(sdk);
-  const queryOpts = decryptValuesQueryOptions(sdk, encryptedInputs, { walletAccount });
+  const queryOpts = decryptValuesQueryOptions(sdk, inputs, { walletAccount });
   return useQuery<DecryptResult>({
     ...queryOpts,
     ...options,
