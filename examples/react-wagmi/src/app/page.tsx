@@ -28,9 +28,9 @@ import { useEnvironment } from "@/providers";
 const TITLE = "Confidential Token Quickstart";
 
 export default function Home() {
-  // ── Wagmi hooks — wallet state managed reactively by wagmi ──────────────────
+  // ── Wagmi hooks: wallet state managed reactively by wagmi ────────────────────
   // The Zama wagmi config adapter subscribes to wagmi connection state internally,
-  // so account and chain changes are handled automatically — no manual eth_accounts
+  // so account and chain changes are handled automatically, with no manual eth_accounts
   // polling or walletKey/refSeededRef remount pattern needed.
   // Connect/disconnect go through lib/wallet.tsx, which backs them with either the Dynamic
   // connect dialog or wagmi's injected connector; wagmi state is the same in both modes.
@@ -65,7 +65,7 @@ export default function Home() {
     void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.wrappersRegistry.chainId() });
   }, [chainId, queryClient]);
 
-  // Native balance via the wagmi transport — auto-updates on account or chain switch. The
+  // Native balance via the wagmi transport; it auto-updates on account or chain switch. The
   // token panel refetches this same key after actions; useBalance shares wagmi's query
   // cache by key, so this header copy updates too.
   const { data: nativeBalance } = useBalance({
@@ -129,7 +129,7 @@ export default function Home() {
     );
   }
 
-  // ── Screen 2: Unsupported network — pick one ──────────────────────────────
+  // ── Screen 2: Unsupported network, pick one ───────────────────────────────
   if (!network) {
     // Without the list, nothing is known about the wallet's chain, so don't call it unsupported.
     if (isNetworksError) {
@@ -164,10 +164,8 @@ export default function Home() {
               Encrypting and decrypting on {unserved.label} needs a relayer. To use it, run the app
               yourself with a relayer configured for {unserved.label}: either Zama's relayer with an{" "}
               <a href="https://docs.zama.org/protocol/sdk/guides/relayer-api-keys">API key</a> or a{" "}
-              <a href="https://github.com/zama-ai/fhevm/blob/main/relayer/docs/SELF_HOSTING.md">
-                relayer you host
-              </a>
-              .
+              relayer you host (for access, contact{" "}
+              <a href="mailto:support@zama.ai">support@zama.ai</a>).
             </p>
           )}
           {picker}
@@ -176,7 +174,7 @@ export default function Home() {
     );
   }
 
-  // ── Screen 3: Connected on a supported network — main UI ──────────────────
+  // ── Screen 3: Connected on a supported network, main UI ───────────────────
   return (
     <main className="app-container">
       {/* viem marks every testnet; the rows without the flag are the mainnets. */}
@@ -229,9 +227,9 @@ function TokenScreen({
   onSelectToken: (address: Address) => void;
 }) {
   // Fetch all valid token pairs from the on-chain WrappersRegistry. The registry address
-  // comes from the connected chain's FHE config — no configuration required.
+  // comes from the connected chain's FHE config, so no configuration is required.
   // metadata: true fetches name/symbol/decimals on-chain for both tokens in each pair.
-  // isPending stays true until the first successful response — covers both the initial
+  // isPending stays true until the first successful response. That covers both the initial
   // disabled state (registry address not yet resolved internally) and the active-fetching
   // state. isLoading alone is insufficient: in TanStack Query v5, isLoading = isPending &&
   // isFetching, so it is false while the query is disabled.

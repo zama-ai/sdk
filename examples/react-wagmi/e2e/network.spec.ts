@@ -83,7 +83,10 @@ test.describe("network in the table without a relayer", () => {
 
     await expect(page.getByText("This deployment does not serve Polygon.")).toBeVisible();
     await expect(page.getByRole("link", { name: "API key" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "relayer you host" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "support@zama.ai" })).toHaveAttribute(
+      "href",
+      "mailto:support@zama.ai",
+    );
     await expect(page.getByText(/unsupported network/)).toHaveCount(0);
     expect(await cspViolations()).toEqual([]);
     expect(polygonReads.join().toLowerCase()).not.toContain(
