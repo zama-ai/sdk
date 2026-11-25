@@ -38,6 +38,7 @@ Add a rule only with its check and the PR that showed the need. Delete a rule th
 | Reading pending unshields never writes storage.                                                                                         | `loadPendingUnshields` in `packages/sdk/src/token/pending-unshield.ts` takes `Pick<GenericStorage, "get">` | #967   |
 | A workflow condition on the PR branch name also checks `github.event.pull_request.head.repo.full_name == github.repository`.            | ast-grep rule `workflow-head-ref-same-repo` (`pnpm lint`)                                                  | #960   |
 | Import another package by its name or an `exports` subpath, never by a relative path into its files (tests and test fixtures excepted). | ast-grep rule `no-cross-package-relative-import` (`.ts`/`.tsx`) (`pnpm lint`)                              | #1006  |
+| Set the Safe Chain minimum package age in `.aikido`. A workflow never overrides it with the env var or a CLI flag.                      | ast-grep rule `safe-chain-age-from-aikido` (`pnpm lint`)                                                   | #1011  |
 
 ## Further reading
 
