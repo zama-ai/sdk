@@ -249,10 +249,15 @@ Install channels:
 
 ### Adding a New Signer Adapter
 
-1. Implement the `GenericSigner` interface in a new file under `packages/sdk/src/<library>/`
-2. Add a corresponding entry point in `package.json` exports
-3. Configure tsup to build the new entry point
-4. Add tests
+1. Implement the `GenericSigner` interface under `packages/sdk/src/<library>/`, exported from `index.ts`
+2. Expose it as a subpath export (see [Adding a Subpath Export](#adding-a-subpath-export))
+3. Add tests
+
+### Adding a Subpath Export
+
+1. Add `"<name>/index": "src/<name>/index.ts"` to the package's `rolldown.config.ts` (`entryPoints` in `packages/sdk`, `input` in `packages/react-sdk`).
+2. Add `./<name>` to the package's `package.json` `exports` by copying an existing entry, keeping `"@zama-fhe/source"` first and pointing at the `src` entry file so workspace typecheck and tests resolve it from source. In `packages/sdk`, also add it to `typesVersions`. `pnpm test:run` checks both.
+3. Optional: to track its public API, add an `api-extractor.<name>.json` (copy `api-extractor.vaults.json`), add it to the package's `api-report` and `api-report:check` scripts and the root `api-report:check:<package>` script, then run `pnpm api-report`.
 
 ### Adding React Hooks
 
