@@ -27,6 +27,8 @@ pnpm build
 pnpm test:run
 ```
 
+`pnpm install` also turns on the pre-commit hook in `.githooks/` by setting `core.hooksPath`. All worktrees of a clone share that setting, but the hook runs with each worktree's own `node_modules`, so run `pnpm install` in a new worktree before you commit there.
+
 ### Monorepo Structure
 
 pnpm workspaces are defined in `pnpm-workspace.yaml` (`packages/*`, `tools/*`, `test/*`, `codemods/*`):
@@ -192,7 +194,7 @@ On `beta` and `alpha`, examples can use API newer than their pins. The bump PR (
 ### Code Style
 
 - **ESM-only**: all packages use `"type": "module"`
-- **oxfmt + oxlint**: enforced via pre-commit hooks (Husky + lint-staged); ast-grep adds custom AST lint rules
+- **oxfmt + oxlint**: enforced by the pre-commit hook (lint-staged); ast-grep adds custom AST lint rules
 - **No new em dashes**: pre-commit and CI fail when a change adds an em dash (U+2014). Rephrase using commas, colons, parentheses, or separate sentences. Run `pnpm lint:em-dash` to check staged changes, or `pnpm lint:em-dash --base <rev>` to check against a base.
   - An edited line counts as added, so replace any em dash on a line you touch. That includes Markdown table rows that oxfmt realigns.
   - A moved file keeps its em dashes only while git still pairs it with the old path (at least 50% similar). A copied file counts as new.

@@ -37,7 +37,7 @@ export function findAddedEmDashes(diff) {
       continue;
     }
     if (inHeader && raw.startsWith("+++ ")) {
-      const path = raw.slice(4);
+      const path = raw.slice(4).replace(/\t$/, "");
       file = path === "/dev/null" ? null : path.replace(/^b\//, "");
       continue;
     }
@@ -124,7 +124,12 @@ function run(args) {
   if (args.length === 0) {
     return findAddedEmDashes(diffAgainst(["--cached"], [":/"]));
   }
-  return [...findAddedEmDashes(diffAgainst(["HEAD"], args)), ...untrackedHits(args)];
+  // Diff the whole tree, not just these paths, so -M can pair a moved file with its old path.
+  const files = new Set(git(["diff", "--name-only", "HEAD", "--", ...args]).split("\n"));
+  const tracked = findAddedEmDashes(diffAgainst(["HEAD"], [":/"])).filter(({ file }) =>
+    files.has(file),
+  );
+  return [...tracked, ...untrackedHits(args)];
 }
 
 // realpath: Node resolves symlinks in import.meta.url but not in argv, so a
