@@ -33,7 +33,7 @@ export function UnshieldCard({
           onSuccess();
         },
         onError: (error) => {
-          // Another tab or account finalized the request first: the funds arrived.
+          // The request was already finalized (an earlier attempt, another tab, or another account): the funds arrived.
           if (error instanceof UnshieldAlreadyFinalizedError) {
             onSuccess();
           }
@@ -119,7 +119,7 @@ export function ResumeUnshieldCard({
             {
               onSuccess,
               onError: (error) => {
-                // Another tab or account finalized the request first: the funds arrived.
+                // The request was already finalized (an earlier attempt, another tab, or another account): the funds arrived.
                 if (error instanceof UnshieldAlreadyFinalizedError) {
                   onSuccess();
                 }

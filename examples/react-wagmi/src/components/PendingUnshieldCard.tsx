@@ -18,7 +18,7 @@ export function PendingUnshieldCard({ token, onSuccess }: PendingUnshieldCardPro
 
   const resume = useResumeUnshield(tokenAddress, {
     onSuccess,
-    // Another tab or account finalized the request first: the funds arrived.
+    // The request was already finalized (an earlier attempt, another tab, or another account): the funds arrived.
     onError: (error) => {
       if (error instanceof UnshieldAlreadyFinalizedError) onSuccess?.();
     },
@@ -37,11 +37,9 @@ export function PendingUnshieldCard({ token, onSuccess }: PendingUnshieldCardPro
     );
   }
 
-  // Keep the card mounted when resume.isSuccess so the "Unshielded!" alert is
-  // visible. pendingTxHash comes from usePendingUnshield's query cache, which is
-  // invalidated (not synchronously cleared) on resume success — without this
-  // guard, a null pendingTxHash from a completed refetch would unmount the card
-  // before the success message has had a chance to be seen.
+  // Keep the card mounted once the resume completes (or was already finalized):
+  // the pending-unshield query refetches to null and would unmount the card
+  // before the message shows.
   if (!pendingTxHash && !resume.isSuccess && !alreadyFinalized) return null;
 
   return (
