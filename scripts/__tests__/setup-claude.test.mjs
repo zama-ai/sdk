@@ -32,6 +32,20 @@ const setup = (...args) =>
 // Runs the installed hook the way git does: from the working tree root.
 const hook = (name, ...args) =>
   execFileSync(join(repo, ".git", "zama-hooks", name), args, { cwd: repo, env }).toString();
+// detached runs it in a new session without a controlling terminal, so /dev/tty can't open.
+const firstRun = (extraEnv) =>
+  execFileSync(process.execPath, [SCRIPT, "--first-run"], {
+    cwd: repo,
+    env: { ...env, CI: "", ...extraEnv },
+    detached: true,
+  }).toString();
+const mode = () => {
+  try {
+    return git("config", "zama.claudeSetup").trim();
+  } catch {
+    return "";
+  }
+};
 const installed = (rel) => {
   const path = join(repo, ".claude", rel);
   return existsSync(path) ? readFileSync(path, "utf8") : null;
@@ -141,6 +155,32 @@ describe("setup-claude", () => {
     expect(out).toContain("removed c.md");
     expect(out).not.toContain("b.md");
     expect(installed("c.md")).toBe(null);
+  });
+
+  it("--first-run installs the git hooks but doesn't ask in CI", () => {
+    firstRun({ CI: "1" });
+    expect(git("config", "core.hooksPath").trim()).toBe(
+      join(realpathSync(repo), ".git", "zama-hooks"),
+    );
+    expect(mode()).toBe("");
+    expect(installed("a.md")).toBe(null);
+  });
+
+  it("--first-run without a terminal asks nothing and installs nothing", () => {
+    firstRun();
+    expect(mode()).toBe("");
+    expect(installed("a.md")).toBe(null);
+  });
+
+  it("setup keeps personal settings and replaces the hooks block", () => {
+    const template = { model: "opus", hooks: { Stop: [{ hooks: [{ command: "template" }] }] } };
+    publish({ "settings.json": JSON.stringify(template) });
+    mkdirSync(join(repo, ".claude"), { recursive: true });
+    const personal = { theme: "dark", hooks: { Stop: [{ hooks: [{ command: "mine" }] }] } };
+    writeFileSync(join(repo, ".claude", "settings.json"), JSON.stringify(personal));
+    const out = setup("--sync");
+    expect(JSON.parse(installed("settings.json"))).toEqual({ ...template, theme: "dark" });
+    expect(out).toContain("Removed a hook that is not in the template: mine");
   });
 
   it("--off stops the reports", () => {
