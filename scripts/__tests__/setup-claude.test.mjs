@@ -133,10 +133,13 @@ describe("setup-claude", () => {
     expect(hook("post-checkout", "a", "b", "1")).toContain("commits files under .claude/");
   });
 
-  it("--sync removes files the source dropped", () => {
+  it("--sync lists the files it changes and removes files the source dropped", () => {
     setup("--sync");
-    publish({ "c.md": null });
-    setup("--sync");
+    publish({ "a.md": "2", "c.md": null });
+    const out = setup("--sync");
+    expect(out).toContain("updated a.md");
+    expect(out).toContain("removed c.md");
+    expect(out).not.toContain("b.md");
     expect(installed("c.md")).toBe(null);
   });
 

@@ -184,7 +184,7 @@ function remove(dst) {
 function install(files, source) {
   const previous = readManifest().files;
   const written = [];
-  let changed = 0;
+  const changes = [];
   for (const { path, data, mode } of files) {
     const rel = path.slice(SOURCE.length + 1);
     const dst = join(TARGET, rel);
@@ -193,18 +193,27 @@ function install(files, source) {
       content = mergedSettings(dst, data);
       warnDroppedHooks(dst, content);
     }
-    changed += writeIfChanged(dst, content, mode) ? 1 : 0;
+    if (writeIfChanged(dst, content, mode)) {
+      changes.push(`updated ${rel}`);
+    }
     written.push(rel);
   }
   for (const dropped of previous.filter((rel) => !written.includes(rel))) {
     if (existsSync(join(TARGET, dropped))) {
       remove(join(TARGET, dropped));
-      changed++;
+      changes.push(`removed ${dropped}`);
     }
   }
   mkdirSync(TARGET, { recursive: true });
   writeFileSync(MANIFEST, JSON.stringify({ source, files: written }, null, 2) + "\n");
-  console.log(`✅ .claude/ updated (${changed} files changed)`);
+  console.log(
+    changes.length
+      ? `✅ .claude/ updated (${changes.length} changed)`
+      : "✅ .claude/ is up to date",
+  );
+  for (const change of changes) {
+    console.log(`  ${change}`);
+  }
 }
 
 function installPlugins() {
