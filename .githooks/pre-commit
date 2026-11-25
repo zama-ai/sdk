@@ -1,5 +1,6 @@
 #!/bin/sh
 set -e
+[ -d node_modules ] || { echo "pre-commit: run pnpm install in this worktree first" >&2; exit 1; }
 pnpm exec lint-staged --concurrent false
 pnpm typecheck
 pnpm llm:stage
