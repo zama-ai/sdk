@@ -55,7 +55,7 @@ function write(files) {
   for (const [rel, content] of Object.entries(files)) {
     const path = join(repo, "claude-setup", rel);
     if (content === null) {
-      rmSync(path);
+      rmSync(path, { recursive: true });
     } else {
       mkdirSync(dirname(path), { recursive: true });
       writeFileSync(path, content);
@@ -181,6 +181,33 @@ describe("setup-claude", () => {
     const out = setup("--sync");
     expect(JSON.parse(installed("settings.json"))).toEqual({ ...template, theme: "dark" });
     expect(out).toContain("Removed a hook that is not in the template: mine");
+  });
+
+  it("rejects unknown arguments and installs nothing", () => {
+    expect(() => setup("--snyc")).toThrow(/Unknown arguments: --snyc/);
+    expect(() => setup("--sync", "--off")).toThrow(/Unknown arguments/);
+    expect(installed("a.md")).toBe(null);
+    expect(mode()).toBe("");
+  });
+
+  it("plain setup with uncommitted claude-setup/ edits makes the hook report a change", () => {
+    setup();
+    expect(hook("post-merge")).toBe("");
+    write({ "a.md": "edited" });
+    setup();
+    expect(hook("post-merge")).toContain("changed on origin/beta");
+  });
+
+  it("--sync succeeds when a path changes between a file and a directory", () => {
+    publish({ foo: "file" });
+    setup("--sync");
+    publish({ foo: null, "foo/bar.md": "x" });
+    setup("--sync");
+    expect(installed("foo/bar.md")).toBe("x");
+    write({ foo: null });
+    publish({ foo: "file again" });
+    setup("--sync");
+    expect(installed("foo")).toBe("file again");
   });
 
   it("--off stops the reports", () => {

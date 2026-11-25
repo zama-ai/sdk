@@ -5,8 +5,9 @@
 //   pnpm setup:claude --off    stop the update reports from the git hooks
 //   --first-run (from `prepare`) installs the git hooks and asks once on the terminal.
 //   --hooks (from .husky/) moves installs that still use husky to these git hooks.
-// Updates read claude-setup/ from TRUSTED_REF, not the checked-out branch. The checkout and merge hooks live in
-// the git dir, not the working tree, so checking out a branch under review runs none of its code.
+// --sync, --first-run and the hook reports read claude-setup/ from TRUSTED_REF, not the checked-out branch. The
+// checkout and merge hooks live in the git dir, not the working tree, so checking out a branch under review runs
+// none of its code.
 
 import { execFileSync } from "node:child_process";
 import {
@@ -36,17 +37,18 @@ const PLUGINS = [
 const git = (...args) => execFileSync("git", args, { maxBuffer: 64 * 1024 * 1024 });
 const ROOT = git("rev-parse", "--show-toplevel").toString().trim();
 const TARGET = join(ROOT, ".claude");
+const SOURCE_MARK = ".claude/.claude-setup-source";
 // A branch can force-add files under the gitignored .claude/, which Claude Code would then load.
 const WARN = `git ls-files --error-unmatch .claude >/dev/null 2>&1 &&
   echo "⚠️  This branch commits files under .claude/. Review them before you run Claude Code here."
 `;
 const REPORT = `[ "$(git config ${MODE_KEY})" = notify ] || exit 0
 tree=$(git rev-parse -q --verify ${TRUSTED_REF}:${SOURCE}) || exit 0
-[ -f .claude/.claude-setup.json ] || {
-  echo "ℹ️  .claude/ is not set up in this worktree. Run pnpm setup:claude --sync, or --off to stop these reports."
+[ -f ${SOURCE_MARK} ] || {
+  echo "ℹ️  .claude/ is not set up in this worktree. Run pnpm setup:claude --sync, or pnpm setup:claude --off to stop these reports."
   exit 0
 }
-grep -qs "\\"source\\": \\"$tree\\"" .claude/.claude-setup.json ||
+[ "$(cat ${SOURCE_MARK})" = "$tree" ] ||
   echo "ℹ️  ${SOURCE}/ changed on ${TRUSTED_REF}. Run pnpm setup:claude --sync to update .claude/."
 exit 0
 `;
@@ -63,8 +65,7 @@ ${WARN}${REPORT}`,
   "post-merge": `#!/bin/sh
 ${WARN}${REPORT}`,
 };
-// The claude-setup/ tree last installed, which the hook compares with TRUSTED_REF, and the files it wrote,
-// so the next install can remove the ones the source dropped.
+// The files the last install wrote, so the next one can remove the ones the source dropped.
 const MANIFEST = join(TARGET, ".claude-setup.json");
 
 function merge(a, b) {
@@ -113,12 +114,8 @@ function filesInCheckout() {
 }
 
 function sourceTree(ref) {
-  return git("rev-parse", "-q", "--verify", `${ref}:${SOURCE}`).toString().trim();
-}
-
-function trustedTree() {
   try {
-    return sourceTree(TRUSTED_REF);
+    return git("rev-parse", "-q", "--verify", `${ref}:${SOURCE}`).toString().trim();
   } catch (error) {
     if (error.status !== 1) {
       throw error;
@@ -139,28 +136,21 @@ function readManifest() {
   try {
     return JSON.parse(readFileSync(MANIFEST, "utf8"));
   } catch {
-    return { source: null, files: [] };
+    return { files: [] };
   }
 }
 
-function mergedSettings(dst, data) {
+function settingsFor(dst, data) {
   const template = JSON.parse(data.toString());
   const current = existsSync(dst) ? JSON.parse(readFileSync(dst, "utf8")) : {};
-  // Hook entries are objects, so unioning them would keep superseded hooks running.
-  const merged = { ...merge(current, template), hooks: template.hooks };
-  return Buffer.from(JSON.stringify(merged, null, 2) + "\n");
-}
-
-function warnDroppedHooks(dst, content) {
-  if (!existsSync(dst)) {
-    return;
-  }
-  const kept = new Set(hookCommands(JSON.parse(content.toString()).hooks));
-  const current = JSON.parse(readFileSync(dst, "utf8")).hooks;
-  for (const command of hookCommands(current).filter((c) => !kept.has(c))) {
+  const kept = new Set(hookCommands(template.hooks));
+  for (const command of hookCommands(current.hooks).filter((c) => !kept.has(c))) {
     console.log(`  ⚠️  Removed a hook that is not in the template: ${command}`);
     console.log("     Put personal hooks in .claude/settings.local.json to keep them.");
   }
+  // Hook entries are objects, so unioning them would keep superseded hooks running.
+  const merged = { ...merge(current, template), hooks: template.hooks };
+  return Buffer.from(JSON.stringify(merged, null, 2) + "\n");
 }
 
 function writeIfChanged(dst, data, mode = 0o644) {
@@ -181,31 +171,27 @@ function remove(dst) {
   }
 }
 
-function install(files, source) {
-  const previous = readManifest().files;
-  const written = [];
+function install(files, tree) {
+  const items = files.map((file) => ({ ...file, rel: file.path.slice(SOURCE.length + 1) }));
+  const written = items.map(({ rel }) => rel);
   const changes = [];
-  for (const { path, data, mode } of files) {
-    const rel = path.slice(SOURCE.length + 1);
-    const dst = join(TARGET, rel);
-    let content = data;
-    if (rel === "settings.json") {
-      content = mergedSettings(dst, data);
-      warnDroppedHooks(dst, content);
-    }
-    if (writeIfChanged(dst, content, mode)) {
-      changes.push(`updated ${rel}`);
-    }
-    written.push(rel);
-  }
-  for (const dropped of previous.filter((rel) => !written.includes(rel))) {
+  // Drop first so a path that changes between file and directory does not collide with the new one.
+  for (const dropped of readManifest().files.filter((rel) => !written.includes(rel))) {
     if (existsSync(join(TARGET, dropped))) {
       remove(join(TARGET, dropped));
       changes.push(`removed ${dropped}`);
     }
   }
+  for (const { rel, data, mode } of items) {
+    const dst = join(TARGET, rel);
+    const content = rel === "settings.json" ? settingsFor(dst, data) : data;
+    if (writeIfChanged(dst, content, mode)) {
+      changes.push(`updated ${rel}`);
+    }
+  }
   mkdirSync(TARGET, { recursive: true });
-  writeFileSync(MANIFEST, JSON.stringify({ source, files: written }, null, 2) + "\n");
+  writeFileSync(join(ROOT, SOURCE_MARK), tree + "\n");
+  writeFileSync(MANIFEST, JSON.stringify({ files: written }, null, 2) + "\n");
   console.log(
     changes.length
       ? `✅ .claude/ updated (${changes.length} changed)`
@@ -252,15 +238,30 @@ function installHooks() {
   git("config", "core.hooksPath", dir);
 }
 
-function setUp({ fromRef }) {
-  const source = fromRef ? trustedTree() : sourceTree("HEAD");
-  if (!source) {
-    console.error(`❌ ${TRUSTED_REF} has no ${SOURCE}/. Run git fetch origin, then retry.`);
-    process.exit(1);
-  }
+function fail(message) {
+  console.error(`❌ ${message}`);
+  process.exit(1);
+}
+
+const trusted = () => ({
+  tree:
+    sourceTree(TRUSTED_REF) ??
+    fail(`${TRUSTED_REF} has no ${SOURCE}/. Run git fetch origin, then retry.`),
+  files: filesAtRef(TRUSTED_REF),
+});
+
+// Uncommitted edits to claude-setup/ get a marker that never equals a tree, so the hook reports a difference.
+const checkout = () => ({
+  tree: git("status", "--porcelain", "--", SOURCE).length
+    ? "worktree"
+    : (sourceTree("HEAD") ?? fail(`HEAD has no ${SOURCE}/.`)),
+  files: filesInCheckout(),
+});
+
+function setUp({ tree, files }) {
   // `pnpm install --ignore-scripts` skips `prepare`, which otherwise installs the git hooks.
   installHooks();
-  install(fromRef ? filesAtRef(TRUSTED_REF) : filesInCheckout(), source);
+  install(files, tree);
   git("config", MODE_KEY, "notify");
   console.log(`✅ Git hooks will tell you when ${SOURCE}/ changes on ${TRUSTED_REF}.`);
   installPlugins();
@@ -268,7 +269,7 @@ function setUp({ fromRef }) {
 
 function firstRun() {
   installHooks();
-  if (gitConfig(MODE_KEY) || process.env.CI || !trustedTree()) {
+  if (gitConfig(MODE_KEY) || process.env.CI || !sourceTree(TRUSTED_REF)) {
     return;
   }
   let tty;
@@ -292,19 +293,24 @@ function firstRun() {
     console.log("Skipped. Run pnpm setup:claude any time to install it.");
     return;
   }
-  setUp({ fromRef: true });
+  setUp(trusted());
 }
 
-const args = new Set(process.argv.slice(2));
-if (args.has("--first-run")) {
-  firstRun();
-} else if (args.has("--hooks")) {
-  installHooks();
-} else if (args.has("--off")) {
-  git("config", MODE_KEY, "off");
-  console.log("✅ Git hooks will no longer report claude-setup/ updates.");
-} else if (args.has("--sync")) {
-  setUp({ fromRef: true });
-} else {
-  setUp({ fromRef: false });
+const COMMANDS = {
+  "": () => setUp(checkout()),
+  "--first-run": firstRun,
+  "--hooks": installHooks,
+  "--off": () => {
+    git("config", MODE_KEY, "off");
+    console.log("✅ Git hooks will no longer report claude-setup/ updates.");
+  },
+  "--sync": () => setUp(trusted()),
+};
+
+const args = process.argv.slice(2);
+if (args.length > 1 || (args.length === 1 && !Object.hasOwn(COMMANDS, args[0]))) {
+  console.error(`Unknown arguments: ${args.join(" ")}`);
+  console.error("Usage: setup-claude.mjs [--sync | --off | --first-run | --hooks]");
+  process.exit(2);
 }
+COMMANDS[args[0] ?? ""]();
