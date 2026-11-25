@@ -2,9 +2,8 @@ id: no-cross-package-relative-import
 language: TypeScript
 severity: error
 message: >-
-  Don't reach into another package's files with a relative path. Import from its
-  package entry: @zama-fhe/sdk (or a subpath its package.json exports, such as
-  @zama-fhe/sdk/internal) or @zama-fhe/react-sdk.
+  Import another package by its name or a subpath in its package.json `exports`,
+  not by a relative path into its files.
 note: >-
   The exports field in each package.json is the public surface. A relative path
   around it couples packages to each other's internals, which then can't change
@@ -13,19 +12,58 @@ metadata:
   added: 2026-11-25
 files:
   - packages/*/src/**/*.ts
-  - packages/*/src/**/*.tsx
 ignores:
   - "**/__tests__/**"
   - "**/*.test.ts"
-  - "**/*.test.tsx"
   - "**/test-fixtures/**"
   - packages/sdk-daemon/src/generated/**
 rule:
-  kind: string
-  regex: ^["'](\.\./)+(sdk|react-sdk|sdk-daemon)/(src|test|dist)/
+  any:
+    - kind: string
+    - kind: template_string
+  regex: ^["'`](\./)?(\.\./)+(sdk|react-sdk|sdk-daemon)/
   inside:
     any:
       - kind: import_statement
       - kind: export_statement
-      - kind: call_expression
-    stopBy: end
+      - kind: arguments
+        inside:
+          kind: call_expression
+          has:
+            field: function
+            kind: import
+---
+id: no-cross-package-relative-import-tsx
+language: Tsx
+severity: error
+message: >-
+  Import another package by its name or a subpath in its package.json `exports`,
+  not by a relative path into its files.
+note: >-
+  The exports field in each package.json is the public surface. A relative path
+  around it couples packages to each other's internals, which then can't change
+  without breaking the other package.
+metadata:
+  added: 2026-11-25
+files:
+  - packages/*/src/**/*.tsx
+ignores:
+  - "**/__tests__/**"
+  - "**/*.test.tsx"
+  - "**/test-fixtures/**"
+  - packages/sdk-daemon/src/generated/**
+rule:
+  any:
+    - kind: string
+    - kind: template_string
+  regex: ^["'`](\./)?(\.\./)+(sdk|react-sdk|sdk-daemon)/
+  inside:
+    any:
+      - kind: import_statement
+      - kind: export_statement
+      - kind: arguments
+        inside:
+          kind: call_expression
+          has:
+            field: function
+            kind: import
