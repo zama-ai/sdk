@@ -19,7 +19,7 @@ const EM_DASH = "\u2014";
 // lint directive reasons (`@ts-expect-error -- text`), and Go's generated-code
 // header.
 const DASH_SYNTAX = /@(?:param|typeParam|returns?|throws)\b|@ts-|(?:es|ox)lint-disable|DO NOT EDIT/;
-const COMMENT = /(?:\/\/|\/\*|^\s*\*|^\s*#)\s(.*)/;
+const COMMENT = /(?:\/\/[/!]?|\/\*\*?|^\s*\*|^\s*#)\s(.*)/;
 // `--` and ` - ` are syntax in code (`a - b`, `git log -- src`), so outside
 // Markdown prose only comments are checked for them. A comment can still quote
 // a command, so `--` before a flag, path, or variable is allowed.
@@ -68,7 +68,7 @@ export function hasDash(text, file) {
       return true;
     }
   }
-  return /[\p{L})] - [\p{L}(]/u.test(comment);
+  return /[\p{L}\p{N})`*"] - [\p{L}(`*"]/u.test(comment);
 }
 
 function lineContext(file, line, fences) {

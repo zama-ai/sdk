@@ -80,6 +80,11 @@ describe("hasDash", () => {
     ["  // the cache", "-", "not the chain", "a.ts"],
     ["# one workspace", "-", "one lockfile", "a.yml"],
     ["# reruns the build", "--", "slow", "code-fence"],
+    ["/** One-liner", "--", "with a stand-in. */", "a.ts"],
+    ["/** Starts a block", "-", "on the first line", "a.ts"],
+    ["//! Crate docs", "-", "in Rust", "lib.rs"],
+    ["- `ConfigurationError`", "-", "invalid request", "a.md"],
+    ["- **Bold**", "-", "does a thing", "a.md"],
   ])("flags %j %j %j", (before, dash, after, file) => {
     expect(hasDash(`${before} ${dash} ${after}`, file)).toBe(true);
   });
@@ -107,6 +112,7 @@ describe("hasDash", () => {
     ["// eslint-disable-next-line no-console -- debug only", "a.ts"],
     [" * @param owner - Balance owner address.", "a.ts"],
     ["const left = total - spent;", "a.ts"],
+    ["// up to 2^64 - 1", "a.ts"],
     ["SELECT x -- trailing comment", "a.sql"],
     ["- a list item", "a.md"],
     ["Fields 100\u2013119 are reserved.", "a.md"],
