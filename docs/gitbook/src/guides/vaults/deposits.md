@@ -83,11 +83,19 @@ await saveBatches(batches);
 {% tab title="React SDK" %}
 
 ```tsx
+import { matchZamaError } from "@zama-fhe/sdk";
 import { useDeposit } from "@zama-fhe/react-sdk/vaults";
 import { STABLE } from "./vaults";
 
 function DepositButton() {
-  const deposit = useDeposit({ onSuccess: ({ batches }) => saveBatches(batches) });
+  const deposit = useDeposit({
+    onSuccess: ({ batches }) => saveBatches(batches),
+    // The join was mined, so a retry would deposit twice: show the transaction instead.
+    onError: (error) =>
+      matchZamaError(error, {
+        VAULT_JOIN_UNCONFIRMED: (e) => showUnconfirmedJoin(e.txHash, e.unconfirmedVaultIds),
+      }),
+  });
 
   return (
     <button
@@ -212,9 +220,17 @@ const { batches } = await vaults.redeem(STABLE, { vaultId: "beta", amount: 500n 
 {% tab title="React SDK" %}
 
 ```tsx
+import { matchZamaError } from "@zama-fhe/sdk";
 import { useRedeem } from "@zama-fhe/react-sdk/vaults";
 
-const redeem = useRedeem({ onSuccess: ({ batches }) => saveBatches(batches) });
+const redeem = useRedeem({
+  onSuccess: ({ batches }) => saveBatches(batches),
+  // The join was mined, so a retry would redeem twice: show the transaction instead.
+  onError: (error) =>
+    matchZamaError(error, {
+      VAULT_JOIN_UNCONFIRMED: (e) => showUnconfirmedJoin(e.txHash, e.unconfirmedVaultIds),
+    }),
+});
 redeem.mutate({ group: STABLE, vaultId: "beta", amount: 500n });
 ```
 

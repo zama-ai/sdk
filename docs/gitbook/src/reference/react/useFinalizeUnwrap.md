@@ -74,6 +74,8 @@ await finalize({ unwrapRequestId: requestId });
 
 ## Return Type
 
+On success, the hook invalidates the confidential balance, underlying allowance, pending-unshield and wagmi balance queries.
+
 {% include ".gitbook/includes/mutation-result.md" %}
 
 ## Related

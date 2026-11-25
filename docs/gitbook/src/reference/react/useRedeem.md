@@ -21,11 +21,19 @@ import { useRedeem } from "@zama-fhe/react-sdk/vaults";
 {% tab title="RedeemButton.tsx" %}
 
 ```tsx
+import { matchZamaError } from "@zama-fhe/sdk";
 import { useRedeem } from "@zama-fhe/react-sdk/vaults";
 import { STABLE } from "./vaults";
 
 function RedeemButton() {
-  const redeem = useRedeem({ onSuccess: ({ batches }) => saveBatches(batches) });
+  const redeem = useRedeem({
+    onSuccess: ({ batches }) => saveBatches(batches),
+    // The join was mined, so a retry would redeem twice: show the transaction instead.
+    onError: (error) =>
+      matchZamaError(error, {
+        VAULT_JOIN_UNCONFIRMED: (e) => showUnconfirmedJoin(e.txHash, e.unconfirmedVaultIds),
+      }),
+  });
 
   return (
     <button

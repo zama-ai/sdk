@@ -129,6 +129,8 @@ The `data` property (after a successful mutation) is `{ txHash: Hex, receipt: Tr
 - **`txHash`** -- Transaction hash submitted to the network.
 - **`receipt`** -- Confirmed transaction receipt from the chain.
 
+On success, the hook invalidates the confidential balance queries.
+
 {% include ".gitbook/includes/mutation-result.md" %}
 
 ## Related

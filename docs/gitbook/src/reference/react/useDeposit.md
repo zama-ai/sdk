@@ -21,11 +21,19 @@ import { useDeposit } from "@zama-fhe/react-sdk/vaults";
 {% tab title="DepositButton.tsx" %}
 
 ```tsx
+import { matchZamaError } from "@zama-fhe/sdk";
 import { useDeposit } from "@zama-fhe/react-sdk/vaults";
 import { STABLE } from "./vaults";
 
 function DepositButton() {
-  const deposit = useDeposit({ onSuccess: ({ batches }) => saveBatches(batches) });
+  const deposit = useDeposit({
+    onSuccess: ({ batches }) => saveBatches(batches),
+    // The join was mined, so a retry would deposit twice: show the transaction instead.
+    onError: (error) =>
+      matchZamaError(error, {
+        VAULT_JOIN_UNCONFIRMED: (e) => showUnconfirmedJoin(e.txHash, e.unconfirmedVaultIds),
+      }),
+  });
 
   return (
     <button
@@ -104,9 +112,9 @@ Called once the wallet has sent the join, before the SDK waits for the receipt. 
 As [`VaultClient.deposit`](../sdk/VaultClient.md#deposit). The ones a UI handles most:
 
 - [`VaultBatcherPausedError`](../sdk/errors.md#vaultbatcherpausederror): every batcher of the chosen vault is paused or closed.
-- `InsufficientConfidentialBalanceError`: the balance is below `amount`.
-- `ChainMismatchError`: the wallet is not on the group's chain.
-- `VaultJoinUnconfirmedError`: the join was mined, but the SDK could not read every batch from the receipt.
+- [`InsufficientConfidentialBalanceError`](../sdk/errors.md#insufficientconfidentialbalanceerror): the balance is below `amount`.
+- [`ChainMismatchError`](../sdk/errors.md#chainmismatcherror): the wallet is not on the group's chain.
+- [`VaultJoinUnconfirmedError`](../sdk/errors.md#vaultjoinunconfirmederror): the join was mined, but the SDK could not read every batch from the receipt.
 
 ## Return Type
 
