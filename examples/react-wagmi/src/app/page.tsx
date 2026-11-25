@@ -164,10 +164,8 @@ export default function Home() {
               Encrypting and decrypting on {unserved.label} needs a relayer. To use it, run the app
               yourself with a relayer configured for {unserved.label}: either Zama's relayer with an{" "}
               <a href="https://docs.zama.org/protocol/sdk/guides/relayer-api-keys">API key</a> or a{" "}
-              <a href="https://github.com/zama-ai/fhevm/blob/main/relayer/docs/SELF_HOSTING.md">
-                relayer you host
-              </a>
-              .
+              relayer you host (for access, contact{" "}
+              <a href="mailto:support@zama.ai">support@zama.ai</a>).
             </p>
           )}
           {picker}
