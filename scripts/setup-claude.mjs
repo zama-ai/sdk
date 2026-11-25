@@ -2,10 +2,10 @@
 // Installs claude-setup/ into the gitignored .claude/.
 //   pnpm setup:claude          copy from this checkout and install the plugins
 //   pnpm setup:claude --sync   copy from TRUSTED_REF
-//   pnpm setup:claude --off    stop the update reports from .githooks
-//   --first-run (from `prepare`) asks once on the terminal; --hook (from .githooks) reports updates on TRUSTED_REF.
-// Updates read claude-setup/ from TRUSTED_REF, not the checked-out branch, so a branch under review can't
-// install its own agent config through them.
+//   pnpm setup:claude --off    stop the update reports from the git hooks
+//   --first-run (from `prepare`) installs the git hooks and asks once on the terminal.
+// Updates read claude-setup/ from TRUSTED_REF, not the checked-out branch. The checkout and merge hooks live in
+// the git dir, not the working tree, so checking out a branch under review runs none of its code.
 
 import { execFileSync } from "node:child_process";
 import {
@@ -35,6 +35,25 @@ const PLUGINS = [
 const git = (...args) => execFileSync("git", args, { maxBuffer: 64 * 1024 * 1024 });
 const ROOT = git("rev-parse", "--show-toplevel").toString().trim();
 const TARGET = join(ROOT, ".claude");
+const REPORT = `[ "$(git config ${MODE_KEY})" = notify ] || exit 0
+tree=$(git rev-parse -q --verify ${TRUSTED_REF}:${SOURCE}) || exit 0
+grep -qs "\\"source\\": \\"$tree\\"" .claude/.claude-setup.json ||
+  echo "ℹ️  ${SOURCE}/ changed on ${TRUSTED_REF}. Run pnpm setup:claude --sync to update .claude/."
+exit 0
+`;
+// pre-commit runs the branch's own checks, which committing to a branch already trusts.
+const HOOKS = {
+  "pre-commit": `#!/bin/sh
+[ -x .githooks/pre-commit ] || exit 0
+exec .githooks/pre-commit "$@"
+`,
+  // $3 is 1 for a branch checkout (including git worktree add) and 0 for a file checkout.
+  "post-checkout": `#!/bin/sh
+[ "$3" = "1" ] || exit 0
+${REPORT}`,
+  "post-merge": `#!/bin/sh
+${REPORT}`,
+};
 // The claude-setup/ tree last installed, which the hook compares with TRUSTED_REF, and the files it wrote,
 // so the next install can remove the ones the source dropped.
 const MANIFEST = join(TARGET, ".claude-setup.json");
@@ -195,9 +214,18 @@ function installPlugins() {
   }
 }
 
+function installHooks() {
+  const common = git("rev-parse", "--path-format=absolute", "--git-common-dir").toString().trim();
+  const dir = join(common, "zama-hooks");
+  for (const [name, body] of Object.entries(HOOKS)) {
+    writeIfChanged(join(dir, name), Buffer.from(body), 0o755);
+  }
+  git("config", "core.hooksPath", dir);
+}
+
 function setUp({ fromRef }) {
-  // `pnpm install --ignore-scripts` skips `prepare`, which otherwise points git at .githooks/.
-  git("config", "core.hooksPath", ".githooks");
+  // `pnpm install --ignore-scripts` skips `prepare`, which otherwise installs the git hooks.
+  installHooks();
   const ref = fromRef ? TRUSTED_REF : "HEAD";
   install(fromRef ? filesAtRef(TRUSTED_REF) : filesInCheckout(), sourceTree(ref));
   git("config", MODE_KEY, "notify");
@@ -205,6 +233,7 @@ function setUp({ fromRef }) {
 }
 
 function firstRun() {
+  installHooks();
   if (gitConfig(MODE_KEY) || process.env.CI) {
     return;
   }
@@ -238,26 +267,9 @@ function firstRun() {
   installPlugins();
 }
 
-function runHook() {
-  if (gitConfig(MODE_KEY) !== "notify") {
-    return;
-  }
-  try {
-    if (readManifest().source !== sourceTree(TRUSTED_REF)) {
-      console.log(
-        `ℹ️  ${SOURCE}/ changed on ${TRUSTED_REF}. Run pnpm setup:claude --sync to update .claude/.`,
-      );
-    }
-  } catch {
-    // The post-checkout hook's exit status becomes the exit status of git checkout.
-  }
-}
-
 const args = new Set(process.argv.slice(2));
 if (args.has("--first-run")) {
   firstRun();
-} else if (args.has("--hook")) {
-  runHook();
 } else if (args.has("--off")) {
   git("config", MODE_KEY, "off");
   console.log("✅ Git hooks will no longer report claude-setup/ updates.");

@@ -1,5 +1,13 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,6 +29,9 @@ let repo;
 const git = (...args) => execFileSync("git", args, { cwd: repo, env }).toString();
 const setup = (...args) =>
   execFileSync(process.execPath, [SCRIPT, ...args], { cwd: repo, env }).toString();
+// Runs the installed hook the way git does: from the working tree root.
+const hook = (name, ...args) =>
+  execFileSync(join(repo, ".git", "zama-hooks", name), args, { cwd: repo, env }).toString();
 const installed = (rel) => {
   const path = join(repo, ".claude", rel);
   return existsSync(path) ? readFileSync(path, "utf8") : null;
@@ -62,7 +73,9 @@ describe("setup-claude", () => {
     setup("--sync");
     expect(installed("a.md")).toBe("1");
     expect(git("config", "zama.claudeSetup").trim()).toBe("notify");
-    expect(git("config", "core.hooksPath").trim()).toBe(".githooks");
+    expect(git("config", "core.hooksPath").trim()).toBe(
+      join(realpathSync(repo), ".git", "zama-hooks"),
+    );
   });
 
   it("plain setup installs from the checkout", () => {
@@ -74,13 +87,29 @@ describe("setup-claude", () => {
   it("the hook only reports updates", () => {
     setup("--sync");
     publish({ "a.md": "2" });
-    expect(setup("--hook")).toContain("changed on origin/beta");
+    expect(hook("post-merge")).toContain("changed on origin/beta");
     expect(installed("a.md")).toBe("1");
   });
 
   it("the hook is quiet when .claude/ is up to date", () => {
     setup("--sync");
-    expect(setup("--hook")).toBe("");
+    expect(hook("post-merge")).toBe("");
+  });
+
+  it("checking out a branch runs none of its hooks", () => {
+    setup("--sync");
+    git("checkout", "-qb", "evil");
+    mkdirSync(join(repo, ".githooks"));
+    writeFileSync(join(repo, ".githooks", "post-checkout"), "#!/bin/sh\ntouch pwned\n", {
+      mode: 0o755,
+    });
+    git("add", "-A");
+    git("commit", "-qm", "evil");
+    git("checkout", "-q", "-");
+    git("checkout", "-q", "evil");
+    git("worktree", "add", "-q", "--detach", "wt", "evil");
+    expect(existsSync(join(repo, "pwned"))).toBe(false);
+    expect(existsSync(join(repo, "wt", "pwned"))).toBe(false);
   });
 
   it("--sync removes files the source dropped", () => {
@@ -94,6 +123,6 @@ describe("setup-claude", () => {
     setup("--sync");
     setup("--off");
     publish({ "a.md": "2" });
-    expect(setup("--hook")).toBe("");
+    expect(hook("post-merge")).toBe("");
   });
 });

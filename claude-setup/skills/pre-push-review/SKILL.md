@@ -23,7 +23,9 @@ Collect the conventions files: root `AGENTS.md`, every `AGENTS.md` under a chang
 
 ## 2. Fan out the lanes
 
-Send the lanes in one message as parallel `Agent` calls. Each prompt gives the repo path, the range `$base..HEAD`, the changed files, the conventions files, the skills the lane must load with the `Skill` tool, and this rule: _read-only; read changed files in full, not only the diff; finding nothing is a fine answer._ Each lane returns findings as `file:line`, problem, evidence, exact fix, confidence, and the skills it loaded. Skip a lane that has no files to review.
+Send the lanes in one message as parallel `Agent` calls. Each prompt gives the repo path, the range `$base..HEAD`, the changed files, the conventions files, the skills the lane must load, and this rule: _read-only; read changed files in full, not only the diff; finding nothing is a fine answer._ Each lane returns findings as `file:line`, problem, evidence, exact fix, confidence, and the skills it loaded. Skip a lane that has no files to review.
+
+A lane reads a skill without a `plugin:` prefix from `.claude/skills/<name>/SKILL.md` with the `Read` tool, not the `Skill` tool, because a personal skill with the same name overrides the project one. It loads a `plugin:skill` with the `Skill` tool.
 
 | Lane         | Skills to load                                                                                                                 | Looks for                                                                                                               |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
