@@ -3,9 +3,9 @@ import { DecryptionFailedError, wrapDecryptError } from "../errors";
 import type { EncryptedValue, RelayerRequestOptions, RelayerSDK } from "./types";
 
 /**
- * Publicly decrypt one uint handle, such as an unwrap amount, for an on-chain finalize call.
+ * Publicly decrypt one euint64-or-wider handle, such as an unwrap amount, for an on-chain finalize call.
  *
- * @throws if public decryption fails, including when the relayer returns no uint for `encryptedValue`. {@link DecryptionFailedError}
+ * @throws if public decryption fails, including when the relayer returns no bigint for `encryptedValue`. {@link DecryptionFailedError}
  */
 export async function decryptPublicUint(
   relayer: Pick<RelayerSDK, "decryptPublicValuesWithSignatures">,
@@ -17,16 +17,16 @@ export async function decryptPublicUint(
     .catch((error: unknown) => {
       throw wrapDecryptError(error, "Public decryption failed");
     });
-  const provenHandle = result.checkSignaturesArgs.handlesList[0];
-  if (provenHandle?.toLowerCase() !== encryptedValue.toLowerCase()) {
+  const returnedHandle = result.checkSignaturesArgs.handlesList[0];
+  if (returnedHandle?.toLowerCase() !== encryptedValue.toLowerCase()) {
     throw new DecryptionFailedError(
-      `Public decryption of ${encryptedValue} returned a proof for ${provenHandle ?? "no handle"}`,
+      `Public decryption of ${encryptedValue} returned values for ${returnedHandle ?? "no handle"}`,
     );
   }
   const value = result.clearValues[0]?.value;
   if (typeof value !== "bigint") {
     throw new DecryptionFailedError(
-      `Public decryption of ${encryptedValue} returned ${value === undefined ? "no value" : `a ${typeof value}`}, not a uint`,
+      `Public decryption of ${encryptedValue} returned ${value === undefined ? "no value" : `a ${typeof value}`}, not a bigint`,
     );
   }
   return { value, decryptionProof: result.checkSignaturesArgs.decryptionProof };

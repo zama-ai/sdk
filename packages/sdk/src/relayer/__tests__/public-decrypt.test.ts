@@ -42,7 +42,7 @@ describe("decryptPublicUint", () => {
     ).rejects.toBeInstanceOf(DecryptionFailedError);
   });
 
-  test("refuses a proof for another handle", async () => {
+  test("refuses values for another handle", async () => {
     const relayer = relayerReturning([{ type: "uint64", value: 500n }]);
     await expect(
       decryptPublicUint(relayer, `0x${"cd".repeat(32)}`, { operation: "finalize-unwrap" }),
