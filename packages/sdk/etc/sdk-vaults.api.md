@@ -176,7 +176,7 @@ export type JoinVariables<TGroup extends VaultGroup = VaultGroup> = Pick<JoinInp
 });
 
 // @public
-export const MAX_GROUP_VAULTS = 8;
+export const MAX_GROUP_VAULTS = 4;
 
 // @public
 export interface OpenBatch extends BatchRef {

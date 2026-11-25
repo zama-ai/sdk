@@ -3,7 +3,7 @@ import { ConfigurationError } from "../errors";
 import type { JoinDirection } from "./types";
 
 /** The most vaults a group may hold. */
-export const MAX_GROUP_VAULTS = 8;
+export const MAX_GROUP_VAULTS = 4;
 
 /**
  * A batcher, with the last batch it takes joins in. Set `lastBatchId` only for

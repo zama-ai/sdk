@@ -300,7 +300,7 @@ describe("config checks, where the config is used", () => {
       }),
     );
     const big = defineVaultGroup({ id: "big", vaults: [ALPHA_VAULT, BETA_VAULT, ...extra] });
-    await expect(createVaultClient(sdk).prepareDeposit(big, input)).rejects.toThrow(/more than 8/);
+    await expect(createVaultClient(sdk).prepareDeposit(big, input)).rejects.toThrow(/more than 4/);
   });
 
   test("refuses a vault id twice", async ({ sdk }) => {
