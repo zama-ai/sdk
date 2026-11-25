@@ -1,4 +1,4 @@
-# Confidential Token Quickstart — react-wagmi
+# Confidential Token Quickstart (react-wagmi)
 
 Next.js 16 example app demonstrating how to integrate `@zama-fhe/react-sdk` with
 [wagmi v3](https://wagmi.sh/) on every network the SDK ships a chain preset for. A network
@@ -37,21 +37,21 @@ Token pairs on every network come from the on-chain `WrappersRegistry` at runtim
 
 ## Stack
 
-- **Next.js 16** (App Router, Webpack — Turbopack not yet supported with WASM)
+- **Next.js 16** (App Router, Webpack; Turbopack not yet supported with WASM)
 - **React 19** + **wagmi v3** + **viem v2**
-- **Dynamic** (optional) — `@dynamic-labs-sdk/client` and `@dynamic-labs-sdk/evm`, Dynamic's headless SDK in connect-only mode: it supplies the wallet catalogue and the connect step (browser wallets + WalletConnect, which is how a Safe pairs from the Safe web app). A wagmi connector of the app's own wraps the authorized wallet, so wagmi alone owns the session
+- **Dynamic** (optional): `@dynamic-labs-sdk/client` and `@dynamic-labs-sdk/evm`, Dynamic's headless SDK in connect-only mode: it supplies the wallet catalogue and the connect step (browser wallets + WalletConnect, which is how a Safe pairs from the Safe web app). A wagmi connector of the app's own wraps the authorized wallet, so wagmi alone owns the session
 - **TanStack Query v5** for async state
 - **@zama-fhe/react-sdk**: `ZamaProvider`, `useConfidentialBalance`, `useShield`, `useUnshield`, `useDelegateDecryption`, etc.
 - **@zama-fhe/react-sdk/vaults**: `useDeposit`, `useRedeem`, `useOpenBatches`, `useBatch`, `useClaim`, `useQuit`, `useFinalize`; `defineVault` from `@zama-fhe/sdk/vaults` describes the vault (`defineVaultGroup` describes a group of several, see the walkthrough)
-- **@zama-fhe/react-sdk/wagmi** — `createConfig` adapter for wagmi signer/provider wiring
-- **@zama-fhe/sdk/web** — browser FHE worker transport via `web()`, routed through the local Next.js proxy (`/api/relayer/<network>`)
-- **@zama-fhe/sdk** `cleartext()` — transport for the cleartext deployments, no relayer involved
+- **@zama-fhe/react-sdk/wagmi**: `createConfig` adapter for wagmi signer/provider wiring
+- **@zama-fhe/sdk/web**: browser FHE worker transport via `web()`, routed through the local Next.js proxy (`/api/relayer/<network>`)
+- **@zama-fhe/sdk** `cleartext()`: transport for the cleartext deployments, no relayer involved
 
 ## Setup
 
 ```bash
 cp .env.example .env.local
-# No changes needed for the testnets — defaults are pre-configured.
+# No changes needed for the testnets: defaults are pre-configured.
 # For the Dynamic connect dialog (WalletConnect, Safe), set NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID.
 
 npm install
@@ -147,7 +147,7 @@ A `.env.local` on your own machine is enough to run the same app yourself (see [
 npm run test:e2e        # runs Playwright (starts its own dev server; port 3004 must be free)
 ```
 
-Tests mock `window.ethereum` and the RPC of the network under test, and abort every relayer request — no wallet or real network required. The suite forces the injected-wallet stack (`NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` cleared), since the Dynamic connect dialog needs Dynamic's API. `dynamicConnector.spec.ts` covers the Dynamic path below the dialog: it drives the connector in the test process with a fake WalletConnect wallet (the chains a session approved, a wallet's own chain switch, a closed session), so it needs no page, Dynamic account or paired phone. The config enables the Ethereum mainnet row with an unreachable relayer URL so the picker and the mainnet feature flags are covered.
+Tests mock `window.ethereum` and the RPC of the network under test, and abort every relayer request, so no wallet or real network is required. The suite forces the injected-wallet stack (`NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` cleared), since the Dynamic connect dialog needs Dynamic's API. `dynamicConnector.spec.ts` covers the Dynamic path below the dialog: it drives the connector in the test process with a fake WalletConnect wallet (the chains a session approved, a wallet's own chain switch, a closed session), so it needs no page, Dynamic account or paired phone. The config enables the Ethereum mainnet row with an unreachable relayer URL so the picker and the mainnet feature flags are covered.
 
 With `CI` set, Playwright builds the app and runs the suite against `next start` instead of the dev server, because the production CSP is stricter than the development one (no `'unsafe-eval'`, no inline styles). `security.spec.ts` checks the headers and that the app loads without a CSP violation; encryption is not exercised, since every relayer call is aborted. `allowlist.spec.ts` covers `ENABLED_NETWORKS` by loading the relayer table in the test process, since the server under test runs with it unset, and with `CI` set it also checks that `next start` refuses to boot on an unknown key, and the key storage lookup. `security.spec.ts` also checks that the storage origin a stub relayer (`e2e/stub-relayer.mjs`) returns from `/v2/keyurl` lands in the page's `connect-src`. `tabs.spec.ts` covers the tabs and the Vaults setup hint, and `vaults-env.spec.ts` covers parsing `NEXT_PUBLIC_<NETWORK>_VAULTS`. No test renders a configured vault: that needs a deployed vault and a relayer.
 
