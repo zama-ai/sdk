@@ -15,6 +15,7 @@ describe("no-em-dash CLI with paths", () => {
     git("init", "-q");
     git("config", "user.email", "test@example.com");
     git("config", "user.name", "test");
+    git("config", "commit.gpgsign", "false");
     writeFileSync(join(dir, file), content);
     git("add", ".");
     git("commit", "-qm", "init");
