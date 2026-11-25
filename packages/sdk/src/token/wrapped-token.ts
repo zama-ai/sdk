@@ -38,10 +38,11 @@ import type {
   UnwrapResult,
   WrapOptions,
 } from "../types";
+import { decryptPublicUint } from "../relayer/public-decrypt";
 import type { RawLog } from "../types/transaction";
 import { toError } from "../utils";
 import { requireAlignedWalletAccount, requireChainAlignment } from "../utils/alignment";
-import { assertBigint, assertNonNullable } from "../utils/assertions";
+import { assertNonNullable } from "../utils/assertions";
 import { isEncryptedValueZero } from "../utils/handles";
 import { lookUpReceipt } from "../utils/receipt-lookup";
 import type { TelemetryOperation } from "../telemetry";
@@ -645,6 +646,7 @@ export class WrappedToken extends Token {
    *   or one decoded from an `UnwrapRequested` event (e.g. when finalizing
    *   across sessions).
    * @returns The transaction hash and mined receipt.
+   * @throws if public decryption of the unwrap amount fails. {@link DecryptionFailedError}
    *
    * @example
    * ```ts
@@ -662,19 +664,12 @@ export class WrappedToken extends Token {
   ): Promise<TransactionResult> {
     this.#requireSigner("finalizeUnwrap");
     await requireChainAlignment("finalizeUnwrap", this.sdk.signer, this.sdk.provider);
-    const result = await this.sdk.decryption.decryptPublicValues([unwrapRequestId], {
+    const { value, decryptionProof } = await decryptPublicUint(this.sdk.relayer, unwrapRequestId, {
       operation: telemetryOperation,
     });
-    const clearValue = result.clearValues[unwrapRequestId];
-    assertBigint(clearValue, "finalizeUnwrap: clearValue");
     return this.submitTransaction({
       operation: "finalizeUnwrap",
-      config: finalizeUnwrapContract(
-        this.address,
-        unwrapRequestId,
-        clearValue,
-        result.decryptionProof,
-      ),
+      config: finalizeUnwrapContract(this.address, unwrapRequestId, value, decryptionProof),
     });
   }
 

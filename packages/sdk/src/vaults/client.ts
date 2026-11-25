@@ -9,7 +9,6 @@ import {
   BalanceCheckUnavailableError,
   ChainMismatchError,
   ConfigurationError,
-  DecryptionFailedError,
   EncryptionFailedError,
   SignerNotConfiguredError,
   VaultBatcherPausedError,
@@ -29,9 +28,10 @@ import type {
   TransactionResult,
   WriteContractConfig,
 } from "../types";
+import { decryptPublicUint } from "../relayer/public-decrypt";
 import { requireWriteChain } from "../utils/alignment";
 import { assertConfidentialBalance } from "../utils/assert-balance";
-import { assertBigint, assertNonNullable } from "../utils/assertions";
+import { assertNonNullable } from "../utils/assertions";
 import { isEncryptedValueZero } from "../utils/handles";
 import { submitTransaction } from "../utils/submit-transaction";
 import type { ZamaSDK } from "../zama-sdk";
@@ -276,7 +276,7 @@ export class VaultClient {
    * @throws if the batch is not dispatched. {@link VaultBatchNotDispatchedError}
    * @throws if the provider is not on the batch's chain while a wallet is connected. {@link ChainMismatchError}
    * @throws if the provider is not on the batch's chain with no wallet connected, or the batcher reports an unknown batch state. {@link ConfigurationError}
-   * @throws if public decryption returns no value for the batch's handle. {@link DecryptionFailedError}
+   * @throws if public decryption of the batch's unwrap amount fails. {@link DecryptionFailedError}
    */
   async prepareFinalize(batch: BatchRef): Promise<PreparedFinalize> {
     return (await this.#planFinalize(batch)).call;
@@ -298,28 +298,17 @@ export class VaultClient {
     }
     const handle = await this.#read(batch.chainId, unwrapAmountContract(wrapper, requestId));
     await this.#requireProviderChain(batch.chainId, "vault finalize");
-    const { clearValues, decryptionProof } = await this.#sdk.decryption.decryptPublicValues(
-      [handle],
-      { operation: "vault-finalize" },
-    );
-    const cleartext = clearValues[handle];
-    if (cleartext === undefined) {
-      throw new DecryptionFailedError(`Public decryption returned no value for ${handle}`);
-    }
-    assertBigint(cleartext, "finalize: clearValues[handle]");
-    const config = dispatchBatchCallbackContract(
-      batcher,
-      batch.batchId,
-      cleartext,
-      decryptionProof,
-    );
+    const { value, decryptionProof } = await decryptPublicUint(this.#sdk.relayer, handle, {
+      operation: "vault-finalize",
+    });
+    const config = dispatchBatchCallbackContract(batcher, batch.batchId, value, decryptionProof);
     return {
       config,
       call: {
         chainId: batch.chainId,
         batcher,
         batchId: batch.batchId,
-        unwrapAmountCleartext: cleartext,
+        unwrapAmountCleartext: value,
         decryptionProof,
         call: toCall(config),
       },
