@@ -90,7 +90,7 @@ import { STABLE } from "./vaults";
 function DepositButton() {
   const deposit = useDeposit({
     onSuccess: ({ batches }) => saveBatches(batches),
-    // The join was mined, so a retry would deposit twice: show the transaction instead.
+    // VAULT_JOIN_UNCONFIRMED: the join was mined, so a retry would deposit twice.
     onError: (error) =>
       matchZamaError(error, {
         VAULT_JOIN_UNCONFIRMED: (e) => showUnconfirmedJoin(e.txHash, e.unconfirmedVaultIds),
@@ -225,7 +225,7 @@ import { useRedeem } from "@zama-fhe/react-sdk/vaults";
 
 const redeem = useRedeem({
   onSuccess: ({ batches }) => saveBatches(batches),
-  // The join was mined, so a retry would redeem twice: show the transaction instead.
+  // VAULT_JOIN_UNCONFIRMED: the join was mined, so a retry would redeem twice.
   onError: (error) =>
     matchZamaError(error, {
       VAULT_JOIN_UNCONFIRMED: (e) => showUnconfirmedJoin(e.txHash, e.unconfirmedVaultIds),

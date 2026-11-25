@@ -5,7 +5,7 @@ description: Send confidential ERC-20 tokens privately.
 
 # useConfidentialTransfer
 
-Send confidential ERC-20 tokens privately. The amount is encrypted client-side before the transaction is submitted on-chain. Automatically invalidates the [`useConfidentialBalance`](./useConfidentialBalance.md) cache on success.
+Send confidential ERC-20 tokens privately. The amount is encrypted client-side before the transaction is submitted on-chain.
 
 ## Import
 

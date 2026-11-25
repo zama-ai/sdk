@@ -5,7 +5,7 @@ description: Transfer confidential tokens on behalf of an owner who approved you
 
 # useConfidentialTransferFrom
 
-Transfer confidential tokens on behalf of an owner who approved you as an operator. The sender must have been granted approval via [`useConfidentialSetOperator`](./useConfidentialSetOperator.md) before calling this hook. Automatically invalidates the [`useConfidentialBalance`](./useConfidentialBalance.md) cache on success.
+Transfer confidential tokens on behalf of an owner who approved you as an operator. The sender must have been granted approval via [`useConfidentialSetOperator`](./useConfidentialSetOperator.md) before calling this hook.
 
 ## Import
 

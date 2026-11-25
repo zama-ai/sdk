@@ -10067,7 +10067,7 @@ import { STABLE } from "./vaults";
 function DepositButton() {
   const deposit = useDeposit({
     onSuccess: ({ batches }) => saveBatches(batches),
-    // The join was mined, so a retry would deposit twice: show the transaction instead.
+    // VAULT_JOIN_UNCONFIRMED: the join was mined, so a retry would deposit twice.
     onError: (error) =>
       matchZamaError(error, {
         VAULT_JOIN_UNCONFIRMED: (e) => showUnconfirmedJoin(e.txHash, e.unconfirmedVaultIds),
@@ -10193,7 +10193,7 @@ import { useRedeem } from "@zama-fhe/react-sdk/vaults";
 
 const redeem = useRedeem({
   onSuccess: ({ batches }) => saveBatches(batches),
-  // The join was mined, so a retry would redeem twice: show the transaction instead.
+  // VAULT_JOIN_UNCONFIRMED: the join was mined, so a retry would redeem twice.
   onError: (error) =>
     matchZamaError(error, {
       VAULT_JOIN_UNCONFIRMED: (e) => showUnconfirmedJoin(e.txHash, e.unconfirmedVaultIds),
@@ -16959,7 +16959,7 @@ The current status of the query. Prefer the boolean flags above for conditional 
 
 # useConfidentialTransfer
 
-Send confidential ERC-20 tokens privately. The amount is encrypted client-side before the transaction is submitted on-chain. Automatically invalidates the [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useConfidentialBalance.md) cache on success.
+Send confidential ERC-20 tokens privately. The amount is encrypted client-side before the transaction is submitted on-chain.
 
 ## Import
 
@@ -17197,7 +17197,7 @@ Reset the mutation state back to its initial values. Clears `data`, `error`, and
 
 # useConfidentialTransferFrom
 
-Transfer confidential tokens on behalf of an owner who approved you as an operator. The sender must have been granted approval via [`useConfidentialSetOperator`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useConfidentialSetOperator.md) before calling this hook. Automatically invalidates the [`useConfidentialBalance`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useConfidentialBalance.md) cache on success.
+Transfer confidential tokens on behalf of an owner who approved you as an operator. The sender must have been granted approval via [`useConfidentialSetOperator`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/react/useConfidentialSetOperator.md) before calling this hook.
 
 ## Import
 
@@ -24490,7 +24490,7 @@ import { STABLE } from "./vaults";
 function DepositButton() {
   const deposit = useDeposit({
     onSuccess: ({ batches }) => saveBatches(batches),
-    // The join was mined, so a retry would deposit twice: show the transaction instead.
+    // VAULT_JOIN_UNCONFIRMED: the join was mined, so a retry would deposit twice.
     onError: (error) =>
       matchZamaError(error, {
         VAULT_JOIN_UNCONFIRMED: (e) => showUnconfirmedJoin(e.txHash, e.unconfirmedVaultIds),
@@ -24532,7 +24532,7 @@ export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
 {% endcode %}
 
 
-`saveBatches` stands in for your own storage. See [Store the batches](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md#4-store-the-batches).
+`saveBatches` and `showUnconfirmedJoin` stand in for your own storage and UI. See [Store the batches](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md#4-store-the-batches).
 
 ## Parameters
 
@@ -24713,7 +24713,7 @@ import { STABLE } from "./vaults";
 function RedeemButton() {
   const redeem = useRedeem({
     onSuccess: ({ batches }) => saveBatches(batches),
-    // The join was mined, so a retry would redeem twice: show the transaction instead.
+    // VAULT_JOIN_UNCONFIRMED: the join was mined, so a retry would redeem twice.
     onError: (error) =>
       matchZamaError(error, {
         VAULT_JOIN_UNCONFIRMED: (e) => showUnconfirmedJoin(e.txHash, e.unconfirmedVaultIds),
@@ -24755,7 +24755,7 @@ export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
 {% endcode %}
 
 
-`saveBatches` stands in for your own storage. See [Store the batches](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md#4-store-the-batches).
+`saveBatches` and `showUnconfirmedJoin` stand in for your own storage and UI. See [Store the batches](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/guides/vaults/deposits.md#4-store-the-batches).
 
 ## Parameters
 
