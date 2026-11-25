@@ -4,6 +4,7 @@
 //   pnpm setup:claude --sync   copy from TRUSTED_REF
 //   pnpm setup:claude --off    stop the update reports from the git hooks
 //   --first-run (from `prepare`) installs the git hooks and asks once on the terminal.
+//   --hooks (from .husky/) moves installs that still use husky to these git hooks.
 // Updates read claude-setup/ from TRUSTED_REF, not the checked-out branch. The checkout and merge hooks live in
 // the git dir, not the working tree, so checking out a branch under review runs none of its code.
 
@@ -35,6 +36,10 @@ const PLUGINS = [
 const git = (...args) => execFileSync("git", args, { maxBuffer: 64 * 1024 * 1024 });
 const ROOT = git("rev-parse", "--show-toplevel").toString().trim();
 const TARGET = join(ROOT, ".claude");
+// A branch can force-add files under the gitignored .claude/, which Claude Code would then load.
+const WARN = `git ls-files --error-unmatch .claude >/dev/null 2>&1 &&
+  echo "⚠️  This branch commits files under .claude/. Review them before you run Claude Code here."
+`;
 const REPORT = `[ "$(git config ${MODE_KEY})" = notify ] || exit 0
 tree=$(git rev-parse -q --verify ${TRUSTED_REF}:${SOURCE}) || exit 0
 grep -qs "\\"source\\": \\"$tree\\"" .claude/.claude-setup.json ||
@@ -50,9 +55,9 @@ exec .githooks/pre-commit "$@"
   // $3 is 1 for a branch checkout (including git worktree add) and 0 for a file checkout.
   "post-checkout": `#!/bin/sh
 [ "$3" = "1" ] || exit 0
-${REPORT}`,
+${WARN}${REPORT}`,
   "post-merge": `#!/bin/sh
-${REPORT}`,
+${WARN}${REPORT}`,
 };
 // The claude-setup/ tree last installed, which the hook compares with TRUSTED_REF, and the files it wrote,
 // so the next install can remove the ones the source dropped.
@@ -270,6 +275,8 @@ function firstRun() {
 const args = new Set(process.argv.slice(2));
 if (args.has("--first-run")) {
   firstRun();
+} else if (args.has("--hooks")) {
+  installHooks();
 } else if (args.has("--off")) {
   git("config", MODE_KEY, "off");
   console.log("✅ Git hooks will no longer report claude-setup/ updates.");

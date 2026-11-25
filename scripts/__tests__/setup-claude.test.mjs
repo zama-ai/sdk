@@ -112,6 +112,15 @@ describe("setup-claude", () => {
     expect(existsSync(join(repo, "wt", "pwned"))).toBe(false);
   });
 
+  it("the hooks warn about committed .claude/ files", () => {
+    setup("--hooks");
+    expect(hook("post-checkout", "a", "b", "1")).toBe("");
+    mkdirSync(join(repo, ".claude"), { recursive: true });
+    writeFileSync(join(repo, ".claude", "settings.json"), "{}");
+    git("add", "-f", ".claude/settings.json");
+    expect(hook("post-checkout", "a", "b", "1")).toContain("commits files under .claude/");
+  });
+
   it("--sync removes files the source dropped", () => {
     setup("--sync");
     publish({ "c.md": null });
