@@ -4754,7 +4754,7 @@ The Relayer API key provides secure access to Zama's hosted Relayer service on m
 
 There are two options to access the FHEVM Relayer for mainnet deployment:
 
-**Self-hosted Relayer:** Deploy and operate your own Relayer instance, fund your own gateway wallet, and handle transactions independently. See the [Self-host Relayer](https://github.com/zama-ai/fhevm/blob/main/relayer/docs/SELF_HOSTING.md) documentation for set-up guides and configuration references.
+**Self-hosted Relayer:** Deploy and operate your own Relayer instance, fund your own gateway wallet, and handle transactions independently. To get access to the Relayer for self-hosting, contact [support@zama.ai](mailto:support@zama.ai).
 
 **Zama-hosted Relayer:** Connect to Zama's hosted Relayer using an API key for authentication. Transaction fees will be billed on a monthly basis according to the usage, with possible discounts and grants applied directly in the invoice.
 
@@ -28744,7 +28744,7 @@ If the wallet is on a chain the app does not support, the app shows a **Choose a
 Ethereum and Polygon mainnet appear in the picker only when you give the server a relayer for them. The public testnet relayer does not serve mainnet, so a self-run instance has two options:
 
 1. **A Zama relayer API key.** Set `MAINNET_RELAYER_URL=https://relayer.mainnet.zama.org` and `MAINNET_RELAYER_API_KEY` to a key from the [API key request form](https://docs.zama.org/protocol/sdk/guides/relayer-api-keys). Keys are issued after manual review.
-2. **A self-hosted relayer.** Set `MAINNET_RELAYER_URL` to your relayer, no key needed. See the [relayer self-hosting guide](https://github.com/zama-ai/fhevm/blob/main/relayer/docs/SELF_HOSTING.md); a relayer needs ETH and $ZAMA on the Gateway chain.
+2. **A self-hosted relayer.** To get access to the relayer for self-hosting, contact [support@zama.ai](mailto:support@zama.ai). Then set `MAINNET_RELAYER_URL` to your relayer, no key needed. A relayer needs ETH and $ZAMA on the Gateway chain.
 
 Without one of these the wallet can still connect to mainnet, but the app hides the network, because every encrypt and decrypt request would fail. A wallet that switches to mainnet anyway sees the **Choose a Network** screen with these two options spelled out.
 

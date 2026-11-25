@@ -15,7 +15,7 @@ Only the Zama-hosted **mainnet** relayer needs an API key. On **Sepolia testnet*
 
 There are two options to access the FHEVM Relayer for mainnet deployment:
 
-**Self-hosted Relayer:** Deploy and operate your own Relayer instance, fund your own gateway wallet, and handle transactions independently. See the [Self-host Relayer](https://github.com/zama-ai/fhevm/blob/main/relayer/docs/SELF_HOSTING.md) documentation for set-up guides and configuration references.
+**Self-hosted Relayer:** Deploy and operate your own Relayer instance, fund your own gateway wallet, and handle transactions independently. To get access to the Relayer for self-hosting, contact [support@zama.ai](mailto:support@zama.ai).
 
 **Zama-hosted Relayer:** Connect to Zama's hosted Relayer using an API key for authentication. Transaction fees will be billed on a monthly basis according to the usage, with possible discounts and grants applied directly in the invoice.
 
