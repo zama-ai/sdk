@@ -1,0 +1,25 @@
+id: no-public-decrypt-result-indexing
+language: TypeScript
+severity: error
+message: >-
+  Reading clearValues of a public decryption makes every caller check that the
+  value is there and is a bigint. To decrypt one uint handle, call
+  decryptPublicUint from packages/sdk/src/relayer/public-decrypt.ts. It returns
+  the value as a bigint with its decryption proof.
+files:
+  - packages/*/src/**/*.ts
+ignores:
+  - packages/*/src/**/__tests__/**
+  - packages/sdk/src/namespaces/decryption.ts
+  - packages/sdk/src/relayer/public-decrypt.ts
+rule:
+  kind: subscript_expression
+  has:
+    field: object
+    any:
+      - kind: identifier
+        regex: ^clearValues$
+      - kind: member_expression
+        has:
+          field: property
+          regex: ^clearValues$
