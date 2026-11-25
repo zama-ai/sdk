@@ -104,8 +104,12 @@ function isMerging() {
   try {
     git(["rev-parse", "-q", "--verify", "MERGE_HEAD"]);
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    // `-q --verify` exits 1 when the ref doesn't exist. Anything else is a real git failure.
+    if (error.status === 1) {
+      return false;
+    }
+    throw error;
   }
 }
 
