@@ -79,8 +79,8 @@ finalize.mutate({ chainId: 1, batcher: "0xAlphaDeposit", batchId: 7n });
 
 **Throws:**
 
-- `VaultBatchNotDispatchedError`: the batch is not dispatched, for example because a keeper already finalized it. The error's `state` says which state it is in.
-- `ChainMismatchError`: the wallet is not on the batch's chain.
+- [`VaultBatchNotDispatchedError`](../sdk/errors.md#vaultbatchnotdispatchederror): the batch is not dispatched, for example because a keeper already finalized it. The error's `state` says which state it is in.
+- [`ChainMismatchError`](../sdk/errors.md#chainmismatcherror): the wallet is not on the batch's chain.
 
 ## Return Type
 

@@ -110,8 +110,8 @@ await approve({ amount: 1000n }); // exact amount
 
 **Throws:**
 
-- `SigningRejectedError` -- if the user rejects the wallet prompt
-- `TransactionRevertedError` -- if the approval transaction reverts
+- [`SigningRejectedError`](../sdk/errors.md#signingrejectederror) -- if the user rejects the wallet prompt
+- [`TransactionRevertedError`](../sdk/errors.md#transactionrevertederror) -- if the approval transaction reverts
 
 ## Return Type
 
@@ -120,7 +120,7 @@ The `data` property (after a successful mutation) is `{ txHash: Hex, receipt: Tr
 - **`txHash`** -- Transaction hash submitted to the network.
 - **`receipt`** -- Confirmed transaction receipt from the chain.
 
-Auto-invalidates the `underlyingAllowance` cache on success.
+On success, the hook invalidates the underlying allowance queries.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

@@ -69,11 +69,11 @@ Returns a standard TanStack Query `UseMutationResult<void, Error, RegisterPermit
 
 **Throws:**
 
-- `ConfigurationError` - `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a process boundary and was corrupted)
-- `PreparedPermitChainMismatchError` - the chain embedded in `prepared.eip712` doesn't match the currently active chain
-- `PreparedPermitExpiredError` - the permit's validity window has already elapsed
-- `TransportKeyPairChangedError` - no transport key pair is stored for `prepared.signerAddress`, or it no longer matches the public key `prepared.eip712` was built against; call `preparePermit` again
-- `SigningFailedError` - the signature is invalid or malformed
+- [`ConfigurationError`](../sdk/errors.md#configurationerror) - `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a process boundary and was corrupted)
+- [`PreparedPermitChainMismatchError`](../sdk/errors.md#preparedpermitchainmismatcherror) - the chain embedded in `prepared.eip712` doesn't match the currently active chain
+- [`PreparedPermitExpiredError`](../sdk/errors.md#preparedpermitexpirederror) - the permit's validity window has already elapsed
+- [`TransportKeyPairChangedError`](../sdk/errors.md#transportkeypairchangederror) - no transport key pair is stored for `prepared.signerAddress`, or it no longer matches the public key `prepared.eip712` was built against; call `preparePermit` again
+- [`SigningFailedError`](../sdk/errors.md#signingfailederror) - the signature is invalid or malformed
 
 ## Related
 

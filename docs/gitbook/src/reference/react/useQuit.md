@@ -80,8 +80,8 @@ The batch to quit.
 
 **Throws:**
 
-- `ChainMismatchError`: the wallet is not on the batch's chain.
-- `TransactionRevertedError`: the quit reverted, for example because the batch was dispatched in the meantime.
+- [`ChainMismatchError`](../sdk/errors.md#chainmismatcherror): the wallet is not on the batch's chain.
+- [`TransactionRevertedError`](../sdk/errors.md#transactionrevertederror): the quit reverted, for example because the batch was dispatched in the meantime.
 
 ## Return Type
 
