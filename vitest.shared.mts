@@ -1,3 +1,4 @@
+import { defaultClientConditions, defaultServerConditions } from "vite";
 import type { Plugin } from "vitest/config";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,33 +24,30 @@ export function iifeStub(): Plugin {
   };
 }
 
-export const sharedResolve = {
-  dedupe: ["wagmi", "react", "react-dom", "@tanstack/react-query"],
-  alias: [
-    {
-      find: /^@zama-fhe\/sdk\/cleartext$/,
-      replacement: path.resolve(root, "./packages/sdk/src/cleartext/index.ts"),
-    },
-    { find: /^@zama-fhe\/sdk\/(.+)/, replacement: path.resolve(root, "./packages/sdk/src/$1") },
-    { find: "@zama-fhe/sdk", replacement: path.resolve(root, "./packages/sdk/src") },
-    {
-      find: /^@zama-fhe\/react-sdk\/(.+)/,
-      replacement: path.resolve(root, "./packages/react-sdk/src/$1"),
-    },
-    { find: /^@zama-fhe\/react-sdk$/, replacement: path.resolve(root, "./packages/react-sdk/src") },
-    {
-      find: /^wagmi\/actions$/,
-      replacement: path.resolve(
-        root,
-        "./packages/react-sdk/node_modules/wagmi/dist/esm/exports/actions.js",
-      ),
-    },
-    {
-      find: /^wagmi$/,
-      replacement: path.resolve(
-        root,
-        "./packages/react-sdk/node_modules/wagmi/dist/esm/exports/index.js",
-      ),
-    },
-  ],
+// Setting `conditions` replaces Vite's defaults, so both lists extend them.
+const sourceCondition = "@zama-fhe/source";
+
+export const sharedConfig = {
+  resolve: {
+    conditions: [sourceCondition, ...defaultClientConditions],
+    dedupe: ["wagmi", "react", "react-dom", "@tanstack/react-query"],
+    alias: [
+      {
+        find: /^wagmi\/actions$/,
+        replacement: path.resolve(
+          root,
+          "./packages/react-sdk/node_modules/wagmi/dist/esm/exports/actions.js",
+        ),
+      },
+      {
+        find: /^wagmi$/,
+        replacement: path.resolve(
+          root,
+          "./packages/react-sdk/node_modules/wagmi/dist/esm/exports/index.js",
+        ),
+      },
+    ],
+  },
+  // Vite applies `resolve.conditions` to the client environment only; node-environment tests resolve through `ssr.resolve`.
+  ssr: { resolve: { conditions: [sourceCondition, ...defaultServerConditions] } },
 };

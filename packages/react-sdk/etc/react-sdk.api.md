@@ -16,12 +16,12 @@ import { ConfidentialTransferFromAndCallParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferFromParams } from '@zama-fhe/sdk/query';
 import { ConfidentialTransferParams } from '@zama-fhe/sdk/query';
 import { DecryptBalanceAsParams } from '@zama-fhe/sdk/query';
+import { DecryptInput } from '@zama-fhe/sdk/query';
 import { DecryptPublicValuesResult } from '@zama-fhe/sdk';
 import { DecryptResult } from '@zama-fhe/sdk/query';
 import { DelegatedDecryptValuesMutationParams } from '@zama-fhe/sdk/query';
 import { DelegateDecryptionParams } from '@zama-fhe/sdk/query';
 import { DelegationStatus } from '@zama-fhe/sdk/query';
-import { EncryptedInput } from '@zama-fhe/sdk/query/user-decrypt';
 import { EncryptParams } from '@zama-fhe/sdk';
 import { EncryptResult } from '@zama-fhe/sdk';
 import { FinalizeUnwrapParams } from '@zama-fhe/sdk/query';
@@ -157,7 +157,7 @@ export function useDecryptBalanceAs(address: Address, options?: UseMutationOptio
 export function useDecryptPublicValues(): UseMutationResult<DecryptPublicValuesResult, Error, `0x${string}`[], unknown>;
 
 // @public
-export function useDecryptValues(encryptedInputs: EncryptedInput[], options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): UseQueryResult<Readonly<Record<`0x${string}`, ClearValue>>, Error>;
+export function useDecryptValues(inputs: DecryptInput[], options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">): UseQueryResult<Readonly<Record<`0x${string}`, ClearValue>>, Error>;
 
 // @public
 export type UseDecryptValuesResult = ReturnType<typeof useDecryptValues>;
