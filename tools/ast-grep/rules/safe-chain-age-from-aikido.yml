@@ -1,0 +1,22 @@
+id: safe-chain-age-from-aikido
+language: yaml
+severity: error
+message: Set the Safe Chain minimum package age only in .aikido.
+note: >-
+  The environment variable and the CLI flags override the .aikido value, so a workflow
+  that sets them silently drifts from the repo policy and from minimumReleaseAge in
+  pnpm-workspace.yaml.
+metadata:
+  added: 2026-11-25
+files:
+  - .github/workflows/*.yml
+  - .github/workflows/*.yaml
+  - .github/actions/**/action.yml
+  - .github/actions/**/action.yaml
+rule:
+  any:
+    - kind: plain_scalar
+    - kind: double_quote_scalar
+    - kind: single_quote_scalar
+    - kind: block_scalar
+  regex: SAFE_CHAIN_MINIMUM_PACKAGE_AGE_HOURS|--safe-chain-(minimum-package-age-hours|skip-minimum-package-age)
