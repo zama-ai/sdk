@@ -30,7 +30,7 @@ If the snippet you're about to generate composes the underlying contract calls f
 
 ## Rules and what enforces them
 
-Add a rule only with its check and the PR that showed the need. Delete a rule that never fires or that people often suppress.
+Add a rule only with its check and the PR that showed the need. Delete a rule that can no longer match anything, or that people often suppress.
 
 | Rule                                                                                                                          | Enforced by                                                                                                | Origin |
 | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------ |
