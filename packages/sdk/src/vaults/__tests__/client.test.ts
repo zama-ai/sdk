@@ -1040,6 +1040,10 @@ describe("batch actions", () => {
       batcher: ALPHA.depositBatcher,
       batchId: 3n,
     });
+    expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
+      encryptedValues: [`0x${"ef".repeat(32)}`],
+      options: { operation: "vault-finalize" },
+    });
     expect(prepared).toMatchObject({ unwrapAmountCleartext: 42n, decryptionProof: "0x1234" });
     expect(decode(prepared.call)).toMatchObject({
       functionName: "dispatchBatchCallback",

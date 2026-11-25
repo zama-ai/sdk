@@ -5,7 +5,7 @@ import type { EncryptedValue, RelayerRequestOptions, RelayerSDK } from "./types"
 /**
  * Publicly decrypt one uint handle, such as an unwrap amount, for an on-chain finalize call.
  *
- * @throws if the relayer returns no value, or a value that is not a uint. {@link DecryptionFailedError}
+ * @throws if the relayer request fails, the proof is for another handle, or the value is not a uint. {@link DecryptionFailedError}
  */
 export async function decryptPublicUint(
   relayer: Pick<RelayerSDK, "decryptPublicValuesWithSignatures">,
@@ -17,6 +17,12 @@ export async function decryptPublicUint(
     .catch((error: unknown) => {
       throw wrapDecryptError(error, "Public decryption failed");
     });
+  const provenHandle = result.checkSignaturesArgs.handlesList[0];
+  if (provenHandle?.toLowerCase() !== encryptedValue.toLowerCase()) {
+    throw new DecryptionFailedError(
+      `Public decryption of ${encryptedValue} returned a proof for ${provenHandle ?? "no handle"}`,
+    );
+  }
   const value = result.clearValues[0]?.value;
   if (typeof value !== "bigint") {
     throw new DecryptionFailedError(

@@ -646,6 +646,7 @@ export class WrappedToken extends Token {
    *   or one decoded from an `UnwrapRequested` event (e.g. when finalizing
    *   across sessions).
    * @returns The transaction hash and mined receipt.
+   * @throws if public decryption returns no uint for the unwrap request. {@link DecryptionFailedError}
    *
    * @example
    * ```ts

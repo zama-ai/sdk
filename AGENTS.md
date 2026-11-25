@@ -37,7 +37,6 @@ Add a rule only with its check and the PR that showed the need. Delete a rule th
 | Check a saved tx hash with `lookUpReceipt` (`utils/receipt-lookup.ts`). Wait for a receipt only on a hash you just submitted. | ast-grep rule `no-receipt-wait-on-saved-hash` (`pnpm lint`)                                                | #967   |
 | Reading pending unshields never writes storage.                                                                               | `loadPendingUnshields` in `packages/sdk/src/token/pending-unshield.ts` takes `Pick<GenericStorage, "get">` | #967   |
 | A workflow condition on the PR branch name also checks `github.event.pull_request.head.repo.full_name == github.repository`.  | ast-grep rule `workflow-head-ref-same-repo` (`pnpm lint`)                                                  | #960   |
-| Package code decrypts one public uint with `decryptPublicUint` (`relayer/public-decrypt.ts`), not by reading `clearValues`.   | ast-grep rule `no-public-decrypt-result-indexing` (`pnpm lint`)                                            | #924   |
 
 ## Further reading
 

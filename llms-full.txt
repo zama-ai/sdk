@@ -16063,7 +16063,7 @@ Returns a `PreparedTransaction`. All three fields are JSON-safe, so the object c
 
 - `ConfigurationError` - invalid request, or the provider's chain differs from the configured chain
 - `EncryptionFailedError` - encryption produced no result (encrypting kinds)
-- `DecryptionFailedError` - fallback for an unclassified public-decryption failure (`FinalizeUnwrap`); classified failures preserve their specific [SDK error](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md)
+- `DecryptionFailedError` - public decryption failed without a more specific cause, or returned no uint (`FinalizeUnwrap`); classified failures preserve their specific [SDK error](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md)
 - `DelegationExpirationTooSoonError` / `DelegationSelfNotAllowedError` / `DelegationDelegateEqualsContractError` - delegation guards (`DelegateDecryption`)
 - `TransactionRevertedError` - gas estimation reverted, for example when `Wrap` is prepared before its approval mines
 - `HcuBlockLimitExceededError` / `HcuTransactionLimitExceededError` - gas estimation hit the protocol's FHE compute (HCU) limits; see [Errors](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#hcublocklimitexceedederror)
