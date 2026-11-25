@@ -5,7 +5,7 @@ import type { EncryptedValue, RelayerRequestOptions, RelayerSDK } from "./types"
 /**
  * Publicly decrypt one uint handle, such as an unwrap amount, for an on-chain finalize call.
  *
- * @throws if the relayer request fails, the proof is for another handle, or the value is not a uint. {@link DecryptionFailedError}
+ * @throws if public decryption fails, including when the relayer returns no uint for `encryptedValue`. {@link DecryptionFailedError}
  */
 export async function decryptPublicUint(
   relayer: Pick<RelayerSDK, "decryptPublicValuesWithSignatures">,

@@ -276,7 +276,7 @@ export class VaultClient {
    * @throws if the batch is not dispatched. {@link VaultBatchNotDispatchedError}
    * @throws if the provider is not on the batch's chain while a wallet is connected. {@link ChainMismatchError}
    * @throws if the provider is not on the batch's chain with no wallet connected, or the batcher reports an unknown batch state. {@link ConfigurationError}
-   * @throws if public decryption returns no uint for the batch's handle. {@link DecryptionFailedError}
+   * @throws if public decryption of the batch's unwrap amount fails. {@link DecryptionFailedError}
    */
   async prepareFinalize(batch: BatchRef): Promise<PreparedFinalize> {
     return (await this.#planFinalize(batch)).call;

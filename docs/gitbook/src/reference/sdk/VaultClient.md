@@ -193,7 +193,7 @@ const { call } = await vaults.prepareFinalize(batchRef);
 - `VaultBatchNotDispatchedError` when the batch is not dispatched. The error carries the batch's `state`.
 - `ChainMismatchError` when a wallet is connected and the provider is not on the batch's chain.
 - `ConfigurationError` when the provider is not on the batch's chain with no wallet connected, or the batcher reports an unknown batch state.
-- `DecryptionFailedError` when the public decryption returns no uint.
+- `DecryptionFailedError` when the public decryption returns no value.
 
 ## Send methods
 
