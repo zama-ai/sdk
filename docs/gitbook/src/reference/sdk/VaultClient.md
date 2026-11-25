@@ -80,7 +80,7 @@ The vaults must be on one chain, and their deposit batchers must take the same a
 
 ### MAX_GROUP_VAULTS
 
-`8`. The most vaults a group may hold.
+`4`. The most vaults a group may hold.
 
 ## createVaultClient
 
