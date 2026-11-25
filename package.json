@@ -42,7 +42,7 @@
     "fhevm:install": "if [ -f contracts/lib/fhevm/sdk/js-sdk/contracts/foundry.toml ]; then cd contracts/lib/fhevm/sdk/js-sdk/contracts && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install; else echo \"skipping: contracts/lib/fhevm is not checked out\"; fi",
     "contracts:install": "pnpm forge-fhevm:install && pnpm fhevm:install && cd contracts && GIT_LFS_SKIP_SMUDGE=1 forge soldeer install",
     "contracts:update": "cd contracts && forge soldeer update",
-    "prepare": "if git rev-parse --git-dir >/dev/null 2>&1; then git config core.hooksPath .githooks; fi",
+    "prepare": "if git rev-parse --git-dir >/dev/null 2>&1; then git config core.hooksPath .githooks && node scripts/setup-claude.mjs --first-run || true; fi",
     "submodule:install": "git submodule update --init --recursive contracts/lib/forge-fhevm && (GIT_TERMINAL_PROMPT=0 git submodule update --init --recursive contracts/lib/fhevm || echo \"warning: could not fetch contracts/lib/fhevm; fhevm host contracts and Playwright E2E will be unavailable\")",
     "submodule:update": "git submodule update --remote --merge",
     "forge-fhevm:build": "cd contracts/lib/forge-fhevm && forge build",
