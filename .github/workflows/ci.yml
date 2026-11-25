@@ -86,7 +86,7 @@ jobs:
 
       - run: pnpm lint
 
-      # Claude Code loads .claude/ on checkout, so a branch must not commit agent config there.
+      # Claude Code loads .claude/ from the working tree, so a branch must not commit agent config there.
       - run: test -z "$(git ls-files .claude)" || { echo "::error::Files under .claude/ are committed"; exit 1; }
 
       - run: pnpm typecheck

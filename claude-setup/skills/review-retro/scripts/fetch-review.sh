@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Print one JSON line per review thread, review body, and PR comment on a pull request.
+# Print one JSON line per review thread, non-empty review body, and PR comment not written by the PR author or a bot.
 # Usage: fetch-review.sh <pr-number-or-url> [-R owner/repo]
 # Read-only. Warns on stderr when a page limit truncates the result.
 set -euo pipefail

@@ -12,7 +12,8 @@ Use only shared inputs: the repo files, `AGENTS.md`, `docs/agents/*`, and the sk
 ## 1. Scope
 
 ```bash
-base=$(git merge-base HEAD origin/beta)   # use the PR's base branch if it is not beta
+git fetch origin beta
+base=$(git merge-base HEAD origin/beta)   # use (and fetch) the PR's base branch if it is not beta
 git log --oneline $base..HEAD
 git diff $base --stat
 ```
@@ -57,7 +58,7 @@ For each verified finding:
 
    Prefer, in order: a type or API change, an import boundary (internals that cannot be imported), a targeted lint or ast-grep rule. Do not add a proposed rule in this branch, and never add rules to the lane skills from this step.
 
-Then run `pnpm lint`, `pnpm typecheck`, and the tests for the touched packages. Commit with a conventional message that describes the change, not the review.
+Then run `pnpm lint`, `pnpm typecheck`, and `pnpm test:run <touched dirs>` for `packages/` and `scripts/`. For other dirs, such as `clients/rust`, run the commands `CONTRIBUTING.md` gives. Commit with a conventional message that describes the change, not the review.
 
 If the fixes changed more than a few lines, run steps 2 to 4 once more on the new range. Stop after two rounds and list what is left.
 
