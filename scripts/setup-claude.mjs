@@ -42,6 +42,10 @@ const WARN = `git ls-files --error-unmatch .claude >/dev/null 2>&1 &&
 `;
 const REPORT = `[ "$(git config ${MODE_KEY})" = notify ] || exit 0
 tree=$(git rev-parse -q --verify ${TRUSTED_REF}:${SOURCE}) || exit 0
+[ -f .claude/.claude-setup.json ] || {
+  echo "ℹ️  .claude/ is not set up in this worktree. Run pnpm setup:claude --sync, or --off to stop these reports."
+  exit 0
+}
 grep -qs "\\"source\\": \\"$tree\\"" .claude/.claude-setup.json ||
   echo "ℹ️  ${SOURCE}/ changed on ${TRUSTED_REF}. Run pnpm setup:claude --sync to update .claude/."
 exit 0

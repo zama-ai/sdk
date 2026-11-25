@@ -97,6 +97,12 @@ describe("setup-claude", () => {
     expect(installed("a.md")).toBe("1");
   });
 
+  it("the hook asks a worktree without .claude/ to set it up", () => {
+    setup("--sync");
+    rmSync(join(repo, ".claude"), { recursive: true });
+    expect(hook("post-merge")).toContain("not set up in this worktree");
+  });
+
   it("the hook is quiet when .claude/ is up to date", () => {
     setup("--sync");
     expect(hook("post-merge")).toBe("");
