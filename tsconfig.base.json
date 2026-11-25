@@ -20,7 +20,9 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
-    "useUnknownInCatchVariables": true
+    "useUnknownInCatchVariables": true,
+    // Resolves sdk and react-sdk imports to src, so typecheck runs without building them first.
+    "customConditions": ["@zama-fhe/source"]
   },
   "exclude": ["node_modules", "**/node_modules", "**/dist", "**/.next", "coverage"]
 }

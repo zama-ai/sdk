@@ -36,16 +36,19 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "@zama-fhe/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./wagmi": {
+      "@zama-fhe/source": "./src/wagmi/index.ts",
       "types": "./dist/wagmi/index.d.ts",
       "import": "./dist/wagmi/index.js",
       "default": "./dist/wagmi/index.js"
     },
     "./vaults": {
+      "@zama-fhe/source": "./src/vaults/index.ts",
       "types": "./dist/vaults/index.d.ts",
       "import": "./dist/vaults/index.js",
       "default": "./dist/vaults/index.js"
