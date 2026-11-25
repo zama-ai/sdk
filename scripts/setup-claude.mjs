@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Installs claude-setup/ into the gitignored .claude/.
-//   pnpm setup:claude          copy from this checkout and install the plugins
-//   pnpm setup:claude --sync   copy from TRUSTED_REF
+//   pnpm setup:claude          copy from this checkout
+//   pnpm setup:claude --sync   copy from TRUSTED_REF (both also install the plugins)
 //   pnpm setup:claude --off    stop the update reports from the git hooks
 //   --first-run (from `prepare`) installs the git hooks and asks once on the terminal.
 //   --hooks (from .husky/) moves installs that still use husky to these git hooks.
@@ -235,6 +235,7 @@ function setUp({ fromRef }) {
   install(fromRef ? filesAtRef(TRUSTED_REF) : filesInCheckout(), sourceTree(ref));
   git("config", MODE_KEY, "notify");
   console.log(`✅ Git hooks will tell you when ${SOURCE}/ changes on ${TRUSTED_REF}.`);
+  installPlugins();
 }
 
 function firstRun() {
@@ -269,7 +270,6 @@ function firstRun() {
     return;
   }
   setUp({ fromRef: true });
-  installPlugins();
 }
 
 const args = new Set(process.argv.slice(2));
@@ -284,5 +284,4 @@ if (args.has("--first-run")) {
   setUp({ fromRef: true });
 } else {
   setUp({ fromRef: false });
-  installPlugins();
 }
