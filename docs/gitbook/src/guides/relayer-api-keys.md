@@ -8,7 +8,7 @@ description: How to obtain, configure, and securely manage your Zama Relayer API
 The Relayer API key provides secure access to Zama's hosted Relayer service on mainnet. This guide explains how to obtain and use your API key.
 
 {% hint style="info" %}
-Only the Zama-hosted **mainnet** relayer needs an API key. On **Sepolia testnet** the relayer is open — the `sepolia` preset works with no key, so you can build and test the full flow before requesting one.
+Only the Zama-hosted **mainnet** relayer needs an API key. On **Sepolia testnet** the relayer is open: the `sepolia` preset works with no key, so you can build and test the full flow before requesting one.
 {% endhint %}
 
 ## Overview
@@ -31,8 +31,8 @@ Before publishing your solution on mainnet, ensure that end-to-end integration h
 
 Once you receive your API key, wire it into the SDK using one of the two strategies covered in the [Authentication guide](authentication.md):
 
-- **Backend proxy** (recommended for browser apps) — the proxy injects the `x-api-key` header so the key never reaches the client.
-- **Direct API key** (server-side apps only) — pass the key in the relayer transport's `auth` field as `{ __type: "ApiKeyHeader", value: ... }`.
+- **Backend proxy** (recommended for browser apps): the proxy injects the `x-api-key` header so the key never reaches the client.
+- **Direct API key** (server-side apps only): pass the key in the relayer transport's `auth` field as `{ __type: "ApiKeyHeader", value: ... }`.
 
 A direct API key reads the key from the environment and sets it on the chain:
 
@@ -66,7 +66,7 @@ let chain = ChainConfig::new(11_155_111, "https://sepolia.infura.io/v3/YOUR_KEY"
 {% endtab %}
 {% endtabs %}
 
-For the Zama-hosted relayer, `ApiKeyHeader` is the supported `auth` method — the hosted endpoint accepts the key only in the `x-api-key` header. (`BearerToken` applies to self-hosted relayers or proxied setups.)
+For the Zama-hosted relayer, `ApiKeyHeader` is the supported `auth` method: the hosted endpoint accepts the key only in the `x-api-key` header. (`BearerToken` applies to self-hosted relayers or proxied setups.)
 
 The Authentication guide includes copy-paste examples for both, an Express proxy reference implementation, and the full table of supported `auth` methods.
 
@@ -89,7 +89,7 @@ The recommended approach depends on your application architecture:
 
 ### Backend proxy pattern
 
-The proxy must add the `x-api-key` header to every forwarded request, so the key stays server-side and your frontend never sees it. It should also pass through the `x-zama-sdk-*` headers the SDK sets, so [SDK usage telemetry](telemetry.md) still reaches the relayer; a proxy that cannot forward custom headers can forward the request URL's query string instead, with `telemetry: "query"` in the SDK config. See the [Authentication guide](authentication.md) for a working Express proxy and the matching client-side `relayerUrl` configuration — the patterns there apply unchanged when the upstream is the Zama-hosted Relayer.
+The proxy must add the `x-api-key` header to every forwarded request, so the key stays server-side and your frontend never sees it. It should also pass through the `x-zama-sdk-*` headers the SDK sets, so [SDK usage telemetry](telemetry.md) still reaches the relayer; a proxy that cannot forward custom headers can forward the request URL's query string instead, with `telemetry: "query"` in the SDK config. See the [Authentication guide](authentication.md) for a working Express proxy and the matching client-side `relayerUrl` configuration. The patterns there apply unchanged when the upstream is the Zama-hosted Relayer.
 
 ## Compromised keys
 
@@ -103,5 +103,5 @@ If Zama identifies that an API key has been compromised, the key holder will be 
 
 ## Next steps
 
-- [Authentication](authentication.md) — wire your API key into the SDK via a backend proxy or direct `auth` field
-- [Configuration](configuration.md) — full relayer, signer, and storage setup
+- [Authentication](authentication.md): wire your API key into the SDK via a backend proxy or direct `auth` field
+- [Configuration](configuration.md): full relayer, signer, and storage setup
