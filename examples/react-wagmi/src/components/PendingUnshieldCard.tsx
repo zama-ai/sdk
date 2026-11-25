@@ -1,7 +1,7 @@
 "use client";
 
 import { useResumeUnshield, usePendingUnshield } from "@zama-fhe/react-sdk";
-import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
+import { type TokenWrapperPairWithMetadata, UnshieldAlreadyFinalizedError } from "@zama-fhe/sdk";
 import { useNetwork } from "@/lib/hooks";
 
 interface PendingUnshieldCardProps {
@@ -16,7 +16,14 @@ export function PendingUnshieldCard({ token, onSuccess }: PendingUnshieldCardPro
 
   const { data: pendingTxHash, isError: loadError } = usePendingUnshield(tokenAddress);
 
-  const resume = useResumeUnshield(tokenAddress, { onSuccess });
+  const resume = useResumeUnshield(tokenAddress, {
+    onSuccess,
+    // Another tab or account finalized the request first: the funds arrived.
+    onError: (error) => {
+      if (error instanceof UnshieldAlreadyFinalizedError) onSuccess?.();
+    },
+  });
+  const alreadyFinalized = resume.error instanceof UnshieldAlreadyFinalizedError;
 
   if (loadError) {
     return (
@@ -35,7 +42,7 @@ export function PendingUnshieldCard({ token, onSuccess }: PendingUnshieldCardPro
   // invalidated (not synchronously cleared) on resume success — without this
   // guard, a null pendingTxHash from a completed refetch would unmount the card
   // before the success message has had a chance to be seen.
-  if (!pendingTxHash && !resume.isSuccess) return null;
+  if (!pendingTxHash && !resume.isSuccess && !alreadyFinalized) return null;
 
   return (
     <section className="card">
@@ -55,10 +62,15 @@ export function PendingUnshieldCard({ token, onSuccess }: PendingUnshieldCardPro
           </form>
         </div>
       )}
-      {resume.isError && (
+      {resume.isError && !alreadyFinalized && (
         <div className="alert alert-error card-status" role="alert">
           {resume.error?.message}
         </div>
+      )}
+      {alreadyFinalized && (
+        <output className="alert alert-success card-status">
+          This unshield was already finalized. The funds arrived.
+        </output>
       )}
       {resume.isSuccess && resume.data?.txHash && (
         <output className="alert alert-success card-status">

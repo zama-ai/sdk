@@ -107,7 +107,10 @@ if (!existsSync(TARGET)) {
 
 try {
   execFileSync("claude", ["--version"], { stdio: "ignore" });
-} catch {
+} catch (error) {
+  if (error.code !== "ENOENT") {
+    throw error;
+  }
   console.log();
   console.log("⚠️  Claude Code CLI not found. Install it first, then run:");
   console.log("  claude plugin marketplace add zama-ai/zama-marketplace");

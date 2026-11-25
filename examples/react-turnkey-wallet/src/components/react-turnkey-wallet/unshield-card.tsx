@@ -112,7 +112,22 @@ export function ResumeUnshieldCard({
           {shortAddr(txHash)}
         </a>
       </p>
-      <form action={() => resumeUnshield.mutate({ unwrapTxHash: txHash }, { onSuccess })}>
+      <form
+        action={() =>
+          resumeUnshield.mutate(
+            { unwrapTxHash: txHash },
+            {
+              onSuccess,
+              onError: (error) => {
+                // Another tab or account finalized the request first: the funds arrived.
+                if (error instanceof UnshieldAlreadyFinalizedError) {
+                  onSuccess();
+                }
+              },
+            },
+          )
+        }
+      >
         <button
           type="submit"
           disabled={resumeUnshield.isPending}
