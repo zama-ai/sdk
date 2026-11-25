@@ -2,13 +2,16 @@ id: workflow-head-ref-same-repo
 language: yaml
 severity: error
 message: >-
-  The PR author picks the branch name, including in forks. Pair it with
-  github.event.pull_request.head.repo.full_name == github.repository in the same condition.
+  The PR author picks the branch name, even from a fork. AND the condition with
+  github.event.pull_request.head.repo.full_name == github.repository.
 note: >-
   A fork can name its branch main or sync/x. Without the same-repo check, a skip or
   exemption keyed on the branch name also applies to fork PRs.
 files:
   - .github/workflows/*.yml
+  - .github/workflows/*.yaml
+  - .github/actions/**/action.yml
+  - .github/actions/**/action.yaml
 rule:
   kind: block_mapping_pair
   has:
@@ -21,4 +24,4 @@ rule:
     - not:
         has:
           field: value
-          regex: head\.repo\.full_name == github\.repository
+          regex: head\.repo\.full_name\s*==\s*github\.repository\b|github\.repository\s*==\s*github\.event\.pull_request\.head\.repo\.full_name
