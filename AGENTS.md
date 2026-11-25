@@ -12,7 +12,7 @@ The daemon system spans `packages/sdk-daemon`, `clients/go`, `clients/rust`, and
 
 **No em dashes:** don't use em dashes (U+2014) in any code or text you write or modify, including comments, docstrings, docs, and user-facing text. Rephrase using commas, colons, parentheses, or separate sentences. Preserve valid operators, syntax, and existing data that must remain exact. Before finishing, check your changes for em dashes and remove any you introduced.
 
-**Agent setup:** run `pnpm setup:claude`. It copies `claude-setup/` → `.claude/` (which is gitignored and unpublished for security, so never commit it) and installs the Zama marketplace plugins and skills. Its hooks run the pre-commit checks (`lint-staged.config.mjs`) on each edited file. Before the turn ends, they typecheck when TypeScript files changed and rebuild the LLM artifacts when their sources changed (see `CONTRIBUTING.md`).
+**Agent setup:** run `pnpm setup:claude`. It copies `claude-setup/` → `.claude/` (gitignored, so never commit it) and installs the zama-developer and zama-protocol plugins. The first `pnpm install` offers to run it. Afterwards git hooks report `claude-setup/` changes on `origin/beta`, and `pnpm setup:claude --sync` applies them. The Claude Code hooks it installs run the pre-commit checks (`lint-staged.config.mjs`) on each edited file. Before the turn ends, they typecheck when TypeScript files changed and rebuild the LLM artifacts when their sources changed (see `CONTRIBUTING.md`). Before opening a PR, run the `pre-push-review` skill and put its result in the PR description.
 
 ## ⚠️ Not `@zama-fhe/relayer-sdk`
 

@@ -195,6 +195,7 @@ On `beta` and `alpha`, examples can use API newer than their pins. The bump PR (
 
 - **ESM-only**: all packages use `"type": "module"`
 - **oxfmt + oxlint**: enforced by the pre-commit hook (lint-staged); ast-grep adds custom AST lint rules
+  - A new ast-grep rule in `tools/ast-grep/rules/` sets `url:` and `metadata: { escapes, added }` to the PRs that motivated it. Each quarter, delete the rules that people suppress instead of fixing the code.
 - **No new em dashes**: pre-commit and CI fail when a change adds an em dash (U+2014). Rephrase using commas, colons, parentheses, or separate sentences. Run `pnpm lint:em-dash` to check staged changes, or `pnpm lint:em-dash --base <rev>` to check against a base.
   - An edited line counts as added, so replace any em dash on a line you touch. That includes Markdown table rows that oxfmt realigns.
   - A moved file keeps its em dashes only while git still pairs it with the old path (at least 50% similar). A copied file counts as new.
@@ -209,6 +210,7 @@ On `beta` and `alpha`, examples can use API newer than their pins. The bump PR (
 3. **Update types** — if you change public APIs, update TypeScript types accordingly
 4. **Run all checks** — ensure `pnpm typecheck && pnpm lint && pnpm test:run && pnpm build` passes; if you changed public APIs or docs/corpus sources, also run `pnpm api-report:check` and `pnpm llm:check`
 5. **Use a Conventional Commit PR title** — examples: `fix: handle signer timeout`, `feat(react-sdk): add cached token balance hook`
+6. **Run `/pre-push-review` in Claude Code before you open the PR.** It fixes what it finds and writes a `## Pre-push review` section for the PR description. It proposes a new check only for a mistake that already escaped twice or is expensive to miss. For review comments that still reach the PR, run `/review-retro <pr>`.
 
 ### Release Automation
 
