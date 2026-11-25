@@ -112,6 +112,17 @@ function sourceTree(ref) {
   return git("rev-parse", "-q", "--verify", `${ref}:${SOURCE}`).toString().trim();
 }
 
+function trustedTree() {
+  try {
+    return sourceTree(TRUSTED_REF);
+  } catch (error) {
+    if (error.status !== 1) {
+      throw error;
+    }
+    return null;
+  }
+}
+
 function gitConfig(key) {
   try {
     return git("config", key).toString().trim();
@@ -229,10 +240,14 @@ function installHooks() {
 }
 
 function setUp({ fromRef }) {
+  const source = fromRef ? trustedTree() : sourceTree("HEAD");
+  if (!source) {
+    console.error(`❌ ${TRUSTED_REF} has no ${SOURCE}/. Run git fetch origin, then retry.`);
+    process.exit(1);
+  }
   // `pnpm install --ignore-scripts` skips `prepare`, which otherwise installs the git hooks.
   installHooks();
-  const ref = fromRef ? TRUSTED_REF : "HEAD";
-  install(fromRef ? filesAtRef(TRUSTED_REF) : filesInCheckout(), sourceTree(ref));
+  install(fromRef ? filesAtRef(TRUSTED_REF) : filesInCheckout(), source);
   git("config", MODE_KEY, "notify");
   console.log(`✅ Git hooks will tell you when ${SOURCE}/ changes on ${TRUSTED_REF}.`);
   installPlugins();
@@ -240,12 +255,7 @@ function setUp({ fromRef }) {
 
 function firstRun() {
   installHooks();
-  if (gitConfig(MODE_KEY) || process.env.CI) {
-    return;
-  }
-  try {
-    sourceTree(TRUSTED_REF);
-  } catch {
+  if (gitConfig(MODE_KEY) || process.env.CI || !trustedTree()) {
     return;
   }
   let tty;

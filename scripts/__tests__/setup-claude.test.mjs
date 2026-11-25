@@ -78,6 +78,12 @@ describe("setup-claude", () => {
     );
   });
 
+  it("--sync without origin/beta asks for a fetch", () => {
+    git("update-ref", "-d", "refs/remotes/origin/beta");
+    expect(() => setup("--sync")).toThrow(/git fetch origin/);
+    expect(installed("a.md")).toBe(null);
+  });
+
   it("plain setup installs from the checkout", () => {
     write({ "a.md": "branch" });
     setup();
