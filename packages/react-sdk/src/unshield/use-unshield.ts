@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import type { Address, TransactionResult } from "@zama-fhe/sdk";
 import {
   invalidateAfterUnshield,
-  invalidateAfterUnshieldSettled,
+  invalidateAfterUnshieldError,
   type UnshieldParams,
   unshieldMutationOptions,
 } from "@zama-fhe/sdk/query";
@@ -19,6 +19,8 @@ import { useWrappedToken } from "../token/use-wrapped-token";
  * - {@link SigningRejectedError} — user rejected the wallet prompt
  * - {@link EncryptionFailedError} — FHE encryption failed during unwrap
  * - {@link DecryptionFailedError} — public decryption failed during finalize
+ * - {@link UnshieldAlreadyFinalizedError}: the unwrap request was already finalized. The
+ *   funds arrived and this hook refreshes the balances, so treat it as completion
  * - {@link TransactionRevertedError} — on-chain transaction reverted
  *
  * @param address - Address of the confidential wrapper contract.
@@ -43,9 +45,9 @@ export function useUnshield(
       options?.onSuccess?.(data, variables, onMutateResult, context);
       invalidateAfterUnshield(context.client, token.address);
     },
-    onSettled: (data, error, variables, onMutateResult, context) => {
-      options?.onSettled?.(data, error, variables, onMutateResult, context);
-      invalidateAfterUnshieldSettled(context.client, token.address);
+    onError: (error, variables, onMutateResult, context) => {
+      options?.onError?.(error, variables, onMutateResult, context);
+      invalidateAfterUnshieldError(context.client, token.address, error);
     },
   });
 }

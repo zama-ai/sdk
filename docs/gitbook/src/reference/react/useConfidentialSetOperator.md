@@ -82,6 +82,8 @@ await setOperator({ operator: "0xDEX", until: oneDay });
 
 `data` is `{ txHash: Hex; receipt: TransactionReceipt }` — the submitted transaction hash and its confirmed on-chain receipt.
 
+On success, the hook invalidates the operator status queries.
+
 {% include ".gitbook/includes/mutation-result.md" %}
 
 ## Related

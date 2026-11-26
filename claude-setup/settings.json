@@ -1,10 +1,12 @@
 {
   "env": { "ENABLE_LSP_TOOL": "1" },
   "extraKnownMarketplaces": {
-    "zama-marketplace": { "source": { "source": "github", "repo": "zama-ai/zama-marketplace" } }
+    "zama-marketplace": { "source": { "source": "github", "repo": "zama-ai/zama-marketplace" } },
+    "zama-skills": { "source": { "source": "github", "repo": "zama-ai/skills" } }
   },
   "enabledPlugins": {
     "zama-developer@zama-marketplace": true,
+    "zama-protocol@zama-skills": true,
     "typescript-lsp@claude-plugins-official": true
   },
   "permissions": {
@@ -56,6 +58,11 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/stop-typecheck.mjs",
             "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/stop-llm-build.mjs",
+            "timeout": 120
           }
         ]
       }

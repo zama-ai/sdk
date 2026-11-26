@@ -121,7 +121,7 @@ export type OpenBatchesQueryConfig = VaultSelection & {
 /**
  * Reads again one second after the soonest batch comes within {@link JOIN_MARGIN_SECONDS} of its
  * due time, when joins may move on, then every {@link KEEPER_POLL_MS} until a keeper dispatches it.
- * `false` while every vault is paused.
+ * `false` while no batch is open.
  */
 function openBatchesRefetchInterval(read: readonly OpenBatch[] | undefined): number | false {
   const waits = (read ?? [])
@@ -134,7 +134,7 @@ function openBatchesRefetchInterval(read: readonly OpenBatch[] | undefined): num
 }
 
 /**
- * Query options that read the open batch of every vault of a group, or of a vault on its own.
+ * Query options that read the open batch of each vault of a group that is not closed, or of a vault on its own.
  * They refetch when a batch comes within a minute of its due time, and poll until a keeper
  * dispatches it; a `refetchInterval` passed to `useQuery` replaces both.
  */

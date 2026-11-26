@@ -15,10 +15,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Safe-chain enforces its own minimum-package-age check independently of
-  # pnpm-workspace.yaml — mirror both the age (72 h) and the exclusion here.
-  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_HOURS: "72"
-  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@fhevm/sdk,@zama-fhe/sdk,@zama-fhe/react-sdk"
   DAEMON_IMAGE: ghcr.io/zama-ai/sdk-daemon
   CRATE: zama_sdk
 

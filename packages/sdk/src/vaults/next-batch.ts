@@ -1,9 +1,5 @@
-import type { Address } from "viem";
-import {
-  ConfigurationError,
-  VaultBatcherPausedError,
-  VaultBatcherReadFailedError,
-} from "../errors";
+import { zeroHash, type Address } from "viem";
+import { ConfigurationError, VaultBatcherReadFailedError } from "../errors";
 import type { GenericProvider } from "../types";
 import { isContractCallError } from "../utils/error";
 import { batchersOf, type BatcherEntry, type Vault } from "./config";
@@ -14,6 +10,7 @@ import {
   closedContract,
   currentBatchIdContract,
   pausedContract,
+  unwrapRequestIdContract,
 } from "./contracts";
 import type { BatchState, JoinDirection } from "./types";
 
@@ -76,10 +73,10 @@ export function pickNextBatch(
 
 /**
  * The batch a join into each vault reaches, in vault order, and the chain time it was picked at.
+ * A vault whose batchers are all closed reads as closed, naming its first batcher.
  *
  * @internal
  * @throws if a vault lists no batcher, or an address or `lastBatchId` is invalid. {@link ConfigurationError}
- * @throws if every batcher of a vault is closed. {@link VaultBatcherPausedError}
  * @throws if a batcher cannot be read. {@link VaultBatcherReadFailedError}
  */
 export async function readNextBatches(
@@ -89,7 +86,7 @@ export async function readNextBatches(
   direction: JoinDirection,
 ): Promise<{
   readonly now: bigint;
-  readonly next: readonly { readonly vault: Vault; readonly offer: OpenOffer | PausedOffer }[];
+  readonly next: readonly { readonly vault: Vault; readonly offer: BatcherOffer }[];
 }> {
   const [now, read] = await Promise.all([
     provider.getBlockTimestamp(chainId),
@@ -103,16 +100,10 @@ export async function readNextBatches(
       }),
     ),
   ]);
-  const next = read.map(({ vault, entries, offers }) => {
-    const offer = pickNextBatch(offers, now);
-    if (offer === undefined) {
-      throw new VaultBatcherPausedError(
-        `Every ${direction} batcher of vault "${vault.id}" is closed, so the vault takes no joins`,
-        { batcher: entries[0].address, vaultId: vault.id },
-      );
-    }
-    return { vault, offer };
-  });
+  const next = read.map(({ vault, entries, offers }) => ({
+    vault,
+    offer: pickNextBatch(offers, now) ?? { status: "closed" as const, batcher: entries[0].address },
+  }));
   return { now, next };
 }
 
@@ -149,9 +140,19 @@ export async function waitsOnPrevious(
   batcher: Address,
   batchId: bigint,
 ): Promise<boolean> {
+  if (batchId <= 1n) {
+    return false;
+  }
+  const previous = batchId - 1n;
+  // As `dispatchBatch` does: a batcher whose ids start past 1 has no batch before its first, and
+  // `batchState` reverts on one, while its unwrap request reads zero.
+  const unwrapRequestId = await provider.readContract({
+    ...unwrapRequestIdContract(batcher, previous),
+    chainId,
+  });
   return (
-    batchId > 1n &&
-    (await readBatchState(provider, chainId, batcher, batchId - 1n)) === "dispatched"
+    unwrapRequestId !== zeroHash &&
+    (await readBatchState(provider, chainId, batcher, previous)) === "dispatched"
   );
 }
 

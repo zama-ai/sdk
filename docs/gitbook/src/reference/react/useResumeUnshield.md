@@ -128,7 +128,7 @@ The SDK persists and clears the pending-unshield state for you. If you bypass `r
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.
 
-Auto-invalidates the `confidentialBalance` cache on success.
+On success and on `UnshieldAlreadyFinalizedError`, the hook invalidates the confidential balance, underlying allowance, pending-unshield and wagmi balance queries.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

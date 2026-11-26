@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { LLM_ARTIFACTS } from "./lib/artifacts.mjs";
 
 const steps = [
   { name: "build", command: "pnpm", args: ["llm:build"] },
@@ -7,11 +8,7 @@ const steps = [
     command: "pnpm",
     args: ["exec", "vitest", "run", "--config", "vitest.llm.config.ts"],
   },
-  {
-    name: "verify-clean",
-    command: "git",
-    args: ["diff", "--exit-code", "llms.txt", "llms-full.txt", "docs/llm/corpus-manifest.json"],
-  },
+  { name: "verify-clean", command: "git", args: ["diff", "--exit-code", ...LLM_ARTIFACTS] },
 ];
 
 for (const step of steps) {

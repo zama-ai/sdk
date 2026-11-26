@@ -1,0 +1,240 @@
+"use client";
+
+import { useEffect, useState, type ReactNode } from "react";
+import { useDecryptValues, useHasPermit, useMetadata } from "@zama-fhe/react-sdk";
+import { useBatch, useClaim, useFinalize, useQuit } from "@zama-fhe/react-sdk/vaults";
+import type { Address } from "@zama-fhe/sdk";
+import type { BatchRef } from "@zama-fhe/sdk/vaults";
+import { formatUnits } from "viem";
+import { describeError } from "@/lib/errors";
+import type { BatchVault } from "@/lib/networks";
+import {
+  batchKey,
+  removeJoinedBatch,
+  useJoinedBatches,
+  vaultLabel,
+  vaultPermitContracts,
+  type VaultDetails,
+} from "@/lib/vaults";
+
+// A keeper normally settles a dispatched batch. After this long, offer the user to settle it.
+const FINALIZE_AFTER_SECONDS = 15 * 60;
+
+interface InProgressBatchesProps {
+  vaults: BatchVault[];
+  /** By vault index. */
+  details: (VaultDetails | undefined)[];
+  account: Address;
+}
+
+/** Every batch the account joined, in every vault and direction, that is not claimed yet. */
+export function InProgressBatches({ vaults, details, account }: InProgressBatchesProps) {
+  const lists = vaults.flatMap((vault, index) =>
+    (["deposit", "redeem"] as const).map((direction) => ({
+      vault,
+      detail: details[index],
+      direction,
+      batcher: direction === "deposit" ? vault.depositBatcher : vault.redeemBatcher,
+    })),
+  );
+  const joined = useJoinedBatches(
+    account,
+    lists.map(({ vault, batcher }) => ({ chainId: vault.chainId, batcher })),
+  );
+  const groups = lists
+    .map((list, k) => ({ ...list, batches: joined[k] ?? [] }))
+    .filter(({ batches }) => batches.length > 0);
+  const onDone = (batch: BatchRef) => removeJoinedBatch(account, batch);
+
+  return (
+    <section className="card" aria-labelledby="vault-batches-title">
+      <h2 className="card-title" id="vault-batches-title">
+        In progress
+      </h2>
+      {groups.length === 0 ? (
+        <p className="token-meta">Nothing in progress.</p>
+      ) : (
+        groups.map(({ vault, detail, direction, batcher, batches }) => {
+          const token = direction === "deposit" ? detail?.asset.address : detail?.share.address;
+          // The amounts decrypt under the permit the vault's cards grant, which a join needs anyway.
+          const permitContracts = detail ? vaultPermitContracts(vault, detail) : [];
+          return (
+            <div key={batcher} className="card-status">
+              <h3 className="section-label">
+                {vaultLabel(vault, detail)} · {direction === "deposit" ? "Deposits" : "Redemptions"}
+              </h3>
+              <ul className="batch-list">
+                {batches.map((batch) => (
+                  <BatchRow
+                    key={batchKey(batch)}
+                    account={account}
+                    batchRef={batch}
+                    token={token}
+                    permitContracts={permitContracts}
+                    onDone={onDone}
+                  />
+                ))}
+              </ul>
+            </div>
+          );
+        })
+      )}
+    </section>
+  );
+}
+
+interface BatchRowProps {
+  account: Address;
+  batchRef: BatchRef;
+  /** The confidential token the join sent, to show its amount; unknown while the vault loads. */
+  token: Address | undefined;
+  permitContracts: Address[];
+  /** Called once the batch is claimed or taken back. */
+  onDone: (batch: BatchRef) => void;
+}
+
+function BatchRow({ account, batchRef, token, permitContracts, onDone }: BatchRowProps) {
+  const wallNow = useWallClock();
+  const { data: batch, error, dataUpdatedAt } = useBatch(batchRef, { account });
+  const amount = useDepositAmount(batchRef.batcher, batch?.deposit, permitContracts);
+  // A claim, by the user or a keeper, leaves an encrypted zero that only decrypting tells from a
+  // deposit. A settled batch that holds nothing has been paid out, so it leaves the list.
+  const paidOut = amount === 0n && (batch?.state === "finalized" || batch?.state === "canceled");
+  useEffect(() => {
+    if (paidOut) {
+      onDone(batchRef);
+    }
+  }, [paidOut, onDone, batchRef]);
+  const done = { onSuccess: () => onDone(batchRef) };
+  const claim = useClaim(done);
+  const quit = useQuit(done);
+  const finalize = useFinalize();
+  const busy = claim.isPending || quit.isPending || finalize.isPending;
+  const actionError = claim.error ?? quit.error ?? finalize.error;
+
+  const row = (label: string, action?: { label: string; run: () => void }): ReactNode => (
+    <li>
+      <div>
+        <span className="balance-label">
+          Batch #{batchRef.batchId.toString()}
+          {amount !== undefined && token && <Amount token={token} amount={amount} />}
+        </span>
+        <p className="token-meta">{label}</p>
+        {actionError && (
+          <p className="token-meta token-meta-error">
+            {describeError(actionError, "Transaction failed")}
+          </p>
+        )}
+      </div>
+      {action && (
+        <button
+          type="button"
+          className="btn btn-sm btn-secondary"
+          disabled={busy}
+          onClick={action.run}
+        >
+          {busy ? "Sending…" : action.label}
+        </button>
+      )}
+    </li>
+  );
+
+  if (!batch) {
+    return row(error ? describeError(error, "Could not read the batch") : "Loading…");
+  }
+
+  // Chain time now: the read's block time plus the wall time since the read, so a skewed browser
+  // clock does not matter.
+  const now = Number(batch.observedAt) + Math.max(0, wallNow - Math.floor(dataUpdatedAt / 1000));
+
+  // `actions` lists what can be sent now, so a button only shows when it would go through.
+  const offer = (action: "claim" | "quit", label: string) =>
+    batch.actions.includes(action)
+      ? { label, run: () => (action === "claim" ? claim : quit).mutate(batchRef) }
+      : undefined;
+
+  switch (batch.state) {
+    case "pending": {
+      const secondsLeft = Number(batch.dispatchableAt) - now;
+      return row(
+        secondsLeft > 0
+          ? `Queued, sent in ${formatSeconds(secondsLeft)} at the earliest`
+          : "Queued, waiting to be sent",
+        offer("quit", "Cancel"),
+      );
+    }
+    case "dispatched": {
+      // Past the callback deadline, finalize cancels the batch instead of settling it.
+      const expired = now >= Number(batch.cancelsAt);
+      const late = now >= Number(batch.dispatchedAt) + FINALIZE_AFTER_SECONDS;
+      if (!expired && !late) {
+        return row("Processing");
+      }
+      return row(expired ? "Processing timed out" : "Processing is taking longer than usual", {
+        label: expired ? "Cancel and get it back" : "Settle now",
+        run: () => finalize.mutate(batchRef),
+      });
+    }
+    case "finalized":
+      return row("Ready to claim", offer("claim", "Claim"));
+    case "canceled":
+      return row("Did not go through, the amount is available", offer("quit", "Get it back"));
+    default:
+      return batch satisfies never;
+  }
+}
+
+/** The account's deposit in the batch, decrypted under an existing permit: the row never prompts the wallet. */
+function useDepositAmount(
+  batcher: Address,
+  deposit: `0x${string}` | null | undefined,
+  permitContracts: Address[],
+): bigint | undefined {
+  const { data: hasPermit } = useHasPermit({ contractAddresses: permitContracts });
+  const { data: values } = useDecryptValues(
+    deposit ? [{ encryptedValue: deposit, contractAddress: batcher }] : [],
+    { enabled: hasPermit === true && Boolean(deposit) },
+  );
+  const amount = deposit ? values?.[deposit] : undefined;
+  return typeof amount === "bigint" ? amount : undefined;
+}
+
+function Amount({ token, amount }: { token: Address; amount: bigint }) {
+  const { data: metadata } = useMetadata(token);
+  return metadata ? ` · ${formatUnits(amount, metadata.decimals)} ${metadata.symbol}` : null;
+}
+
+/** The browser's Unix time in seconds, ticking every second to advance chain time between reads. */
+function useWallClock() {
+  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
+  useEffect(() => {
+    const id = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
+const UNITS = [
+  ["d", 86_400],
+  ["h", 3_600],
+  ["m", 60],
+  ["s", 1],
+] as const;
+
+/** The two largest units: `2d 3h`, `4h 23m`, `12m 5s`, `45s`. */
+function formatSeconds(seconds: number) {
+  const parts: string[] = [];
+  let rest = Math.floor(seconds);
+  for (const [unit, size] of UNITS) {
+    const count = Math.floor(rest / size);
+    rest -= count * size;
+    if (count > 0 || parts.length > 0) {
+      parts.push(`${count}${unit}`);
+    }
+    if (parts.length === 2) {
+      break;
+    }
+  }
+  // `1m`, not `1m 0s`.
+  return parts.filter((part, index) => index === 0 || !part.startsWith("0")).join(" ") || "0s";
+}

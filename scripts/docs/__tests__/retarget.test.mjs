@@ -337,8 +337,8 @@ Plain-language release notes for the \`3.x\` line.
 
 ## Versions
 
-- [**3.1.x**](v3-1.md) — Release notes for the 3.1.x line.
-- [**3.0.x**](v3-0.md) — Release notes for the 3.0.x line.
+- [**3.1.x**](v3-1.md): Release notes for the 3.1.x line.
+- [**3.0.x**](v3-0.md): Release notes for the 3.0.x line.
 `;
 
 const V3_0 = `---

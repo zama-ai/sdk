@@ -12,7 +12,7 @@ The daemon system spans `packages/sdk-daemon`, `clients/go`, `clients/rust`, and
 
 **No em dashes:** don't use em dashes (U+2014) in any code or text you write or modify, including comments, docstrings, docs, and user-facing text. Rephrase using commas, colons, parentheses, or separate sentences. Preserve valid operators, syntax, and existing data that must remain exact. Before finishing, check your changes for em dashes and remove any you introduced.
 
-**Agent setup:** run `pnpm setup:claude`. It copies `claude-setup/` → `.claude/` (which is gitignored and unpublished for security, so never commit it) and installs the Zama marketplace plugins and skills. Its hooks run the pre-commit checks (`lint-staged.config.mjs`) on each edited file, and typecheck before the turn ends when TypeScript files changed.
+**Agent setup:** run `pnpm setup:claude`. It copies `claude-setup/` → `.claude/` (gitignored, so never commit it) and installs the zama-developer and zama-protocol plugins. The first `pnpm install` offers to run it. Afterwards git hooks report `claude-setup/` changes on `origin/beta`, and `pnpm setup:claude --sync` applies them. The Claude Code hooks it installs run the pre-commit checks (`lint-staged.config.mjs`) on each edited file. Before the turn ends, they typecheck when TypeScript files changed and rebuild the LLM artifacts when their sources changed (see `CONTRIBUTING.md`). Before opening a PR, run the `pre-push-review` skill and put its result in the PR description.
 
 ## ⚠️ Not `@zama-fhe/relayer-sdk`
 
@@ -30,10 +30,15 @@ If the snippet you're about to generate composes the underlying contract calls f
 
 ## Rules and what enforces them
 
-| Rule                                                                                                                          | Enforced by                                                                                                |
-| ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Check a saved tx hash with `lookUpReceipt` (`utils/receipt-lookup.ts`). Wait for a receipt only on a hash you just submitted. | ast-grep rule `no-receipt-wait-on-saved-hash` (`pnpm lint`)                                                |
-| Reading pending unshields never writes storage.                                                                               | `loadPendingUnshields` in `packages/sdk/src/token/pending-unshield.ts` takes `Pick<GenericStorage, "get">` |
+Add a rule only with its check and the PR that showed the need. Delete a rule that can no longer match anything, or that people often suppress.
+
+| Rule                                                                                                                                    | Enforced by                                                                                                | Origin |
+| --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------ |
+| Check a saved tx hash with `lookUpReceipt` (`utils/receipt-lookup.ts`). Wait for a receipt only on a hash you just submitted.           | ast-grep rule `no-receipt-wait-on-saved-hash` (`pnpm lint`)                                                | #967   |
+| Reading pending unshields never writes storage.                                                                                         | `loadPendingUnshields` in `packages/sdk/src/token/pending-unshield.ts` takes `Pick<GenericStorage, "get">` | #967   |
+| A workflow condition on the PR branch name also checks `github.event.pull_request.head.repo.full_name == github.repository`.            | ast-grep rule `workflow-head-ref-same-repo` (`pnpm lint`)                                                  | #960   |
+| Import another package by its name or an `exports` subpath, never by a relative path into its files (tests and test fixtures excepted). | ast-grep rule `no-cross-package-relative-import` (`.ts`/`.tsx`) (`pnpm lint`)                              | #1006  |
+| Set the Safe Chain minimum package age in `.aikido`. A workflow never overrides it with the env var or a CLI flag.                      | ast-grep rule `safe-chain-age-from-aikido` (`pnpm lint`)                                                   | #1011  |
 
 ## Further reading
 

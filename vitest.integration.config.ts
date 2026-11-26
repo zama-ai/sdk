@@ -1,6 +1,6 @@
 import { defineConfig } from "vitest/config";
 import dotenv from "dotenv";
-import path from "node:path";
+import { sharedConfig } from "./vitest.shared.mjs";
 
 export default defineConfig({
   test: {
@@ -14,13 +14,5 @@ export default defineConfig({
     hookTimeout: 30_000,
     env: dotenv.config().parsed,
   },
-  resolve: {
-    alias: [
-      {
-        find: /^@zama-fhe\/sdk\/(.+)/,
-        replacement: path.resolve(__dirname, "./packages/sdk/src/$1"),
-      },
-      { find: "@zama-fhe/sdk", replacement: path.resolve(__dirname, "./packages/sdk/src") },
-    ],
-  },
+  ssr: sharedConfig.ssr,
 });

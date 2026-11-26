@@ -152,7 +152,7 @@ await shield({
 
 **Throws:**
 
-- `InsufficientERC20BalanceError` -- if the ERC-20 balance is less than `amount` (exposes `requested`, `available`, `token`)
+- [`InsufficientERC20BalanceError`](../sdk/errors.md#insufficienterc20balanceerror) -- if the ERC-20 balance is less than `amount` (exposes `requested`, `available`, `token`)
 
 ## Return Type
 
@@ -162,7 +162,7 @@ import { type ShieldParams } from "@zama-fhe/sdk/query";
 
 `data` resolves to `{ txHash: Hex, receipt: TransactionReceipt }`.
 
-Auto-invalidates the `confidentialBalance` cache on success.
+On success, the hook invalidates the confidential balance, underlying allowance and wagmi balance queries.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

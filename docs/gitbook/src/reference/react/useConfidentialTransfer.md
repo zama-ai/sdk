@@ -5,7 +5,7 @@ description: Send confidential ERC-20 tokens privately.
 
 # useConfidentialTransfer
 
-Send confidential ERC-20 tokens privately. The amount is encrypted client-side before the transaction is submitted on-chain. Automatically invalidates the [`useConfidentialBalance`](./useConfidentialBalance.md) cache on success.
+Send confidential ERC-20 tokens privately. The amount is encrypted client-side before the transaction is submitted on-chain.
 
 ## Import
 
@@ -149,8 +149,8 @@ await transfer({
 
 **Throws:**
 
-- `InsufficientConfidentialBalanceError` -- if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
-- `BalanceCheckUnavailableError` -- if balance validation is required but decryption is not possible (no stored permits). Grant a permit first with `useGrantPermit`, or use `skipBalanceCheck: true`
+- [`InsufficientConfidentialBalanceError`](../sdk/errors.md#insufficientconfidentialbalanceerror) -- if the confidential balance is less than `amount` (exposes `requested`, `available`, `token`)
+- [`BalanceCheckUnavailableError`](../sdk/errors.md#balancecheckunavailableerror) -- if balance validation is required but decryption is not possible (no stored permits). Grant a permit first with `useGrantPermit`, or use `skipBalanceCheck: true`
 
 ## Return Type
 
@@ -158,6 +158,8 @@ The `data` property (after a successful mutation) is `{ txHash: Hex, receipt: Tr
 
 - **`txHash`** -- Transaction hash submitted to the network.
 - **`receipt`** -- Confirmed transaction receipt from the chain.
+
+On success, the hook invalidates the confidential balance queries.
 
 {% include ".gitbook/includes/mutation-result.md" %}
 

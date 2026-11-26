@@ -1,5 +1,5 @@
 import { defineConfig } from "vitest/config";
-import { iifeStub, sharedResolve } from "./vitest.shared.mjs";
+import { iifeStub, sharedConfig } from "./vitest.shared.mjs";
 
 export default defineConfig({
   test: {
@@ -16,7 +16,7 @@ export default defineConfig({
           globals: true,
           setupFiles: ["./vitest.setup.ts"],
         },
-        resolve: sharedResolve,
+        ...sharedConfig,
       },
       {
         plugins: [iifeStub()],
@@ -30,7 +30,7 @@ export default defineConfig({
           globals: true,
           setupFiles: ["./vitest.setup.ts"],
         },
-        resolve: sharedResolve,
+        ...sharedConfig,
       },
       {
         test: {
@@ -38,7 +38,7 @@ export default defineConfig({
           include: ["packages/sdk/**/*.test-d.ts"],
           typecheck: { enabled: true, tsconfig: "./packages/sdk/tsconfig.json" },
         },
-        resolve: sharedResolve,
+        ...sharedConfig,
       },
       {
         plugins: [iifeStub()],
@@ -51,14 +51,18 @@ export default defineConfig({
           globals: true,
           setupFiles: ["./vitest.setup.ts"],
         },
-        resolve: sharedResolve,
+        ...sharedConfig,
       },
       {
         test: {
           name: "scripts",
           environment: "node",
           // scripts/llm tests run separately via `pnpm llm:check` (vitest.llm.config.ts).
-          include: ["scripts/docs/**/*.test.mjs", "scripts/lint/**/*.test.mjs"],
+          include: [
+            "scripts/__tests__/*.test.mjs",
+            "scripts/docs/**/*.test.mjs",
+            "scripts/lint/**/*.test.mjs",
+          ],
           exclude: ["**/node_modules/**"],
         },
       },

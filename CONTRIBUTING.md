@@ -27,6 +27,8 @@ pnpm build
 pnpm test:run
 ```
 
+`pnpm install` also turns on the pre-commit hook in `.githooks/` by setting `core.hooksPath`. All worktrees of a clone share that setting, but the hook runs with each worktree's own `node_modules`, so run `pnpm install` in a new worktree before you commit there.
+
 ### Monorepo Structure
 
 pnpm workspaces are defined in `pnpm-workspace.yaml` (`packages/*`, `tools/*`, `test/*`, `codemods/*`):
@@ -192,7 +194,8 @@ On `beta` and `alpha`, examples can use API newer than their pins. The bump PR (
 ### Code Style
 
 - **ESM-only**: all packages use `"type": "module"`
-- **oxfmt + oxlint**: enforced via pre-commit hooks (Husky + lint-staged); ast-grep adds custom AST lint rules
+- **oxfmt + oxlint**: enforced by the pre-commit hook (lint-staged); ast-grep adds custom AST lint rules
+  - A new ast-grep rule in `tools/ast-grep/rules/` sets `url:` and `metadata: { escapes, added }` to the PRs that motivated it. Each quarter, delete the rules that people suppress instead of fixing the code.
 - **No new em dashes**: pre-commit and CI fail when a change adds an em dash (U+2014). Rephrase using commas, colons, parentheses, or separate sentences. Run `pnpm lint:em-dash` to check staged changes, or `pnpm lint:em-dash --base <rev>` to check against a base.
   - An edited line counts as added, so replace any em dash on a line you touch. That includes Markdown table rows that oxfmt realigns.
   - A moved file keeps its em dashes only while git still pairs it with the old path (at least 50% similar). A copied file counts as new.
@@ -207,6 +210,7 @@ On `beta` and `alpha`, examples can use API newer than their pins. The bump PR (
 3. **Update types** — if you change public APIs, update TypeScript types accordingly
 4. **Run all checks** — ensure `pnpm typecheck && pnpm lint && pnpm test:run && pnpm build` passes; if you changed public APIs or docs/corpus sources, also run `pnpm api-report:check` and `pnpm llm:check`
 5. **Use a Conventional Commit PR title** — examples: `fix: handle signer timeout`, `feat(react-sdk): add cached token balance hook`
+6. **Run `/pre-push-review` in Claude Code before you open the PR.** It fixes what it finds and writes a `## Pre-push review` section for the PR description. It proposes a new check only for a mistake that already escaped twice or is expensive to miss. For review comments that still reach the PR, run `/review-retro <pr>`.
 
 ### Release Automation
 
@@ -249,10 +253,15 @@ Install channels:
 
 ### Adding a New Signer Adapter
 
-1. Implement the `GenericSigner` interface in a new file under `packages/sdk/src/<library>/`
-2. Add a corresponding entry point in `package.json` exports
-3. Configure tsup to build the new entry point
-4. Add tests
+1. Implement the `GenericSigner` interface under `packages/sdk/src/<library>/`, exported from `index.ts`
+2. Expose it as a subpath export (see [Adding a Subpath Export](#adding-a-subpath-export))
+3. Add tests
+
+### Adding a Subpath Export
+
+1. Add `"<name>/index": "src/<name>/index.ts"` to the package's `rolldown.config.ts` (`entryPoints` in `packages/sdk`, `input` in `packages/react-sdk`).
+2. Add `./<name>` to the package's `package.json` `exports` by copying an existing entry, keeping `"@zama-fhe/source"` first and pointing at the `src` entry file so workspace typecheck and tests resolve it from source. In `packages/sdk`, also add it to `typesVersions`. `pnpm test:run` checks both.
+3. Optional: to track its public API, add an `api-extractor.<name>.json` (copy `api-extractor.vaults.json`), add it to the package's `api-report` and `api-report:check` scripts and the root `api-report:check:<package>` script, then run `pnpm api-report`.
 
 ### Adding React Hooks
 

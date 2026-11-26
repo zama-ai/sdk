@@ -13,9 +13,10 @@ export interface UnshieldAlreadyFinalizedDetails {
 
 /**
  * The unwrap request was already finalized on-chain: the underlying ERC-20
- * tokens were delivered and there is nothing left to resume. The SDK clears
+ * tokens were delivered and there is nothing left to finalize. The SDK clears
  * the persisted pending-unshield entry before throwing, so treat this as a
- * success signal: refresh balances and dismiss any "resume unshield" prompt.
+ * success signal: show the unshield as complete, refresh balances, and dismiss
+ * any "resume unshield" prompt.
  */
 export class UnshieldAlreadyFinalizedError extends ZamaError {
   /** Transaction hash of the original unwrap request. */

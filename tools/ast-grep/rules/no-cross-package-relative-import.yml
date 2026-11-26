@@ -1,0 +1,69 @@
+id: no-cross-package-relative-import
+language: TypeScript
+severity: error
+message: >-
+  Import another package by its name or a subpath in its package.json `exports`,
+  not by a relative path into its files.
+note: >-
+  The exports field in each package.json is the public surface. A relative path
+  around it couples packages to each other's internals, which then can't change
+  without breaking the other package.
+metadata:
+  added: 2026-11-25
+files:
+  - packages/*/src/**/*.ts
+ignores:
+  - "**/__tests__/**"
+  - "**/*.test.ts"
+  - "**/test-fixtures/**"
+  - packages/sdk-daemon/src/generated/**
+rule:
+  any:
+    - kind: string
+    - kind: template_string
+  regex: ^["'`](\./)?(\.\./)+(sdk|react-sdk|sdk-daemon)/
+  inside:
+    any:
+      - kind: import_statement
+      - kind: export_statement
+      - kind: arguments
+        inside:
+          kind: call_expression
+          has:
+            field: function
+            kind: import
+---
+id: no-cross-package-relative-import-tsx
+language: Tsx
+severity: error
+message: >-
+  Import another package by its name or a subpath in its package.json `exports`,
+  not by a relative path into its files.
+note: >-
+  The exports field in each package.json is the public surface. A relative path
+  around it couples packages to each other's internals, which then can't change
+  without breaking the other package.
+metadata:
+  added: 2026-11-25
+files:
+  - packages/*/src/**/*.tsx
+ignores:
+  - "**/__tests__/**"
+  - "**/*.test.tsx"
+  - "**/test-fixtures/**"
+  - packages/sdk-daemon/src/generated/**
+rule:
+  any:
+    - kind: string
+    - kind: template_string
+  regex: ^["'`](\./)?(\.\./)+(sdk|react-sdk|sdk-daemon)/
+  inside:
+    any:
+      - kind: import_statement
+      - kind: export_statement
+      - kind: arguments
+        inside:
+          kind: call_expression
+          has:
+            field: function
+            kind: import
