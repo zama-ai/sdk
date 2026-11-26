@@ -4889,6 +4889,7 @@ dependencies = [
  "num-bigint",
  "prost",
  "reqwest",
+ "rustix",
  "serde_json",
  "tempfile",
  "tokio",

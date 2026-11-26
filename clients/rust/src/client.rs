@@ -2,6 +2,7 @@ use crate::{ClientError, Result, SdkBuilder, SdkConfig, generated, types::Signer
 use generated::daemon_service_client::DaemonServiceClient;
 use hyper_util::rt::TokioIo;
 use std::{future::Future, path::Path, time::Duration};
+use tokio::net::UnixStream;
 use tonic::transport::{Channel, Endpoint};
 use tower::service_fn;
 
@@ -12,6 +13,21 @@ pub struct Client {
     pub(crate) timeout: Option<Duration>,
 }
 
+/// Connects to the daemon socket and keeps the stream only when the process
+/// listening on it runs as `expected_uid`. The daemon and the application run as
+/// the same UID, so any other peer is not the daemon.
+async fn connect_daemon(socket: &Path, expected_uid: u32) -> std::io::Result<UnixStream> {
+    let stream = UnixStream::connect(socket).await?;
+    let uid = stream.peer_cred()?.uid();
+    if uid != expected_uid {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::PermissionDenied,
+            format!("daemon socket peer runs as UID {uid}, expected UID {expected_uid}"),
+        ));
+    }
+    Ok(stream)
+}
+
 impl Client {
     pub async fn connect(socket: impl AsRef<Path>) -> Result<Self> {
         let socket = socket.as_ref().to_owned();
@@ -20,7 +36,7 @@ impl Client {
             .connect_with_connector(service_fn(move |_| {
                 let socket = socket.clone();
                 async move {
-                    tokio::net::UnixStream::connect(socket)
+                    connect_daemon(&socket, rustix::process::getuid().as_raw())
                         .await
                         .map(TokioIo::new)
                 }
@@ -108,5 +124,22 @@ impl Client {
             return Err(ClientError::protocol("missing SDK context ID"));
         }
         Ok(response.context_id)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn connect_daemon_checks_the_peer_uid() {
+        let dir = tempfile::tempdir().unwrap();
+        let socket = dir.path().join("s");
+        let _listener = tokio::net::UnixListener::bind(&socket).unwrap();
+        let uid = rustix::process::getuid().as_raw();
+
+        connect_daemon(&socket, uid).await.unwrap();
+        let error = connect_daemon(&socket, uid + 1).await.unwrap_err();
+        assert_eq!(error.kind(), std::io::ErrorKind::PermissionDenied);
     }
 }

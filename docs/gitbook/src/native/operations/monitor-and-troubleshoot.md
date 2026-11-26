@@ -8,15 +8,15 @@ Monitor daemon-backed operations from your Go or Rust application. Record elapse
 
 ## Available signals
 
-| Signal                                           | Meaning                                                                                                               |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| Container healthcheck                            | The daemon answers `GetInfo` on its socket. It does not check RPC or relayer reachability.                            |
-| `Daemon ready.` on stdout                        | The daemon has started its socket server.                                                                             |
-| Startup failure line on stderr and exit code `1` | Configuration or startup failed.                                                                                      |
-| SDK warning and error messages on stderr         | Plain-text SDK diagnostics, without attached data objects.                                                            |
-| Client errors                                    | SDK or daemon code, message, retryability, and a retry delay when available. Transport failures may lack an SDK code. |
+| Signal                                           | Meaning                                                                                                                             |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Container healthcheck                            | The socket file belongs to the daemon's user and the daemon answers `GetInfo` on it. It does not check RPC or relayer reachability. |
+| `Daemon ready.` on stdout                        | The daemon has started its socket server.                                                                                           |
+| Startup failure line on stderr and exit code `1` | Configuration or startup failed.                                                                                                    |
+| SDK warning and error messages on stderr         | Plain-text SDK diagnostics, without attached data objects.                                                                          |
+| Client errors                                    | SDK or daemon code, message, retryability, and a retry delay when available. Transport failures may lack an SDK code.               |
 
-The daemon does not expose a metrics endpoint or structured request logs. Use application-observed operation latencies and errors as the service-level signals. Use the socket healthcheck as a liveness probe: run `node dist/healthcheck.js` in the daemon container, with `ZAMA_SDK_DAEMON_SOCKET_PATH` set.
+The daemon does not expose a metrics endpoint or structured request logs. Use application-observed operation latencies and errors as the service-level signals. Use the socket healthcheck as a liveness probe: run `node dist/healthcheck.js` in the daemon container as the daemon's user, with `ZAMA_SDK_DAEMON_SOCKET_PATH` set.
 
 In Go, inspect `SDKError` and `RPCError`. In Rust, inspect `ClientError::kind()` and `ClientError::sdk_error()`. [Daemon error codes](../reference/error-codes.md) lists the codes the daemon adds to the SDK codes. Include operation names and error codes in your metrics without including plaintext values, credentials, or signing payloads.
 
@@ -29,6 +29,14 @@ In Go, inspect `SDKError` and `RPCError`. In Rust, inspect `ClientError::kind()`
 5. Check configured values against the [configuration reference](../reference/daemon-configuration.md), then restart.
 
 The daemon reclaims an owned stale socket only after confirming no listener is active. Do not delete a live socket to start a second daemon.
+
+## Client cannot connect to the daemon
+
+1. Confirm the daemon is running and its healthcheck passes.
+2. Confirm the application's socket path is the daemon's socket, and that the socket volume is mounted in the application's container.
+3. Run the application as the daemon's UID. When the UIDs differ, the client closes the connection and reports `daemon socket peer runs as UID <daemon>, expected UID <application>`.
+
+Go reports a connection failure from the first operation, as an `RPCError` without an SDK code. Rust reports it from `Client::connect` as `ErrorKind::Transport`, with the detail in the error's source chain. The Go client connects on Linux and macOS only.
 
 ## Healthcheck passes but SDK operations fail
 

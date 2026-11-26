@@ -3,6 +3,7 @@ package zama
 import (
 	"context"
 	"errors"
+	"os"
 	"path/filepath"
 
 	pb "github.com/zama-ai/sdk/clients/go/v3/internal/gen/zama/sdk/v1beta1"
@@ -30,7 +31,7 @@ func DialWithOptions(socket string, options DialOptions) (*Client, error) {
 	if limit < 0 {
 		return nil, errors.New("message limit must be positive")
 	}
-	conn, err := grpc.NewClient("unix://"+socket, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(limit), grpc.MaxCallSendMsgSize(limit)))
+	conn, err := grpc.NewClient("unix://"+socket, grpc.WithContextDialer(dialDaemon(socket, uint32(os.Getuid()))), grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(limit), grpc.MaxCallSendMsgSize(limit)))
 	if err != nil {
 		return nil, err
 	}
