@@ -40,7 +40,9 @@ import { withOperation } from "./telemetry";
 export interface ZamaSDKOptions {
   /**
    * Encrypts the transport key pair's private half at rest. Headless environments only
-   * (CLI tools, servers, agents); the constructor rejects it in browser contexts. Supply
+   * (CLI tools, servers, agents); the constructor rejects it in browser contexts.
+   * Cached decrypted values stay in plaintext but are stored with a tag derived from
+   * this secret; a cached value whose tag does not verify is decrypted again. Supply
    * at least 32 random bytes, or a string of at least 64 characters, from a CSPRNG or
    * secrets manager. The SDK copies a Uint8Array secret and zeroizes its own copy after
    * key import; it never touches your buffer, so zeroize yours after construction.
@@ -155,7 +157,7 @@ export class ZamaSDK {
     this.storage = config.storage;
     this.#onEvent = config.onEvent ?? function () {};
     this.#logger = config.logger;
-    this.#cachingService = new CachingService(config.storage, this.#logger);
+    this.#cachingService = new CachingService(config.storage, this.#logger, derivationSecret);
     this.#delegationService = new DelegationService({
       provider: this.provider,
       router: config.router,

@@ -84,7 +84,7 @@ wrappingKey = HKDF-SHA256(ikm: transportKeyPairDerivationSecret, salt: "scope:<t
 ciphertext  = AES-256-GCM(wrappingKey, random 96-bit IV, privateKey, aad: publicKey + createdAt + expiresAt + tkmsVersion)
 ```
 
-The salt is the storage identity: `transportKeyPairScope` if set, else the signer address, prefixed by kind so the two namespaces never collide. Signers in one scope share one wrapping key. Only the private key is encrypted. The public key, timestamps, and TKMS version stay readable, but are bound to the ciphertext as AES-GCM additional authenticated data: tampering with any of them fails decryption. Permits stay in plaintext because they are already public data. Each wrapped entry records `wrappingVersion: 1`, so a future scheme's entries are recognizable rather than treated as corruption.
+The salt is the storage identity: `transportKeyPairScope` if set, else the signer address, prefixed by kind so the two namespaces never collide. Signers in one scope share one wrapping key. Only the private key is encrypted. The public key, timestamps, and TKMS version stay readable, but are bound to the ciphertext as AES-GCM additional authenticated data: tampering with any of them fails decryption. Permits stay in plaintext because they are already public data. Each wrapped entry records `wrappingVersion: 1`, so a future scheme's entries are recognizable rather than treated as corruption. Cached decrypted values also stay in plaintext, and each is stored with an HMAC-SHA-256 tag from a key derived from the same secret: the SDK ignores a cached value whose tag is missing or does not verify and decrypts it again.
 
 Prefer a `Uint8Array` secret. The SDK copies it, imports the copy into a non-extractable WebCrypto key on first use, and zeroizes that copy. The SDK never touches your original buffer: zeroize it after construction. A `string` cannot be scrubbed: JavaScript strings are immutable, so copies may remain in the heap.
 
@@ -116,7 +116,7 @@ The protection fails if a storage-level attacker can also reach the secret. Sour
 
 #### Rotation
 
-The secret is set once, at construction. To rotate it, restart with the new value. Without a scope, the old wrapped entry fails to decrypt, the SDK treats that as a cache miss and deletes it, and the next `grantPermit()` generates a fresh key pair wrapped with the new secret. With a scope, rotation does not self-heal: follow the migration steps in the warning below. Replacing a lost secret with a new one has the same cost as rotating it.
+The secret is set once, at construction. To rotate it, restart with the new value. Without a scope, the old wrapped entry fails to decrypt, the SDK treats that as a cache miss and deletes it, and the next `grantPermit()` generates a fresh key pair wrapped with the new secret. With a scope, rotation does not self-heal: follow the migration steps in the warning below. Replacing a lost secret with a new one has the same cost as rotating it. Cached decrypted values tagged with the old secret are ignored and decrypted again, with or without a scope.
 
 A fresh key pair invalidates every permit granted for the old one, so the signer must re-sign. The number of wallet prompts depends on how your app grants permits: one prompt if you re-grant the full contract set in one call, several spread over time if you grant lazily per contract. To avoid extra prompts, rotate the secret when the key pair expires anyway; `transportKeyPairTTL` sets that cadence.
 

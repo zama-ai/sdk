@@ -1,10 +1,21 @@
-import { getAddress, type Address } from "viem";
+import { getAddress, toBytes, toHex, type Address } from "viem";
 import { z } from "zod/mini";
+import type { DerivationSecretHolder } from "../credentials/keypair-wrapping";
 import type { ClearValue, EncryptedValue } from "../relayer/types";
-import { checksummedAddress } from "../schemas/primitives";
+import { checksummedAddress, hex } from "../schemas/primitives";
 import type { GenericLogger, GenericStorage } from "../types";
 
 const CacheValueSchema = z.union([z.bigint(), z.boolean(), checksummedAddress]);
+const TaggedCacheValueSchema = z.object({ value: CacheValueSchema, tag: hex });
+/** Versioned so a future tag scheme never reuses this one's derived key. */
+const TAG_KEY_INFO = "zama-sdk-decrypt-cache-tag-v1";
+
+/** The bytes a tag covers: the entry's storage key and its value, so a tag is not valid for another entry. */
+function tagInput(key: string, value: ClearValue): Uint8Array<ArrayBuffer> {
+  // Lowercased because an address is tagged in the caller's casing on write but read back
+  // checksummed; without it a non-checksummed address never verifies.
+  return new TextEncoder().encode(JSON.stringify([key, typeof value, String(value).toLowerCase()]));
+}
 const CacheIndexSchema = z.array(z.string());
 
 /**
@@ -13,6 +24,9 @@ const CacheIndexSchema = z.array(z.string());
  * Each entry is keyed by `(requester, contractAddress, handle)` so different
  * signers cannot read each other's cached decryptions.
  *
+ * With a derivation secret, each entry is stored with a tag derived from that
+ * secret, and an entry whose tag does not verify is a miss.
+ *
  * @internal
  */
 export class CachingService {
@@ -20,11 +34,18 @@ export class CachingService {
   readonly #logger: GenericLogger;
   readonly #decryptNamespace = "zama:decrypt";
   readonly #decryptKeysNamespace = `${this.#decryptNamespace}:keys`;
+  readonly #derivationSecret: DerivationSecretHolder | undefined;
+  #tagKey: Promise<CryptoKey> | undefined;
   #indexWriteQueue: Promise<void> = Promise.resolve();
 
-  constructor(storage: GenericStorage, logger: GenericLogger) {
+  constructor(
+    storage: GenericStorage,
+    logger: GenericLogger,
+    derivationSecret?: DerivationSecretHolder,
+  ) {
     this.#storage = storage;
     this.#logger = logger;
+    this.#derivationSecret = derivationSecret;
   }
 
   async get(
@@ -34,16 +55,15 @@ export class CachingService {
   ): Promise<ClearValue | null> {
     try {
       const key = this.#buildStorageKey(requester, contractAddress, encryptedValue);
-      const value = await this.#storage.get(key);
+      const stored = await this.#storage.get(key);
+      if (stored === null) {
+        return null;
+      }
+      const value = await this.#readEntry(key, stored);
       if (value === null) {
-        return null;
-      }
-      const parsed = CacheValueSchema.safeParse(value);
-      if (!parsed.success) {
         await this.delete(requester, contractAddress, encryptedValue);
-        return null;
       }
-      return parsed.data;
+      return value;
     } catch (error) {
       this.#logger.warn("CachingService.get failed", { error });
       return null;
@@ -58,7 +78,7 @@ export class CachingService {
   ): Promise<void> {
     try {
       const key = this.#buildStorageKey(requester, contractAddress, encryptedValue);
-      await this.#storage.set<ClearValue>(key, value);
+      await this.#storage.set(key, await this.#toEntry(key, value));
       this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
         this.#addToIndex(key).catch((error) => {
           this.#logger.warn("CachingService index write failed", { error });
@@ -100,6 +120,58 @@ export class CachingService {
       }),
     );
     await this.#indexWriteQueue;
+  }
+
+  /** The value of a stored entry, or `null` when the entry is malformed or its tag does not verify. */
+  async #readEntry(key: string, stored: unknown): Promise<ClearValue | null> {
+    if (!this.#derivationSecret) {
+      const parsed = CacheValueSchema.safeParse(stored);
+      return parsed.success ? parsed.data : null;
+    }
+    const parsed = TaggedCacheValueSchema.safeParse(stored);
+    if (!parsed.success) {
+      return null;
+    }
+    const { value, tag } = parsed.data;
+    const verified = await crypto.subtle.verify(
+      "HMAC",
+      await this.#getTagKey(this.#derivationSecret),
+      new Uint8Array(toBytes(tag)),
+      tagInput(key, value),
+    );
+    return verified ? value : null;
+  }
+
+  async #toEntry(key: string, value: ClearValue): Promise<unknown> {
+    if (!this.#derivationSecret) {
+      return value;
+    }
+    const tag = await crypto.subtle.sign(
+      "HMAC",
+      await this.#getTagKey(this.#derivationSecret),
+      tagInput(key, value),
+    );
+    return { value, tag: toHex(new Uint8Array(tag)) };
+  }
+
+  #getTagKey(derivationSecret: DerivationSecretHolder): Promise<CryptoKey> {
+    this.#tagKey ??= derivationSecret
+      .baseKey()
+      .then((baseKey) =>
+        crypto.subtle.deriveKey(
+          {
+            name: "HKDF",
+            hash: "SHA-256",
+            salt: new Uint8Array(),
+            info: new TextEncoder().encode(TAG_KEY_INFO),
+          },
+          baseKey,
+          { name: "HMAC", hash: "SHA-256" },
+          false,
+          ["sign", "verify"],
+        ),
+      );
+    return this.#tagKey;
   }
 
   async #doDelete(key: string): Promise<void> {
