@@ -162,14 +162,10 @@ export function toUnifiedPermitNotSupportedError(
 }
 
 /**
- * A stored V2 (unified/wildcard) permit's scope is needed for this decrypt,
- * but the connected relayer instance hasn't deployed the `/v3/user-decrypt`
- * route it requires. Distinct from {@link UnifiedPermitNotSupportedError}:
- * that one fires at *signing* time because the *chain* hasn't upgraded to
- * protocol v0.14+; this one fires at *decrypt* time even though the chain and
- * the stored permit are both V2-capable — only this particular relayer
- * instance hasn't deployed the route yet. Grant a specific-contract (V1)
- * permit instead, or retry once the relayer upgrades.
+ * A decrypt needs a stored V2 (unified) permit, but the connected relayer
+ * hasn't deployed the `/v3/user-decrypt` route it requires. Revoke the permit
+ * with `revokePermits`, then call `grantPermit` to sign a V1 permit, or retry
+ * once the relayer upgrades.
  */
 export class UnifiedDecryptionUnsupportedError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {

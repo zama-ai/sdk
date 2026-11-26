@@ -106,14 +106,13 @@ export function wrapDecryptError(
     );
   }
 
-  // A stored V2/wildcard permit's scope is needed for this decrypt, but this
-  // relayer instance hasn't deployed /v3/user-decrypt yet — distinct from
-  // UnifiedPermitNotSupportedError (signing-time, chain hasn't upgraded).
+  // A new grantPermit alone signs nothing: the stored V2 permit still counts as covering.
   if (error instanceof Error && isUnifiedDecryptionUnsupportedMessage(error.message)) {
     return new UnifiedDecryptionUnsupportedError(
-      "This account's stored permit for this scope is a wildcard (V2) permit, but the connected " +
-        "relayer does not yet support unified decryption (/v3/user-decrypt). Grant a specific-" +
-        "contract permit instead (sdk.permits.grantPermit([...])), or retry once the relayer upgrades.",
+      "The stored permit covering these contracts is a V2 (unified) permit, but the connected " +
+        "relayer does not yet support unified decryption (/v3/user-decrypt). Revoke it with " +
+        "sdk.permits.revokePermits([...]), then call sdk.permits.grantPermit([...]) to sign a V1 " +
+        "permit, or retry once the relayer upgrades.",
       { cause: error },
     );
   }
