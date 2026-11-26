@@ -279,6 +279,7 @@ test.each(cases)("offline prepare preserves omitted options: $name", async (item
   const direct = fixture(undefined);
   const remote = await harness(false);
   try {
+    item.setup?.(direct, remote.fixtures[0]!);
     const expected = await direct.sdk.offline.prepare(item.request);
     const actual = await prepare(remote, item.transaction);
     expect({

@@ -16082,7 +16082,7 @@ Returns a `PreparedTransaction`. All three fields are JSON-safe, so the object c
 
 **Throws:**
 
-- [`ConfigurationError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#configurationerror) - invalid request, or the provider's chain differs from the configured chain
+- [`ConfigurationError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#configurationerror) - invalid request, the provider's chain differs from the configured chain, or the provider's prepared transaction does not match the requested call (chain ID, target, calldata or value)
 - [`EncryptionFailedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#encryptionfailederror) - encryption produced no result (encrypting kinds)
 - [`DecryptionFailedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#decryptionfailederror) - fallback for an unclassified public-decryption failure (`FinalizeUnwrap`); classified failures preserve their specific [SDK error](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md)
 - [`DelegationExpirationTooSoonError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#delegationexpirationtoosoonerror) / [`DelegationSelfNotAllowedError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#delegationselfnotallowederror) / [`DelegationDelegateEqualsContractError`](https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/reference/sdk/errors.md#delegationdelegateequalscontracterror) - delegation guards (`DelegateDecryption`)
