@@ -110,8 +110,10 @@ export class PreparedPermitExpiredError extends ZamaError {
  * isn't on protocol v0.14+, its `protocolConfigContractAddress` isn't set, or
  * its relayer lacks unified decryption support. A {@link WILDCARD_PERMIT}
  * request fails before any wallet prompt; a contract-list request falls back
- * to V1 unless the chain rejects the V2 signing request. Grant an explicit
- * contract list instead, or retry once the network upgrades.
+ * to V1 unless the chain turns out not to be on protocol v0.14+. When the
+ * `protocolConfigContractAddress` or relayer support is missing, request an
+ * explicit contract list instead of a wildcard; on a chain not yet on v0.14+,
+ * retry once it upgrades.
  */
 export class UnifiedPermitNotSupportedError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {
@@ -120,45 +122,45 @@ export class UnifiedPermitNotSupportedError extends ZamaError {
   }
 }
 
-function unifiedPermitNotSupportedMessage(op: "grantPermit" | "preparePermit"): string {
-  return (
-    `${op}: V2 (unified) decryption permits — including wildcard permits — require protocol ` +
-    "v0.14 or later on this network. The connected chain hasn't upgraded yet (or its " +
-    "ProtocolConfig contract address isn't configured on this FheChain). " +
-    `Call ${op} with an explicit V1 contract list instead, or retry once the network upgrades.`
+type UnifiedPermitOperation = "grantPermit" | "grantDelegationPermit" | "preparePermit";
+
+/**
+ * A {@link WILDCARD_PERMIT} request on a network where V2 permits are off: no
+ * `protocolConfigContractAddress`, or the relayer doesn't report unified decryption support.
+ *
+ * @param op Which public entry point is rejecting the request.
+ */
+export function wildcardPermitNotSupportedError(
+  op: UnifiedPermitOperation,
+): UnifiedPermitNotSupportedError {
+  return new UnifiedPermitNotSupportedError(
+    `${op}: this network can't sign V2 (unified) permits because its FheChain has no ` +
+      "protocolConfigContractAddress or its relayer doesn't report unified decryption " +
+      `support. Call ${op} with an explicit contract list instead of WILDCARD_PERMIT; ` +
+      "the SDK signs a V1 permit.",
   );
 }
 
 /**
- * A {@link WILDCARD_PERMIT} request the caller already confirmed is unsupported,
- * before any relayer call was attempted. See {@link toUnifiedPermitNotSupportedError}
- * for the converted-error counterpart.
+ * Converts the `@fhevm/sdk` "invalid extraData version" signal (raised while building a V2
+ * payload on a chain not on protocol v0.14+) into a typed {@link UnifiedPermitNotSupportedError}.
  *
- * @param op Which `CredentialService` entry point is rejecting the request.
- */
-export function wildcardPermitNotSupportedError(
-  op: "grantPermit" | "preparePermit",
-): UnifiedPermitNotSupportedError {
-  return new UnifiedPermitNotSupportedError(unifiedPermitNotSupportedMessage(op));
-}
-
-/**
- * Converts the `@fhevm/sdk` "invalid extraData version" signal — the chain
- * hasn't upgraded to protocol v0.14+ — into a typed
- * {@link UnifiedPermitNotSupportedError} worded for the calling entry point.
- *
- * @param op Which `CredentialService` entry point is converting the error.
+ * @param op Which public entry point is converting the error.
  * @returns The typed error, or `undefined` when `error` doesn't match so the
  *   caller can fall through to its own handling.
  */
 export function toUnifiedPermitNotSupportedError(
-  op: "grantPermit" | "preparePermit",
+  op: UnifiedPermitOperation,
   error: unknown,
 ): UnifiedPermitNotSupportedError | undefined {
   if (!(error instanceof Error) || !isUnsupportedUnifiedPermitMessage(error.message)) {
     return undefined;
   }
-  return new UnifiedPermitNotSupportedError(unifiedPermitNotSupportedMessage(op), { cause: error });
+  return new UnifiedPermitNotSupportedError(
+    `${op}: this chain isn't on protocol v0.14+ yet, so it can't use V2 (unified) permits. ` +
+      "Retry once the network upgrades.",
+    { cause: error },
+  );
 }
 
 /**
