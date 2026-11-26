@@ -235,6 +235,8 @@ jobs:
     needs: [validate-branch]
     if: ${{ !cancelled() && !failure() && inputs.publish-tag == '' }}
     uses: ./.github/workflows/daemon.yml
+    with:
+      skip-image-scan: true
     # Only the called job, which declares the environment, can read this environment secret, but the caller must
     # still pass it by name: `secrets: inherit` does not carry it.
     secrets:
