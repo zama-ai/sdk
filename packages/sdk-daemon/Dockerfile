@@ -1,6 +1,6 @@
 # Pulling from dhi.io needs `docker login dhi.io` with a Docker Hub account. The build stage is the same Debian
 # release as the runtime stage, so the pruned node_modules link against the same glibc.
-FROM dhi.io/node:24-debian13-dev@sha256:e1b6dd02ec91bf4e4345230c672b97cd21ce63e269e7531298a8420e44ca1c07 AS build
+FROM dhi.io/node:24-debian13-dev@sha256:bd0e46a6276a5d973149b0a6df6080ae5bfe46674a04a07e3e61ef40da70aa84 AS build
 # The dev image ships bash; don't depend on /bin/sh being present.
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 RUN npm install --global pnpm@11.1.2
