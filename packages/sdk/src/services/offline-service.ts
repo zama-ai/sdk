@@ -1,4 +1,4 @@
-import type { Address } from "viem";
+import { type Abi, type Address, encodeFunctionData, isAddressEqual, parseTransaction } from "viem";
 import { decryptPublicUint } from "../relayer/public-decrypt";
 import type { RelayerRequestOptions } from "../relayer/types";
 import type { ChainRouter } from "../chains/router";
@@ -146,6 +146,26 @@ export class OfflineService {
     const unsignedTx = await this.#provider.prepareTransaction(parsed).catch((error: unknown) => {
       throw matchHcuRevert(error, `prepare ${request.kind}`) ?? error;
     });
+
+    // The provider reads the chain ID again and serializes the call itself,
+    // so check its output against the chain and calldata above.
+    const tx = parseTransaction(unsignedTx);
+    const data = encodeFunctionData({
+      abi: parsed.calldata.abi as Abi,
+      functionName: parsed.calldata.functionName,
+      args: parsed.calldata.args,
+    });
+    if (
+      tx.chainId !== expectedChainId ||
+      !tx.to ||
+      !isAddressEqual(tx.to, parsed.calldata.address) ||
+      tx.data?.toLowerCase() !== data.toLowerCase() ||
+      (tx.value ?? 0n) !== (parsed.calldata.value ?? 0n)
+    ) {
+      throw new ConfigurationError(
+        `Offline.prepare: the provider returned a transaction that does not match the prepared ${request.kind} call on chain ${expectedChainId}.`,
+      );
+    }
     return { kind: request.kind, unsignedTx, from: parsed.from } satisfies PreparedFor<K>;
   }
 

@@ -53,7 +53,7 @@ Returns a `PreparedTransaction`. All three fields are JSON-safe, so the object c
 
 **Throws:**
 
-- [`ConfigurationError`](errors.md#configurationerror) - invalid request, or the provider's chain differs from the configured chain
+- [`ConfigurationError`](errors.md#configurationerror) - invalid request, the provider's chain differs from the configured chain, or the provider's prepared transaction does not match the requested call (chain ID, target, calldata or value)
 - [`EncryptionFailedError`](errors.md#encryptionfailederror) - encryption produced no result (encrypting kinds)
 - [`DecryptionFailedError`](errors.md#decryptionfailederror) - fallback for an unclassified public-decryption failure (`FinalizeUnwrap`); classified failures preserve their specific [SDK error](./errors.md)
 - [`DelegationExpirationTooSoonError`](errors.md#delegationexpirationtoosoonerror) / [`DelegationSelfNotAllowedError`](errors.md#delegationselfnotallowederror) / [`DelegationDelegateEqualsContractError`](errors.md#delegationdelegateequalscontracterror) - delegation guards (`DelegateDecryption`)

@@ -1,5 +1,5 @@
-import { getAddress, type Address, type Hex } from "viem";
-import { describe, expect, TEST_UNSIGNED_TX, test, vi } from "../../test-fixtures";
+import { getAddress, parseTransaction, serializeTransaction, type Address, type Hex } from "viem";
+import { describe, expect, test, vi } from "../../test-fixtures";
 import { HcuTransactionLimitExceededError, TransactionRevertedError } from "../../errors";
 import type { GenericProvider } from "../../types/provider";
 
@@ -9,7 +9,6 @@ const RECIPIENT_DATA_20 = "0x00000000000000000000000000000000000000ff" as Hex;
 const TOKEN = "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a" as Address;
 const RECIPIENT = "0x3333333333333333333333333333333333333333" as Address;
 const DELEGATE = "0x4444444444444444444444444444444444444444" as Address;
-const UNSIGNED = TEST_UNSIGNED_TX;
 
 describe("OfflineService — HCU limit reverts", () => {
   test("maps a gas-estimation HCU revert wrapped by the provider to its typed error", async ({
@@ -93,7 +92,10 @@ describe("OfflineService — ConfidentialTransfer prepare", () => {
     );
     expect(prepared.kind).toBe("ConfidentialTransfer");
     expect(prepared.from).toBe(getAddress(userAddress));
-    expect(prepared.unsignedTx).toBe(UNSIGNED);
+    expect(parseTransaction(prepared.unsignedTx)).toMatchObject({
+      chainId: 31337,
+      to: TOKEN.toLowerCase(),
+    });
   });
 });
 
@@ -283,7 +285,7 @@ describe("OfflineService — other transaction kinds", () => {
       checkSignaturesArgs: {
         handlesList: [handle],
         abiEncodedCleartexts: "0x2a",
-        decryptionProof: "0xproof",
+        decryptionProof: "0xc0ffee",
       },
     } as unknown as Awaited<ReturnType<typeof relayer.decryptPublicValuesWithSignatures>>);
     const sdk = createSDK({ signer });
@@ -302,7 +304,7 @@ describe("OfflineService — other transaction kinds", () => {
         calldata: expect.objectContaining({
           functionName: "finalizeUnwrap",
           // Strict-order args: position matters on calldata.
-          args: [handle, 42n, "0xproof"],
+          args: [handle, 42n, "0xc0ffee"],
         }),
       }),
     );
@@ -756,7 +758,10 @@ describe("OfflineService — signer-optional surface (cross-process custody)", (
     });
 
     expect(prepared.from).toBe(getAddress(userAddress));
-    expect(prepared.unsignedTx).toBe(UNSIGNED);
+    expect(parseTransaction(prepared.unsignedTx)).toMatchObject({
+      chainId: 31337,
+      to: TOKEN.toLowerCase(),
+    });
     expect(provider.prepareTransaction).toHaveBeenCalled();
   });
 });
@@ -833,4 +838,31 @@ describe("OfflineService — chain-alignment guard", () => {
     expect(relayer.encryptValues).not.toHaveBeenCalled();
     expect(provider.prepareTransaction).not.toHaveBeenCalled();
   });
+
+  test.for([
+    ["chain", { chainId: 1 }],
+    ["target", { to: RECIPIENT }],
+    ["calldata", { data: "0xdeadbeef" as Hex }],
+    ["value", { value: 1n }],
+  ] as const)(
+    "throws when the provider returns a transaction with a different %s",
+    async ([, override], { createSDK, signer, provider, userAddress }) => {
+      const { ConfigurationError } = await import("../../errors");
+      const build = vi.mocked(provider.prepareTransaction).getMockImplementation()!;
+      vi.mocked(provider.prepareTransaction).mockImplementation(async (args) => {
+        const tx = parseTransaction(await build(args));
+        return serializeTransaction({ ...tx, ...override });
+      });
+      const sdk = createSDK({ signer });
+      await expect(
+        sdk.offline.prepare({
+          kind: "SetOperator",
+          from: userAddress,
+          token: TOKEN,
+          operator: DELEGATE,
+          until: 1_900_000_000,
+        }),
+      ).rejects.toBeInstanceOf(ConfigurationError);
+    },
+  );
 });
