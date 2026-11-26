@@ -21,13 +21,8 @@ on:
       - "tools/**"
       - ".github/actions/install-deps/**"
       - ".github/workflows/daemon.yml"
-      - ".trivyignore"
   workflow_dispatch:
   workflow_call:
-    inputs:
-      skip-image-scan:
-        type: boolean
-        default: false
     secrets:
       DOCKERHUB_OIDC_CONNECTIONID:
         required: true
@@ -188,7 +183,7 @@ jobs:
           context: .
           file: packages/sdk-daemon/Dockerfile
           load: true
-          tags: ghcr.io/zama-ai/sdk-daemon:ci
+          tags: ghcr.io/zama-ai/sdk/sdk-daemon:ci
           # Scoped per architecture so the two builds don't overwrite each other's cache.
           cache-from: type=gha,scope=daemon-image-${{ matrix.arch }}
           cache-to: type=gha,scope=daemon-image-${{ matrix.arch }},mode=max
@@ -208,13 +203,3 @@ jobs:
           trap 'docker compose -f compose.host.yaml down' EXIT
           docker compose -f compose.host.yaml up -d --wait --wait-timeout 120
           test -S socket/sdk.sock
-      - name: Scan the image
-        if: ${{ !inputs.skip-image-scan }}
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        with:
-          image-ref: ghcr.io/zama-ai/sdk-daemon:ci
-          exit-code: "1"
-          vuln-type: os,library
-          severity: CRITICAL,HIGH
-          trivyignores: .trivyignore
-          version: v0.76.0

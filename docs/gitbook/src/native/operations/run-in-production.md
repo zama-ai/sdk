@@ -31,44 +31,48 @@ Two daemons must not share a SQLite credential volume: each named database is lo
 
 ## Verify and pin the image
 
-Each release signs the image in the release workflow and stores the signature, build provenance, and an SBOM next to it on GitHub Container Registry. Before the first deployment of a version, and before every upgrade, resolve the release tag to its digest, verify that digest, and pin it. A tag can be moved; a digest cannot.
+Each release signs the image and stores the signature, build provenance, and an SBOM next to it on GitHub Container Registry. Before the first deployment of a version, and before every upgrade, resolve the release tag to its digest, verify that digest, and pin it. A tag can be moved; a digest cannot.
 
 Resolve the tag first, so the digest you verify is the digest you pin:
 
 ```bash
 export ZAMA_SDK_VERSION=3.9.0-beta.16
-export ZAMA_SDK_DAEMON_DIGEST="$(docker buildx imagetools inspect "ghcr.io/zama-ai/sdk-daemon:${ZAMA_SDK_VERSION}" --format '{{ .Manifest.Digest }}')"
+export ZAMA_SDK_DAEMON_DIGEST="$(docker buildx imagetools inspect "ghcr.io/zama-ai/sdk/sdk-daemon:${ZAMA_SDK_VERSION}" --format '{{ .Manifest.Digest }}')"
 ```
 
 Verify the digest with the [GitHub CLI](https://cli.github.com/):
 
 ```bash
-gh attestation verify "oci://ghcr.io/zama-ai/sdk-daemon@${ZAMA_SDK_DAEMON_DIGEST}" --repo zama-ai/sdk \
-  --signer-workflow zama-ai/sdk/.github/workflows/release.yml
+gh attestation verify "oci://ghcr.io/zama-ai/sdk/sdk-daemon@${ZAMA_SDK_DAEMON_DIGEST}" --bundle-from-oci \
+  --owner zama-ai --source-ref refs/heads/main
 ```
 
-The command checks that the image was built by the release workflow of the `zama-ai/sdk` repository. With [cosign](https://github.com/sigstore/cosign) instead:
+The command checks that the image was built and signed by a GitHub Actions workflow on the `main` branch of a `zama-ai` repository. `--bundle-from-oci` reads the attestations from the registry, next to the image. The GitHub CLI needs a GitHub login, and any account works. Without one, use the cosign command below.
+
+To verify with [cosign](https://github.com/sigstore/cosign) instead, give it GitHub's trust root. The image is signed with GitHub's own Sigstore instance, which has no public transparency log, so cosign skips those checks:
 
 ```bash
-cosign verify-attestation "ghcr.io/zama-ai/sdk-daemon@${ZAMA_SDK_DAEMON_DIGEST}" --new-bundle-format \
+gh attestation trusted-root | grep githubapp.com | head -n 1 > github_trusted_root.json
+cosign verify-attestation "ghcr.io/zama-ai/sdk/sdk-daemon@${ZAMA_SDK_DAEMON_DIGEST}" --new-bundle-format \
+  --trusted-root github_trusted_root.json --use-signed-timestamps --insecure-ignore-tlog=true --insecure-ignore-sct \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  --certificate-identity-regexp '^https://github.com/zama-ai/sdk/\.github/workflows/release\.yml@refs/heads/(main|beta|alpha)$' \
-  --type https://slsa.dev/provenance/v1
+  --certificate-identity-regexp '^https://github\.com/zama-ai/[^/]+/\.github/workflows/[^@]+@refs/heads/main$' \
+  --type slsaprovenance1
 ```
 
-Keep `ZAMA_SDK_DAEMON_DIGEST` exported. The Compose files below then pull `ghcr.io/zama-ai/sdk-daemon:<version>@sha256:…`, and Docker refuses any content that doesn't match. Images released before signing was introduced carry no attestations, and the verification fails for them.
+Keep `ZAMA_SDK_DAEMON_DIGEST` exported. The Compose files below then pull `ghcr.io/zama-ai/sdk/sdk-daemon:<version>@sha256:…`, and Docker refuses any content that doesn't match.
 
 The SBOM is attached to each platform image, not to the manifest list the tag resolves to. To read the SBOM of the image your Docker host runs, resolve the digest for its architecture and verify it with `--predicate-type https://spdx.dev/Document/v2.3` and `--format json`:
 
 ```bash
 arch="$(docker version --format '{{ .Server.Arch }}')"
-platform_digest="$(docker buildx imagetools inspect "ghcr.io/zama-ai/sdk-daemon@${ZAMA_SDK_DAEMON_DIGEST}" \
+platform_digest="$(docker buildx imagetools inspect "ghcr.io/zama-ai/sdk/sdk-daemon@${ZAMA_SDK_DAEMON_DIGEST}" \
   --format "{{ range .Manifest.Manifests }}{{ if eq .Platform.Architecture \"${arch}\" }}{{ .Digest }}{{ end }}{{ end }}")"
-gh attestation verify "oci://ghcr.io/zama-ai/sdk-daemon@${platform_digest}" --repo zama-ai/sdk \
-  --predicate-type https://spdx.dev/Document/v2.3 --format json
+gh attestation verify "oci://ghcr.io/zama-ai/sdk/sdk-daemon@${platform_digest}" --bundle-from-oci \
+  --owner zama-ai --source-ref refs/heads/main --predicate-type https://spdx.dev/Document/v2.3 --format json
 ```
 
-Published images are re-scanned daily. A critical or high CVE in a published image is tracked in a GitHub issue on the repository and fixed with a patched release, so subscribe to releases and plan to [upgrade](upgrade-and-recover.md) when one ships.
+Published images are re-scanned daily. A critical or high CVE in a published image is fixed with a patched release, so subscribe to releases and plan to [upgrade](upgrade-and-recover.md) when one ships.
 
 ## Run with Docker Compose
 
