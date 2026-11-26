@@ -106,12 +106,12 @@ export class PreparedPermitExpiredError extends ZamaError {
 }
 
 /**
- * The connected chain doesn't support V2 (unified) decryption permits yet —
- * including {@link WILDCARD_PERMIT} — because it hasn't upgraded to protocol
- * v0.14 or later. Thrown before any wallet prompt: the SDK detects this from
- * the chain's on-chain KMS context, without a signature attempt. V1 permits
- * (an explicit contract list, not `WILDCARD_PERMIT`) are unaffected — grant
- * one of those instead, or retry once the network upgrades.
+ * A V2 (unified) decryption permit can't be signed on the connected chain: it
+ * isn't on protocol v0.14+, its `protocolConfigContractAddress` isn't set, or
+ * its relayer lacks unified decryption support. A {@link WILDCARD_PERMIT}
+ * request fails before any wallet prompt; a contract-list request falls back
+ * to V1 unless the chain rejects the V2 signing request. Grant an explicit
+ * contract list instead, or retry once the network upgrades.
  */
 export class UnifiedPermitNotSupportedError extends ZamaError {
   constructor(message: string, options?: ErrorOptions) {

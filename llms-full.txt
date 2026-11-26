@@ -14471,6 +14471,8 @@ import {
   TransportKeyPairChangedError,
   PreparedPermitChainMismatchError,
   PreparedPermitExpiredError,
+  UnifiedPermitNotSupportedError,
+  UnifiedDecryptionUnsupportedError,
   RelayerRequestFailedError,
   NotEntitledError,
   RpcRateLimitError,
@@ -14579,6 +14581,8 @@ Exactly seven error classes are retryable today: `RpcRateLimitError`, `RelayerRe
 | `TransportKeyPairChangedError`            | `TRANSPORT_KEY_PAIR_CHANGED`             | Transport key pair changed between `preparePermit` and `registerPermit`                                                                   |
 | `PreparedPermitChainMismatchError`        | `PREPARED_PERMIT_CHAIN_MISMATCH`         | The chain embedded in `prepared.eip712` doesn't match the chain `registerPermit` is running against                                       |
 | `PreparedPermitExpiredError`              | `PREPARED_PERMIT_EXPIRED`                | A prepared permit's validity window elapsed before its signature was registered                                                           |
+| `UnifiedPermitNotSupportedError`          | `UNIFIED_PERMIT_NOT_SUPPORTED`           | A wildcard permit, or the V2 permit the SDK picked, can't be signed (no v0.14+, `protocolConfigContractAddress` or relayer V2 support)    |
+| `UnifiedDecryptionUnsupportedError`       | `UNIFIED_DECRYPTION_UNSUPPORTED`         | A decrypt needs a stored V2 (unified) permit, but the connected relayer doesn't support unified decryption yet                            |
 | `RelayerRequestFailedError`               | `RELAYER_REQUEST_FAILED`                 | Relayer HTTP request failed                                                                                                               |
 | `NotEntitledError`                        | `NOT_ENTITLED`                           | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`)         |
 | `RpcRateLimitError`                       | `RPC_RATE_LIMITED`                       | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)                                                          |
@@ -14994,6 +14998,39 @@ matchZamaError(error, {
 ```
 
 **How to handle:** Call `preparePermit` again for a fresh validity window. Consider a longer `durationDays` (up to 365) if approval routinely takes this long.
+
+### UnifiedPermitNotSupportedError
+
+**Code:** `UNIFIED_PERMIT_NOT_SUPPORTED`
+
+Thrown by `grantPermit`, `grantDelegationPermit`, `preparePermit` and `batchPreparePermits` when a V2 (unified) permit can't be signed: the chain isn't on protocol v0.14+, its `FheChain` has no `protocolConfigContractAddress`, or the relayer lacks unified decryption support. It fails before any wallet prompt. A [`WILDCARD_PERMIT`](https://raw.githubusercontent.com/zama-ai/sdk/alpha/docs/gitbook/src/concepts/permit-model.md#wildcard-v2-permits) request throws in every case. A contract-list request falls back to a V1 permit when the `protocolConfigContractAddress` or relayer support is missing, and throws only when the chain turns out not to be on protocol v0.14+.
+
+```ts
+matchZamaError(error, {
+  UNIFIED_PERMIT_NOT_SUPPORTED: () => showError("This network doesn't support V2 permits yet"),
+});
+```
+
+**How to handle:** The error message names the cause. When the `protocolConfigContractAddress` or relayer support is missing, request an explicit contract list instead of `WILDCARD_PERMIT`: the SDK signs a V1 permit. On a chain not yet on protocol v0.14+, retry once it upgrades. On a custom chain, set `protocolConfigContractAddress` if the network has a `ProtocolConfig` contract.
+
+### UnifiedDecryptionUnsupportedError
+
+**Code:** `UNIFIED_DECRYPTION_UNSUPPORTED`
+
+Thrown by decrypt operations when the stored permit covering the requested contracts is a V2 (unified) permit, such as a wildcard one, but the connected relayer doesn't support unified decryption yet. The chain and the permit are both V2-capable; only the relayer lags.
+
+```ts
+matchZamaError(error, {
+  UNIFIED_DECRYPTION_UNSUPPORTED: async () => {
+    await sdk.permits.revokePermits([tokenAddress]);
+    await sdk.permits.grantPermit([tokenAddress]);
+  },
+});
+```
+
+**How to handle:** Revoke the stored V2 permit for those contracts with `revokePermits`, then call `grantPermit`: the SDK signs a V1 permit while the relayer lacks unified support. Or retry once the relayer upgrades.
+
+For a delegated decrypt, retry once the relayer upgrades: `revokePermits` with a contract list leaves delegated permits alone. As a last resort, `revokePermits()` with no argument drops the delegated permit so `grantDelegationPermit` can sign a V1 one, but it also removes every other permit for this signer on every chain, so the user has to sign again everywhere.
 
 ### RelayerRequestFailedError
 
