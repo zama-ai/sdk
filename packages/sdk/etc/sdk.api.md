@@ -580,6 +580,7 @@ export const bscTestnet: Readonly<{
     readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
     readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
     readonly registryAddress: "0x84c5B9669b1BA109D31096c64AFEF1473Ac4Db43";
+    readonly protocolConfigContractAddress: "0xC320dd3d4e15D8E4c20dff42fE09Aa936A88b3ED";
     readonly keyVerification: {
         readonly chain: Readonly<{
             readonly id: 11155111;

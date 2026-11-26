@@ -184,6 +184,7 @@ describe("CredentialService.grantPermit wildcard", () => {
   }) => {
     const error = await credentialService.grantPermit(WILDCARD_PERMIT).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(UnifiedPermitNotSupportedError);
+    expect((error as Error).message).toMatch(/explicit contract list/);
     expect(relayer.canUseUnifiedDecryptionPermit).toHaveBeenCalledOnce();
     expect(relayer.signUnifiedDecryptionPermit).not.toHaveBeenCalled();
     expect(signer.signTypedData).not.toHaveBeenCalled();
@@ -206,6 +207,7 @@ describe("CredentialService.grantPermit wildcard", () => {
     const error = await credentialService.grantPermit(WILDCARD_PERMIT).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(UnifiedPermitNotSupportedError);
     expect((error as Error).message).toContain("protocol v0.14");
+    expect((error as Error).message).not.toContain("contract list");
     expect(signer.signTypedData).not.toHaveBeenCalled();
   });
 
@@ -222,6 +224,7 @@ describe("CredentialService.grantPermit wildcard", () => {
     const error = await credentialService.grantPermit(WILDCARD_PERMIT).catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(UnifiedPermitNotSupportedError);
+    expect((error as Error).message).toMatch(/explicit contract list/);
     expect(relayer.canUseUnifiedDecryptionPermit).not.toHaveBeenCalled();
     expect(relayer.signUnifiedDecryptionPermit).not.toHaveBeenCalled();
   });

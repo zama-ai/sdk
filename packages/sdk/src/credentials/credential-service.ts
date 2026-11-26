@@ -254,8 +254,7 @@ export class CredentialService {
     contracts: readonly Address[] | WildcardPermit,
     delegator?: Address,
   ): Promise<SerializedTransportKeyPairWithPermissions> {
-    const operation: PermitOperation =
-      delegator !== undefined ? "grantDelegationPermit" : "grantPermit";
+    const operation = delegator !== undefined ? "grantDelegationPermit" : "grantPermit";
     const isWildcard = contracts === WILDCARD_PERMIT;
     let signerAddress: ChecksummedAddress;
     let requested: ChecksummedAddress[];
@@ -289,7 +288,7 @@ export class CredentialService {
         return { keypair, permissions: [existing] };
       }
       if ((await this.#permitVersion()) === 1) {
-        throw this.#failPermit(operation, wildcardPermitNotSupportedError("grantPermit"));
+        throw this.#failPermit(operation, wildcardPermitNotSupportedError(operation));
       }
       const permission = await this.#signPermit({ version: 2, chunk: [], keypair, scope });
       await swallow("persist permit", () => this.#store.append(scope, [permission]), this.#logger);
@@ -346,8 +345,9 @@ export class CredentialService {
    * @throws if `request.contracts` exceeds {@link MAX_CONTRACTS_PER_PERMIT} (not checked
    *   for a wildcard request), is empty, `request.delegator` equals `request.signer`, or
    *   `request.durationDays` exceeds the V1 permit maximum of 365 days. {@link ConfigurationError}
-   * @throws if a wildcard permit is requested against a chain that hasn't upgraded to
-   *   protocol v0.14+. `UnifiedPermitNotSupportedError`
+   * @throws if a V2 permit can't be built: a wildcard request on a chain with no
+   *   `protocolConfigContractAddress` or a relayer without unified decryption support, or any
+   *   V2 request on a chain not on protocol v0.14+. `UnifiedPermitNotSupportedError`
    * @throws if the transport key pair cannot be wrapped or unwrapped. {@link KeyWrappingError}
    * @throws if a concurrent rotation replaces the transport key pair while this
    *   call is generating one. {@link TransportKeyPairChangedError}
@@ -388,8 +388,9 @@ export class CredentialService {
    * @throws if `request.contracts` is empty, `request.delegator` equals
    *   `request.signer`, or `request.durationDays` exceeds the V1 permit maximum
    *   of 365 days. {@link ConfigurationError}
-   * @throws if a wildcard permit is requested against a chain that hasn't upgraded to
-   *   protocol v0.14+. `UnifiedPermitNotSupportedError`
+   * @throws if a V2 permit can't be built: a wildcard request on a chain with no
+   *   `protocolConfigContractAddress` or a relayer without unified decryption support, or any
+   *   V2 request on a chain not on protocol v0.14+. `UnifiedPermitNotSupportedError`
    * @throws if the transport key pair cannot be wrapped or unwrapped. {@link KeyWrappingError}
    * @throws if a concurrent rotation replaces the transport key pair while this
    *   call is generating one. {@link TransportKeyPairChangedError}
@@ -901,13 +902,11 @@ export class CredentialService {
           : { version: 1, durationDays: this.#permitTTL },
       );
     } catch (error) {
-      const operation: PermitOperation = isDelegated ? "grantDelegationPermit" : "grantPermit";
+      const operation = isDelegated ? "grantDelegationPermit" : "grantPermit";
       // Probe only unclassified errors: an already-typed ZamaError carries its
       // own code and must not be re-read as a relayer "unsupported" message.
       const unsupported =
-        error instanceof ZamaError
-          ? undefined
-          : toUnifiedPermitNotSupportedError("grantPermit", error);
+        error instanceof ZamaError ? undefined : toUnifiedPermitNotSupportedError(operation, error);
       if (unsupported) {
         throw this.#failPermit(operation, unsupported);
       }

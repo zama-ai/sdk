@@ -35,6 +35,8 @@ import {
   TransportKeyPairChangedError,
   PreparedPermitChainMismatchError,
   PreparedPermitExpiredError,
+  UnifiedPermitNotSupportedError,
+  UnifiedDecryptionUnsupportedError,
   RelayerRequestFailedError,
   NotEntitledError,
   RpcRateLimitError,
@@ -72,9 +74,9 @@ import { matchZamaError } from "@zama-fhe/sdk";
 
 const message = matchZamaError(error, {
   SIGNING_REJECTED: () => "Please approve the transaction in your wallet",
-  ENCRYPTION_FAILED: () => "Encryption failed — try again",
+  ENCRYPTION_FAILED: () => "Encryption failed, try again",
   TRANSACTION_REVERTED: (e) => `Transaction failed: ${e.message}`,
-  NO_CIPHERTEXT: () => "No confidential balance — shield tokens first",
+  NO_CIPHERTEXT: () => "No confidential balance, shield tokens first",
   INSUFFICIENT_CONFIDENTIAL_BALANCE: (e) => `Need ${e.requested}, have ${e.available}`,
   INSUFFICIENT_ERC20_BALANCE: (e) => `Need ${e.requested}, have ${e.available}`,
   BALANCE_CHECK_UNAVAILABLE: () => "Sign to verify your balance first",
@@ -101,17 +103,17 @@ try {
   await token.confidentialTransfer(to, amount);
 } catch (error) {
   if (!isRetryable(error)) {
-    throw error; // terminal — don't retry
+    throw error; // terminal: don't retry
   }
   const delaySeconds = retryAfterSeconds(error) ?? 2; // backoff when the server gives no hint
   // ... wait, then retry
 }
 ```
 
-| Function            | Signature                                                      | Description                                                                                                                                                                                                                                          |
-| ------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `isRetryable`       | `(error: unknown) => error is ZamaError & { retryable: true }` | `true` only for a `ZamaError` instance whose `.retryable` is `true`; `false` for anything else, including non-SDK errors.                                                                                                                            |
-| `retryAfterSeconds` | `(error: unknown) => number \| undefined`                      | Reads the error's own `retryAfter` field when the error is retryable and carries one. Only `RelayerRequestFailedError` and `RpcRateLimitError` currently carry `retryAfter` — treat `undefined` as "retry with your own backoff," not "don't retry." |
+| Function            | Signature                                                      | Description                                                                                                                                                                                                                                         |
+| ------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `isRetryable`       | `(error: unknown) => error is ZamaError & { retryable: true }` | `true` only for a `ZamaError` instance whose `.retryable` is `true`; `false` for anything else, including non-SDK errors.                                                                                                                           |
+| `retryAfterSeconds` | `(error: unknown) => number \| undefined`                      | Reads the error's own `retryAfter` field when the error is retryable and carries one. Only `RelayerRequestFailedError` and `RpcRateLimitError` currently carry `retryAfter`; treat `undefined` as "retry with your own backoff," not "don't retry." |
 
 Exactly seven error classes are retryable today: `RpcRateLimitError`, `RelayerRequestFailedError` (only on an HTTP 429 or an `@fhevm/sdk` relayer timeout), `DelegationNotPropagatedError`, `DelegationCooldownError`, `WalletAccountNotReadyError`, `HcuBlockLimitExceededError`, and `UnwrapNotMinedError`. `VaultBatcherReadFailedError` is retryable for some instances: see [VaultBatcherReadFailedError](#vaultbatcherreadfailederror). See [Retry transient failures](../../guides/handle-errors.md#8-retry-transient-failures) for the full guide, including React Query integration.
 
@@ -143,6 +145,8 @@ Exactly seven error classes are retryable today: `RpcRateLimitError`, `RelayerRe
 | `TransportKeyPairChangedError`            | `TRANSPORT_KEY_PAIR_CHANGED`             | Transport key pair changed between `preparePermit` and `registerPermit`                                                                   |
 | `PreparedPermitChainMismatchError`        | `PREPARED_PERMIT_CHAIN_MISMATCH`         | The chain embedded in `prepared.eip712` doesn't match the chain `registerPermit` is running against                                       |
 | `PreparedPermitExpiredError`              | `PREPARED_PERMIT_EXPIRED`                | A prepared permit's validity window elapsed before its signature was registered                                                           |
+| `UnifiedPermitNotSupportedError`          | `UNIFIED_PERMIT_NOT_SUPPORTED`           | A wildcard permit, or the V2 permit the SDK picked, can't be signed (no v0.14+, `protocolConfigContractAddress` or relayer V2 support)    |
+| `UnifiedDecryptionUnsupportedError`       | `UNIFIED_DECRYPTION_UNSUPPORTED`         | A decrypt needs a stored V2 (unified) permit, but the connected relayer doesn't support unified decryption yet                            |
 | `RelayerRequestFailedError`               | `RELAYER_REQUEST_FAILED`                 | Relayer HTTP request failed                                                                                                               |
 | `NotEntitledError`                        | `NOT_ENTITLED`                           | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`)         |
 | `RpcRateLimitError`                       | `RPC_RATE_LIMITED`                       | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)                                                          |
@@ -214,7 +218,7 @@ Thrown when the signer and provider resolve to different chains during an operat
 
 ```ts
 matchZamaError(error, {
-  CHAIN_MISMATCH: () => showError("Wallet is on the wrong network — switch and retry"),
+  CHAIN_MISMATCH: () => showError("Wallet is on the wrong network, switch and retry"),
 });
 ```
 
@@ -242,7 +246,7 @@ try {
 
 **Code:** `SIGNING_FAILED`
 
-The wallet attempted to sign but failed for a reason other than user rejection — network issues, hardware wallet firmware problems, or RPC timeouts. Like `SigningRejectedError`, it carries `operation`, and, when recoverable from the wallet/provider's raw error, `rpcCode` (its JSON-RPC / EIP-1193 numeric error code) and `walletErrorName` (the error class name the wallet/provider library threw, e.g. viem's `InvalidParamsRpcError`) — useful for grouping and alerting on structured fields instead of parsing `message`. `grantPermit`, `grantDelegationPermit`, and `registerPermit` failures also emit a `ZamaSDKEvents.PermitError` event carrying the same error before throwing; see [`onEvent`](ZamaSDK.md#onevent).
+The wallet attempted to sign but failed for a reason other than user rejection: network issues, hardware wallet firmware problems, or RPC timeouts. Like `SigningRejectedError`, it carries `operation`, and, when recoverable from the wallet/provider's raw error, `rpcCode` (its JSON-RPC / EIP-1193 numeric error code) and `walletErrorName` (the error class name the wallet/provider library threw, e.g. viem's `InvalidParamsRpcError`), useful for grouping and alerting on structured fields instead of parsing `message`. `grantPermit`, `grantDelegationPermit`, and `registerPermit` failures also emit a `ZamaSDKEvents.PermitError` event carrying the same error before throwing; see [`onEvent`](ZamaSDK.md#onevent).
 
 ```ts
 matchZamaError(error, { SIGNING_FAILED: (e) => console.error("Wallet signing error:", e.message) });
@@ -258,7 +262,7 @@ FHE encryption failed inside the WASM runtime. Usually caused by missing WASM su
 
 ```ts
 matchZamaError(error, {
-  ENCRYPTION_FAILED: () => showError("Encryption failed — check browser compatibility"),
+  ENCRYPTION_FAILED: () => showError("Encryption failed, check browser compatibility"),
 });
 ```
 
@@ -285,7 +289,7 @@ matchZamaError(error, {
 FHE decryption failed. Can occur after an interrupted unshield or when the transport key pair state is corrupted.
 
 ```ts
-matchZamaError(error, { DECRYPTION_FAILED: () => showError("Decryption failed — try refreshing") });
+matchZamaError(error, { DECRYPTION_FAILED: () => showError("Decryption failed, try refreshing") });
 ```
 
 **How to handle:** If this happens after a page reload during unshield, use `getPendingUnshield()` and `resumeUnshield()` to recover. Otherwise, calling `sdk.permits.clear()` and retrying forces a fresh transport key pair.
@@ -308,7 +312,7 @@ matchZamaError(error, {
 
 **Code:** `INVALIDATION_TIMESTAMP_TOO_LOW`
 
-Thrown by `invalidateDecryptionSignatures()` when the requested cutoff is not strictly later than the account's current invalidation cutoff. The ACL only ever moves the cutoff forward, so re-sending the same timestamp — or an older one — reverts.
+Thrown by `invalidateDecryptionSignatures()` when the requested cutoff is not strictly later than the account's current invalidation cutoff. The ACL only ever moves the cutoff forward, so re-sending the same timestamp (or an older one) reverts.
 
 ```ts
 matchZamaError(error, {
@@ -331,7 +335,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Pass a timestamp no later than now, or omit it to let the chain resolve the cutoff from the current block timestamp — which also sidesteps client clock skew.
+**How to handle:** Pass a timestamp no later than now, or omit it to let the chain resolve the cutoff from the current block timestamp, which also sidesteps client clock skew.
 
 ### HcuBlockLimitExceededError
 
@@ -438,7 +442,7 @@ The relayer rejected the transport key pair. This happens when the key pair is m
 matchZamaError(error, {
   INVALID_KEYPAIR: () => {
     sdk.permits.clear();
-    showPrompt("Transport key pair rejected — sign again to continue");
+    showPrompt("Transport key pair rejected, sign again to continue");
   },
 });
 ```
@@ -468,7 +472,7 @@ The transport key pair exceeded its TTL (default: 30 days). The user needs to si
 
 ```ts
 matchZamaError(error, {
-  KEYPAIR_EXPIRED: () => showPrompt("Transport key pair expired — sign to refresh"),
+  KEYPAIR_EXPIRED: () => showPrompt("Transport key pair expired, sign to refresh"),
 });
 ```
 
@@ -478,7 +482,7 @@ matchZamaError(error, {
 
 **Code:** `NO_CIPHERTEXT`
 
-The account has no encrypted balance on-chain — it has never shielded tokens for this contract. This is different from a zero balance.
+The account has no encrypted balance on-chain: it has never shielded tokens for this contract. This is different from a zero balance.
 
 ```ts
 try {
@@ -491,7 +495,7 @@ try {
 }
 ```
 
-**How to handle:** Show an empty state in your UI prompting the user to shield tokens. Do not display "0" — there is no balance to show.
+**How to handle:** Show an empty state in your UI prompting the user to shield tokens. Do not display "0": there is no balance to show.
 
 ### KeyWrappingError
 
@@ -520,11 +524,11 @@ With a `transportKeyPairScope`, no mismatch self-heals: regenerating would clobb
 
 **Code:** `TRANSPORT_KEY_PAIR_CHANGED`
 
-Thrown by [`registerPermit`](./ZamaSDK.md#permits-registerpermit) when the transport key pair changed between `preparePermit` and `registerPermit` — a TTL expiry or eviction happened in between. The prepared EIP-712 payload is signed against the old key pair's public key; registering it under a different one would bind the permit to the wrong key.
+Thrown by [`registerPermit`](./ZamaSDK.md#permits-registerpermit) when the transport key pair changed between `preparePermit` and `registerPermit` (a TTL expiry or eviction happened in between). The prepared EIP-712 payload is signed against the old key pair's public key; registering it under a different one would bind the permit to the wrong key.
 
 ```ts
 matchZamaError(error, {
-  TRANSPORT_KEY_PAIR_CHANGED: () => showError("Offline permit expired — restart the request"),
+  TRANSPORT_KEY_PAIR_CHANGED: () => showError("Offline permit expired, restart the request"),
 });
 ```
 
@@ -549,7 +553,7 @@ matchZamaError(error, {
 
 **Code:** `PREPARED_PERMIT_EXPIRED`
 
-A prepared permit's validity window (`startTimestamp` + `durationDays`) elapsed before its signature was registered — the out-of-process signing ceremony took longer than the permit's lifetime.
+A prepared permit's validity window (`startTimestamp` + `durationDays`) elapsed before its signature was registered: the out-of-process signing ceremony took longer than the permit's lifetime.
 
 ```ts
 matchZamaError(error, {
@@ -558,6 +562,39 @@ matchZamaError(error, {
 ```
 
 **How to handle:** Call `preparePermit` again for a fresh validity window. Consider a longer `durationDays` (up to 365) if approval routinely takes this long.
+
+### UnifiedPermitNotSupportedError
+
+**Code:** `UNIFIED_PERMIT_NOT_SUPPORTED`
+
+Thrown by `grantPermit`, `grantDelegationPermit`, `preparePermit` and `batchPreparePermits` when a V2 (unified) permit can't be signed: the chain isn't on protocol v0.14+, its `FheChain` has no `protocolConfigContractAddress`, or the relayer lacks unified decryption support. It fails before any wallet prompt. A [`WILDCARD_PERMIT`](../../concepts/permit-model.md#wildcard-v2-permits) request throws in every case. A contract-list request falls back to a V1 permit when the `protocolConfigContractAddress` or relayer support is missing, and throws only when the chain turns out not to be on protocol v0.14+.
+
+```ts
+matchZamaError(error, {
+  UNIFIED_PERMIT_NOT_SUPPORTED: () => showError("This network doesn't support V2 permits yet"),
+});
+```
+
+**How to handle:** The error message names the cause. When the `protocolConfigContractAddress` or relayer support is missing, request an explicit contract list instead of `WILDCARD_PERMIT`: the SDK signs a V1 permit. On a chain not yet on protocol v0.14+, retry once it upgrades. On a custom chain, set `protocolConfigContractAddress` if the network has a `ProtocolConfig` contract.
+
+### UnifiedDecryptionUnsupportedError
+
+**Code:** `UNIFIED_DECRYPTION_UNSUPPORTED`
+
+Thrown by decrypt operations when the stored permit covering the requested contracts is a V2 (unified) permit, such as a wildcard one, but the connected relayer doesn't support unified decryption yet. The chain and the permit are both V2-capable; only the relayer lags.
+
+```ts
+matchZamaError(error, {
+  UNIFIED_DECRYPTION_UNSUPPORTED: async () => {
+    await sdk.permits.revokePermits([tokenAddress]);
+    await sdk.permits.grantPermit([tokenAddress]);
+  },
+});
+```
+
+**How to handle:** Revoke the stored V2 permit for those contracts with `revokePermits`, then call `grantPermit`: the SDK signs a V1 permit while the relayer lacks unified support. Or retry once the relayer upgrades.
+
+For a delegated decrypt, retry once the relayer upgrades: `revokePermits` with a contract list leaves delegated permits alone. As a last resort, `revokePermits()` with no argument drops the delegated permit so `grantDelegationPermit` can sign a V1 one, but it also removes every other permit for this signer on every chain, so the user has to sign again everywhere.
 
 ### RelayerRequestFailedError
 
@@ -575,7 +612,7 @@ matchZamaError(error, {
       await sleep((e.retryAfter ?? 1) * 1000);
       retry();
     } else {
-      showError("Relayer unavailable — try again later");
+      showError("Relayer unavailable, try again later");
     }
   },
 });
@@ -583,19 +620,19 @@ matchZamaError(error, {
 
 **How to handle:** For a 429, wait `.retryAfter` seconds (when present) before retrying instead of inventing a backoff. Otherwise, check `relayerUrl` in your transport config, verify the `auth` option if using API key authentication, and check relayer service health.
 
-> **Browser note:** back-pressure is reliable server-side. In the browser, the relayer's 429 is served cross-origin without CORS headers, so `.retryAfter` (and sometimes `.statusCode`) may be unavailable — fall back to your own backoff.
+> **Browser note:** back-pressure is reliable server-side. In the browser, the relayer's 429 is served cross-origin without CORS headers, so `.retryAfter` (and sometimes `.statusCode`) may be unavailable, so fall back to your own backoff.
 
 ### NotEntitledError
 
 **Code:** `NOT_ENTITLED`
 
-The configured signer is not entitled to decrypt the encrypted value: the relayer's ACL check (`persistAllowed`) denied it. This is a **terminal, non-retryable** condition — the account needs an on-chain ACL grant (`FHE.allow`) before it can decrypt. It is distinct from a transient infrastructure failure, so entitlement-aware consumers (e.g. server-side indexers) can branch deterministically instead of pre-checking on-chain out of band or string-matching messages.
+The configured signer is not entitled to decrypt the encrypted value: the relayer's ACL check (`persistAllowed`) denied it. This is a **terminal, non-retryable** condition: the account needs an on-chain ACL grant (`FHE.allow`) before it can decrypt. It is distinct from a transient infrastructure failure, so entitlement-aware consumers (e.g. server-side indexers) can branch deterministically instead of pre-checking on-chain out of band or string-matching messages.
 
-The SDK derives this typed error from the relayer's own authoritative ACL check — it adds no extra on-chain reads.
+The SDK derives this typed error from the relayer's own authoritative ACL check; it adds no extra on-chain reads.
 
 > **Scope:** `NotEntitledError` covers the **direct signer** (user-decrypt path) not being entitled. The rarer "the dapp contract itself is not authorized for this encrypted value" case is a dapp misconfiguration and currently surfaces as `DecryptionFailedError`, so retry-aware consumers should not treat every `DecryptionFailedError` as transient.
 
-> **Delegated path:** on a _delegated_ decrypt, a "not entitled" verdict comes from the **delegator's** `persistAllowed` L1 read, which returns `false` transiently while a just-granted delegation propagates or when the RPC serves a stale block. That case is **not** terminal — it surfaces as the retryable [`DelegationNotPropagatedError`](#delegationnotpropagatederror) instead, mirroring the delegated-500 handling.
+> **Delegated path:** on a _delegated_ decrypt, a "not entitled" verdict comes from the **delegator's** `persistAllowed` L1 read, which returns `false` transiently while a just-granted delegation propagates or when the RPC serves a stale block. That case is **not** terminal: it surfaces as the retryable [`DelegationNotPropagatedError`](#delegationnotpropagatederror) instead, mirroring the delegated-500 handling.
 
 The error carries `encryptedValue`, `contractAddress`, and `account`.
 
@@ -606,7 +643,7 @@ try {
   await sdk.decryption.decryptValues([{ encryptedValue, contractAddress }]);
 } catch (error) {
   if (error instanceof NotEntitledError) {
-    // Don't retry — wait for an ACL grant / backfill, then re-attempt.
+    // Don't retry: wait for an ACL grant / backfill, then re-attempt.
     markPendingGrant(error.encryptedValue, error.contractAddress);
   }
 }
@@ -618,7 +655,7 @@ try {
 
 **Code:** `RPC_RATE_LIMITED`
 
-The consumer's **RPC provider** rate-limited an on-chain read the SDK performs during decryption (e.g. the ACL check) — surfaced as HTTP 429 or the JSON-RPC `-32005` ("limit exceeded") code. This is an RPC-endpoint problem, **not** a decryption or entitlement failure, and the operation is safe to **retry** (ideally with backoff). It is separate from the relayer's own back-pressure, which remains a `RelayerRequestFailedError`. The error exposes `retryAfter` (seconds) when the provider supplies a hint — a numeric value or a `Retry-After` header (e.g. viem's `HttpRequestError`).
+The consumer's **RPC provider** rate-limited an on-chain read the SDK performs during decryption (e.g. the ACL check), surfaced as HTTP 429 or the JSON-RPC `-32005` ("limit exceeded") code. This is an RPC-endpoint problem, **not** a decryption or entitlement failure, and the operation is safe to **retry** (ideally with backoff). It is separate from the relayer's own back-pressure, which remains a `RelayerRequestFailedError`. The error exposes `retryAfter` (seconds) when the provider supplies a hint: a numeric value or a `Retry-After` header (e.g. viem's `HttpRequestError`).
 
 ```ts
 import { RpcRateLimitError } from "@zama-fhe/sdk";
@@ -638,8 +675,8 @@ try {
 
 These are distinct states:
 
-- **`NoCiphertextError`** — the account has never shielded tokens. There is no encrypted balance to decrypt. Show an empty state like "No confidential balance".
-- **Balance of `0n`** — the account has shielded before but currently holds zero. Show "Balance: 0".
+- **`NoCiphertextError`**: the account has never shielded tokens. There is no encrypted balance to decrypt. Show an empty state like "No confidential balance".
+- **Balance of `0n`**: the account has shielded before but currently holds zero. Show "Balance: 0".
 
 ```ts
 try {
@@ -720,7 +757,7 @@ try {
 
 **Code:** `INSUFFICIENT_ALLOWANCE`
 
-The ERC-20 allowance granted to the wrapper is less than the requested `wrap` amount. Thrown by `wrap()` before submitting the transaction, when you drive the manual `approve` + `wrap` flow yourself. `shield()` never throws this — it manages approval internally.
+The ERC-20 allowance granted to the wrapper is less than the requested `wrap` amount. Thrown by `wrap()` before submitting the transaction, when you drive the manual `approve` + `wrap` flow yourself. `shield()` never throws this; it manages approval internally.
 
 | Property    | Type      | Description                                     |
 | ----------- | --------- | ----------------------------------------------- |
@@ -821,7 +858,7 @@ The delegation has expired and can no longer be used for decryption.
 
 ```ts
 matchZamaError(error, {
-  DELEGATION_EXPIRED: () => showPrompt("Delegation expired — create a new one"),
+  DELEGATION_EXPIRED: () => showPrompt("Delegation expired, create a new one"),
 });
 ```
 
@@ -883,7 +920,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** No action needed — the delegation is already configured as requested.
+**How to handle:** No action needed: the delegation is already configured as requested.
 
 ### DelegationContractIsSelfError
 
@@ -903,17 +940,17 @@ matchZamaError(error, {
 
 **Code:** `DELEGATION_NOT_PROPAGATED`
 
-Thrown on a delegated decrypt when either (a) the relayer returns an HTTP 500, or (b) the delegator fails the on-chain ACL check (`persistAllowed` returns `false`). The most likely cause in both cases is that the delegation was recently granted on L1 but hasn't propagated to the gateway (on Arbitrum) yet — cross-chain sync usually completes within ~10 blocks (a few seconds) — or the consumer's RPC is serving a stale block. Because it is a timing window rather than a permanent denial, it is **retryable** (unlike the terminal [`NotEntitledError`](#notentitlederror) on the direct user-decrypt path).
+Thrown on a delegated decrypt when either (a) the relayer returns an HTTP 500, or (b) the delegator fails the on-chain ACL check (`persistAllowed` returns `false`). The most likely cause in both cases is that the delegation was recently granted on L1 but hasn't propagated to the gateway (on Arbitrum) yet (cross-chain sync usually completes within ~10 blocks, a few seconds), or the consumer's RPC is serving a stale block. Because it is a timing window rather than a permanent denial, it is **retryable** (unlike the terminal [`NotEntitledError`](#notentitlederror) on the direct user-decrypt path).
 
-The delegated-decrypt path rides out this window with a bounded internal retry (~30s), so you rarely see this error — it surfaces only when propagation outlasts the retry budget, or when you opt out with `waitForPropagation: false`.
+The delegated-decrypt path rides out this window with a bounded internal retry (~30s), so you rarely see this error: it surfaces only when propagation outlasts the retry budget, or when you opt out with `waitForPropagation: false`.
 
 ```ts
 matchZamaError(error, {
-  DELEGATION_NOT_PROPAGATED: () => showInfo("Delegation is still syncing — retry shortly"),
+  DELEGATION_NOT_PROPAGATED: () => showInfo("Delegation is still syncing, retry shortly"),
 });
 ```
 
-**How to handle:** Retry shortly — propagation normally completes within seconds. If the error persists, the gateway or relayer may be experiencing an unrelated issue.
+**How to handle:** Retry shortly: propagation normally completes within seconds. If the error persists, the gateway or relayer may be experiencing an unrelated issue.
 
 ### AclPausedError
 
@@ -925,7 +962,7 @@ Caught from the on-chain `EnforcedPause` revert. The ACL contract is paused, tem
 matchZamaError(error, { ACL_PAUSED: () => showError("Delegation is temporarily disabled") });
 ```
 
-**How to handle:** Wait for the ACL contract to be unpaused. This is an operator-level action — contact the protocol team if this persists.
+**How to handle:** Wait for the ACL contract to be unpaused. This is an operator-level action: contact the protocol team if this persists.
 
 {% hint style="info" %}
 The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError` subclasses on `delegateDecryption` and `revokeDelegation`. Unmapped reverts fall through to `TransactionRevertedError`. See the [delegation method reference](./delegation.md#methods) for the full mapping.
@@ -951,5 +988,5 @@ The SDK automatically maps known ACL Solidity revert reasons to typed `ZamaError
 
 ## Related
 
-- [Error handling guide](../../guides/handle-errors.md) — practical patterns for catching and displaying errors
-- [ZamaSDK](./ZamaSDK.md) — SDK constructor and permit management
+- [Error handling guide](../../guides/handle-errors.md): practical patterns for catching and displaying errors
+- [ZamaSDK](./ZamaSDK.md): SDK constructor and permit management

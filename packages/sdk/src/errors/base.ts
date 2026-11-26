@@ -96,9 +96,9 @@ export const ZamaErrorCode = {
   PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH",
   /** A prepared permit's validity window elapsed before its signature was registered. */
   PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED",
-  /** V2 (unified) decryption permits — including wildcard permits — need protocol v0.14+; the connected chain hasn't upgraded yet. */
+  /** V2 (unified) decryption permits, wildcard ones included, need protocol v0.14+, the chain's `protocolConfigContractAddress` and a relayer with unified decryption support; one of them is missing. */
   UnifiedPermitNotSupported: "UNIFIED_PERMIT_NOT_SUPPORTED",
-  /** A stored V2/wildcard permit's scope is needed, but the connected relayer instance doesn't support unified decryption yet. */
+  /** A stored V2 (unified) permit's scope is needed, but the connected relayer doesn't support unified decryption yet. */
   UnifiedDecryptionUnsupported: "UNIFIED_DECRYPTION_UNSUPPORTED",
   /** `invalidateDecryptionSignatures` was given a cutoff at or below the account's current one; the ACL only moves it forward. */
   InvalidationTimestampTooLow: "INVALIDATION_TIMESTAMP_TOO_LOW",
@@ -176,8 +176,8 @@ const RETRYABLE_BY_CODE: Complete<Record<ZamaErrorCode, boolean>> = {
   [ZamaErrorCode.TransportKeyPairChanged]: false, // caller must prepare the permit again against the current key pair
   [ZamaErrorCode.PreparedPermitChainMismatch]: false, // caller must register against the chain the permit was prepared for
   [ZamaErrorCode.PreparedPermitExpired]: false, // caller must prepare the permit again for a fresh validity window
-  [ZamaErrorCode.UnifiedPermitNotSupported]: false, // resolves only once the chain itself upgrades to protocol v0.14+
-  [ZamaErrorCode.UnifiedDecryptionUnsupported]: false, // resolves only once this relayer instance deploys /v3/user-decrypt, or the caller falls back to a V1 permit
+  [ZamaErrorCode.UnifiedPermitNotSupported]: false, // resolves only once the chain, its ProtocolConfig and its relayer all support V2
+  [ZamaErrorCode.UnifiedDecryptionUnsupported]: false, // resolves once this relayer deploys /v3/user-decrypt, or the caller revokes the V2 permit and grants V1
   [ZamaErrorCode.InvalidationTimestampTooLow]: false, // the caller must pass a strictly later cutoff; retrying the same one always reverts
   [ZamaErrorCode.InvalidationTimestampInFuture]: false, // the caller must pass a cutoff no later than now
   [ZamaErrorCode.UnshieldAlreadyFinalized]: false, // the funds already arrived; the stale entry is cleared
