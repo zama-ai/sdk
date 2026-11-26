@@ -1,5 +1,37 @@
 # Changelog
 
+## [3.9.0](https://github.com/zama-ai/sdk/compare/v3.8.0...v3.9.0) (2026-11-26)
+
+### Features
+
+- **daemon:** report daemon traffic in telemetry ([#947](https://github.com/zama-ai/sdk/issues/947)) ([d640d72]())
+- **examples:** offer Sepolia alongside the custom environment in react-wagmi ([#952](https://github.com/zama-ai/sdk/issues/952)) ([59d9236]())
+- **examples:** split react-wagmi into Tokens, Delegation and Vaults tabs ([#914](https://github.com/zama-ai/sdk/issues/914)) ([811b3bd]())
+- **sdk:** update bsc testnet addresses ([#944](https://github.com/zama-ai/sdk/issues/944)) ([4272f44]()), closes [zama-ai/fhevm#4723]()
+- **sdk:** verify the FHE public key and CRS against KMSGeneration (beta, @fhevm/sdk 0.13.9) ([#974](https://github.com/zama-ai/sdk/issues/974)) ([011ef7c]()), closes [#943]() [zama-ai/fhevm#5028]() [#943]()
+- **vaults:** route a join to the next batch among several batchers ([#959](https://github.com/zama-ai/sdk/issues/959)) ([5bbc963]())
+
+### Bug Fixes
+
+- **daemon:** drop the CVE-2026-76844 waiver from the image scan ([#980](https://github.com/zama-ai/sdk/issues/980)) ([59ca2d3]()), closes [#906]() [#931]()
+- **daemon:** risk-accept CVE-2026-124709 in the image scan ([#979](https://github.com/zama-ai/sdk/issues/979)) ([d5ea321]())
+- **deps:** raise the Next.js floor to 16.4.6 in the examples and test app ([#955](https://github.com/zama-ai/sdk/issues/955)) ([c83d715]())
+- **react-sdk:** refresh balances when someone else finalizes the unshield ([#984](https://github.com/zama-ai/sdk/issues/984)) ([2af12db]()), closes [#967]()
+- **react-sdk:** stop leaking a non-exported sdk path into published types ([#1006](https://github.com/zama-ai/sdk/issues/1006)) ([fd0687d]())
+- route daemon ownership to security team ([#981](https://github.com/zama-ai/sdk/issues/981)) ([d7590db]())
+- **sdk:** keep interrupted unshields recoverable, checked under every interleaving ([#967](https://github.com/zama-ai/sdk/issues/967)) ([03c80c6]()), closes [unshield#1]() [#956]()
+- **vaults:** leave a paused member out of a group join instead of refusing the group ([#978](https://github.com/zama-ai/sdk/issues/978)) ([0c34f7b]())
+- **vaults:** lower MAX_GROUP_VAULTS from 8 to 4 ([#1001](https://github.com/zama-ai/sdk/issues/1001)) ([d9bf684]())
+- **vaults:** read the batch before a batcher's first one as the contract does ([#998](https://github.com/zama-ai/sdk/issues/998)) ([13b0283]()), closes [zama-ai/super-app#874]()
+
+### Code Refactoring
+
+- **sdk:** decrypt one public uint through one internal helper ([#1004](https://github.com/zama-ai/sdk/issues/1004)) ([f35e3ed]()), closes [#961]()
+
+### Build System
+
+- **sdk:** bump @fhevm/sdk from 0.13.2 to 0.13.7 ([#971](https://github.com/zama-ai/sdk/issues/971)) ([3985b7c]())
+
 ## [3.9.0-beta.16](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.15...v3.9.0-beta.16) (2026-11-26)
 
 ### Bug Fixes
