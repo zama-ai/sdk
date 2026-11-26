@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.9.0-beta.16](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.15...v3.9.0-beta.16) (2026-11-26)
+
+### Bug Fixes
+
+- **react-sdk:** stop leaking a non-exported sdk path into published types ([#1006](https://github.com/zama-ai/sdk/issues/1006)) ([fd0687d]())
+- **vaults:** lower MAX_GROUP_VAULTS from 8 to 4 ([#1001](https://github.com/zama-ai/sdk/issues/1001)) ([d9bf684]())
+
+### Code Refactoring
+
+- **sdk:** decrypt one public uint through one internal helper ([#1004](https://github.com/zama-ai/sdk/issues/1004)) ([f35e3ed]()), closes [#961]()
+
 ## [3.9.0-beta.15](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.14...v3.9.0-beta.15) (2026-11-24)
 
 ### Features
