@@ -26,7 +26,7 @@ RUN pnpm install --frozen-lockfile --offline \
   && install -d -m 0700 /rootfs/run/zama /rootfs/var/lib/zama
 
 # Node.js only: no shell or package manager, and no entrypoint, so CMD names node.
-FROM dhi.io/node:24-debian13@sha256:b1f27e02fbc8c2178892d39affd54dc2bd4e2215100b47a79c6f6038858eba72
+FROM dhi.io/node:24-debian13
 ARG RUNTIME_UID=10000
 ARG RUNTIME_GID=10001
 ENV NODE_ENV=production
