@@ -359,7 +359,7 @@ description: Release notes for the 3.x line.
 
 ## Versions
 
-- [**3.3.x**](v3-3.md) — Release notes for the 3.3.x line.
+- [**3.3.x**](v3-3.md): Release notes for the 3.3.x line.
 `;
 
 const CHANGELOG_MD_FIXTURE = `# Changelog
@@ -425,7 +425,9 @@ describe("promoteChangelog", () => {
     expect(summary).toContain("changelog/v3-4.md");
 
     const index = readFileSync(join(root, `${CHANGELOG_DIR}/v3.md`), "utf8");
-    expect(index).toContain("(v3-4.md)");
+    expect(index).toContain("- [**3.4.x**](v3-4.md): Release notes for the 3.4.x line.");
+    // Pre-commit rejects newly added em dashes, so generated lines must not carry one.
+    expect(index).not.toContain(String.fromCodePoint(0x2014));
 
     const beta = readFileSync(join(root, `${CHANGELOG_DIR}/beta.md`), "utf8");
     expect(betaHasSubstance(beta)).toBe(false);
