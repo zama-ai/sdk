@@ -1,5 +1,11 @@
 # Changelog
 
+## [4.0.0-alpha.10](https://github.com/zama-ai/sdk/compare/v4.0.0-alpha.9...v4.0.0-alpha.10) (2026-11-26)
+
+### Bug Fixes
+
+- **sdk:** wire the bscTestnet ProtocolConfig address ([#1020](https://github.com/zama-ai/sdk/issues/1020)) ([d4d3046]())
+
 ## [3.9.0](https://github.com/zama-ai/sdk/compare/v3.8.0...v3.9.0) (2026-11-26)
 
 ### Features
