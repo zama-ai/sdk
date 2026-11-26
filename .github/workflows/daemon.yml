@@ -24,6 +24,10 @@ on:
       - ".trivyignore"
   workflow_dispatch:
   workflow_call:
+    inputs:
+      skip-image-scan:
+        type: boolean
+        default: false
     secrets:
       DOCKERHUB_OIDC_CONNECTIONID:
         required: true
@@ -36,17 +40,13 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_HOURS: "72"
-  SAFE_CHAIN_MINIMUM_PACKAGE_AGE_EXCLUSIONS: "@fhevm/sdk,@zama-fhe/sdk,@zama-fhe/react-sdk"
-
 jobs:
   go:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: clients/go/go.mod
           cache-dependency-path: |
@@ -106,7 +106,7 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: ./.github/actions/install-deps
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version-file: clients/go/go.mod
           cache-dependency-path: clients/go/go.sum
@@ -192,17 +192,6 @@ jobs:
           # Scoped per architecture so the two builds don't overwrite each other's cache.
           cache-from: type=gha,scope=daemon-image-${{ matrix.arch }}
           cache-to: type=gha,scope=daemon-image-${{ matrix.arch }},mode=max
-      # Every CRITICAL or HIGH finding fails, fixed or not: a finding without a fix is either risk-accepted in
-      # .trivyignore after a security review, or it blocks the image. Keep in step with the release scan.
-      - name: Scan the image
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        with:
-          image-ref: ghcr.io/zama-ai/sdk-daemon:ci
-          exit-code: "1"
-          vuln-type: os,library
-          severity: CRITICAL,HIGH
-          trivyignores: .trivyignore
-          version: v0.76.0
       - name: Start the daemon with the deployment Compose file
         env:
           ZAMA_SDK_VERSION: ci
@@ -219,3 +208,13 @@ jobs:
           trap 'docker compose -f compose.host.yaml down' EXIT
           docker compose -f compose.host.yaml up -d --wait --wait-timeout 120
           test -S socket/sdk.sock
+      - name: Scan the image
+        if: ${{ !inputs.skip-image-scan }}
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ghcr.io/zama-ai/sdk-daemon:ci
+          exit-code: "1"
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+          trivyignores: .trivyignore
+          version: v0.76.0

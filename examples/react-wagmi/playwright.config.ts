@@ -9,41 +9,55 @@ export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,
   use: { baseURL: "http://localhost:3004", trace: "on-first-retry" },
-  webServer: {
-    command: production ? "npm run build && npm run start -- -p 3004" : "npm run dev",
-    url: "http://localhost:3004",
-    // Never reuse a dev server already on the port: the tests depend on the env below, which
-    // a developer's own server does not have.
-    reuseExistingServer: false,
-    timeout: production ? 300_000 : 120_000,
-    // Applied to the build too, so NEXT_PUBLIC_* values are inlined from here rather than
-    // from a dev's .env.local.
-    env: {
-      // Force the default RPC URLs so mockRpc's intercept patterns always match.
-      NEXT_PUBLIC_SEPOLIA_RPC_URL: "",
-      NEXT_PUBLIC_MAINNET_RPC_URL: "",
-      NEXT_PUBLIC_BNB_TESTNET_RPC_URL: "",
-      // Force the injected-wallet stack: the suite drives a mocked window.ethereum through
-      // wagmi's injected connector, Dynamic's dialog needs its live API, and a dev's .env.local
-      // may enable Dynamic.
-      NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: "",
-      // Force the stock Sepolia preset: a dev's .env.local may select a custom environment,
-      // whose registry address would not match the mocked one.
-      NEXT_PUBLIC_ZAMA_ENV: "",
-      NEXT_PUBLIC_REGISTRY_ADDRESS: "",
-      // Enable the mainnet row so the picker and the mainnet feature flags are testable, and pin
-      // Polygon off. Nothing listens on port 9, so a forwarded proxy call fails fast with 503.
-      MAINNET_RELAYER_URL: "http://127.0.0.1:9",
-      POLYGON_RELAYER_URL: "",
-      ENABLED_NETWORKS: "",
-      // Bind the vault demo to the mocked cUSDC pair (MOCK_CTOKEN1_ADDRESS) so the
-      // ConfidentialVault cards render when that token is selected on Sepolia.
-      NEXT_PUBLIC_VAULT_ADDRESS: "0x5555555555555555555555555555555555555555",
-      NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN: "0x2222222222222222222222222222222222222222",
-      // Pin a commit so the footer test can check the commit link.
-      NEXT_PUBLIC_COMMIT_SHA: "0123456789abcdef0123456789abcdef01234567",
-      NEXT_PUBLIC_SOURCE_REPO_URL: "",
+  // In order: the app reads the stub relayer's keyurl at boot.
+  webServer: [
+    {
+      command: "node e2e/stub-relayer.mjs 3006",
+      url: "http://127.0.0.1:3006/v2/keyurl",
+      reuseExistingServer: false,
     },
-  },
+    {
+      command: production ? "npm run build && npm run start -- -p 3004" : "npm run dev",
+      url: "http://localhost:3004",
+      // Never reuse a dev server already on the port: the tests depend on the env below, which
+      // a developer's own server does not have.
+      reuseExistingServer: false,
+      timeout: production ? 300_000 : 120_000,
+      // Applied to the build too, so NEXT_PUBLIC_* values are inlined from here rather than
+      // from a dev's .env.local.
+      env: {
+        // Force the default RPC URLs so mockRpc's intercept patterns always match.
+        NEXT_PUBLIC_SEPOLIA_RPC_URL: "",
+        NEXT_PUBLIC_MAINNET_RPC_URL: "",
+        NEXT_PUBLIC_HOODI_RPC_URL: "",
+        // Force the injected-wallet stack: the suite drives a mocked window.ethereum through
+        // wagmi's injected connector, Dynamic's dialog needs its live API, and a dev's .env.local
+        // may enable Dynamic.
+        NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: "",
+        // Force the stock Sepolia preset: a dev's .env.local may select a custom environment,
+        // whose registry address would not match the mocked one.
+        NEXT_PUBLIC_ZAMA_ENV: "",
+        NEXT_PUBLIC_REGISTRY_ADDRESS: "",
+        // Enable the mainnet row so the picker and the mainnet feature flags are testable, and pin
+        // Polygon off. Nothing listens on port 9, so a forwarded mainnet call fails fast with 503.
+        // Sepolia's relayer is the stub above, so the page CSP lists the key storage it names.
+        SEPOLIA_RELAYER_URL: "http://127.0.0.1:3006",
+        SEPOLIA_RELAYER_API_KEY: "",
+        MAINNET_RELAYER_URL: "http://127.0.0.1:9",
+        POLYGON_RELAYER_URL: "",
+        ENABLED_NETWORKS: "",
+        // No vaults, so the Vaults tab shows its setup hint whatever a dev's .env.local says.
+        NEXT_PUBLIC_SEPOLIA_VAULTS: "",
+        NEXT_PUBLIC_BNB_TESTNET_VAULTS: "",
+        NEXT_PUBLIC_HOODI_VAULTS: "",
+        NEXT_PUBLIC_ZENITH_VAULTS: "",
+        NEXT_PUBLIC_MAINNET_VAULTS: "",
+        NEXT_PUBLIC_POLYGON_VAULTS: "",
+        // Pin a commit so the footer test can check the commit link.
+        NEXT_PUBLIC_COMMIT_SHA: "0123456789abcdef0123456789abcdef01234567",
+        NEXT_PUBLIC_SOURCE_REPO_URL: "",
+      },
+    },
+  ],
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });

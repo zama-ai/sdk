@@ -1,16 +1,6 @@
 {
   "extends": "../../tsconfig.json",
-  "compilerOptions": {
-    "plugins": [{ "name": "next" }],
-    "paths": {
-      "@zama-fhe/sdk": ["../../packages/sdk/src/index.ts"],
-      "@zama-fhe/sdk/cleartext": ["../../packages/sdk/src/relayer/cleartext/index.ts"],
-      "@zama-fhe/sdk/*": ["../../packages/sdk/src/*"],
-      "@zama-fhe/react-sdk": ["../../packages/react-sdk/src/index.ts"],
-      "@zama-fhe/react-sdk/*": ["../../packages/react-sdk/src/*"],
-      "@/*": ["./src/*"]
-    }
-  },
+  "compilerOptions": { "plugins": [{ "name": "next" }], "paths": { "@/*": ["./src/*"] } },
   "include": [
     "next-env.d.ts",
     "**/*.ts",

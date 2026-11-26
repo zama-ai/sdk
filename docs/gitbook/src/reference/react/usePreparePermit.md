@@ -80,8 +80,8 @@ Returns a standard TanStack Query `UseMutationResult<PreparedPermit, Error, Prep
 
 **Throws:**
 
-- `ConfigurationError` - `request.contracts` is empty or exceeds 10 addresses, `request.delegator` equals `request.signer`, or `request.durationDays` exceeds the V1 permit maximum of 365 days
-- `TransportKeyPairChangedError` - a concurrent `permits.revokeTransportKeyPair()` rotated the transport key pair while this call was generating one
+- [`ConfigurationError`](../sdk/errors.md#configurationerror) - `request.contracts` is empty or exceeds 10 addresses, `request.delegator` equals `request.signer`, or `request.durationDays` exceeds the V1 permit maximum of 365 days
+- [`TransportKeyPairChangedError`](../sdk/errors.md#transportkeypairchangederror) - a concurrent `permits.revokeTransportKeyPair()` rotated the transport key pair while this call was generating one
 
 ## Related
 

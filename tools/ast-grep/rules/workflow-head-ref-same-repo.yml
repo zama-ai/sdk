@@ -1,0 +1,29 @@
+id: workflow-head-ref-same-repo
+language: yaml
+severity: error
+message: >-
+  The PR author picks the branch name, even from a fork. The condition must include
+  github.event.pull_request.head.repo.full_name == github.repository.
+note: >-
+  A fork can name its branch main or sync/x. Without the same-repo check, a skip or
+  exemption keyed on the branch name also applies to fork PRs. Join the two checks
+  with &&. The rule only confirms that the same-repo check appears somewhere in the
+  condition, not how it is joined.
+files:
+  - .github/workflows/*.yml
+  - .github/workflows/*.yaml
+  - .github/actions/**/action.yml
+  - .github/actions/**/action.yaml
+rule:
+  kind: block_mapping_pair
+  has:
+    field: key
+    regex: ^(if|continue-on-error)$
+  all:
+    - has:
+        field: value
+        regex: github\.(head_ref|event\.pull_request\.head\.ref)\b
+    - not:
+        has:
+          field: value
+          regex: head\.repo\.full_name\s*==\s*github\.repository\b|github\.repository\s*==\s*github\.event\.pull_request\.head\.repo\.full_name

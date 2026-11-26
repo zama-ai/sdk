@@ -1,12 +1,18 @@
 // oxlint-disable eslint-plugin-react-hooks/rules-of-hooks
 import type { QueryClient } from "@tanstack/react-query";
 import { renderHook, type RenderHookOptions } from "@testing-library/react";
-import { createConfig, type GenericLogger, type ZamaConfig } from "@zama-fhe/sdk";
+import {
+  createConfig,
+  type GenericLogger,
+  type GenericProvider,
+  type GenericSigner,
+  type GenericStorage,
+  type RelayerSDK,
+  type ZamaConfig,
+} from "@zama-fhe/sdk";
 import type { FheChain } from "@zama-fhe/sdk/chains";
-import type { RelayerSDK } from "@zama-fhe/sdk/relayer/types";
-import type { FixturesOf } from "@zama-fhe/sdk/test-fixtures/types";
-import type { GenericProvider, GenericSigner, GenericStorage } from "@zama-fhe/sdk/types";
 import type React from "react";
+import type { FixturesOf } from "../../../sdk/src/test-fixtures/types";
 import { Providers } from "./providers";
 import type { QueryClientFixtures } from "./query-client";
 

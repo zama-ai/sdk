@@ -49,6 +49,7 @@ overrides:
 # Only install packages published at least 3 days ago (4320 minutes),
 # reducing exposure to supply-chain attacks via newly published versions.
 # https://pnpm.io/settings#minimumreleaseage
+# Safe Chain ignores these two settings and reads its own copy from .aikido.
 minimumReleaseAge: 4320
 minimumReleaseAgeExclude:
   - "@fhevm/sdk"

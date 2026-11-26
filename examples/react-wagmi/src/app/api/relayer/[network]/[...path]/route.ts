@@ -1,5 +1,4 @@
 import type { NextRequest } from "next/server";
-import { envList } from "@/lib/env";
 import { upstreamFor } from "@/lib/relayers";
 
 // The relayer routes the web() transport calls. Anything else is rejected, so the proxy
@@ -62,13 +61,15 @@ const RESPONSE_DROP = new Set([...HOP_BY_HOP, "content-encoding", "content-lengt
 
 // Browsers send Origin on every POST and on cross-site GETs, so this stops other sites from
 // spending this deployment's relayer quota from their users' browsers. It does not stop
-// scripted abuse; rate limit at the hosting layer for that.
+// scripted abuse; rate limit at the hosting layer for that. The page and this route share a
+// host: the one the browser asked for, which a reverse proxy passes on as X-Forwarded-Host.
+// A TLS terminator changes the scheme the server sees, so only hosts are compared.
 function originAllowed(req: NextRequest): boolean {
   const origin = req.headers.get("origin");
   if (!origin) return true;
-  const configured = envList("RELAYER_PROXY_ALLOWED_ORIGINS");
-  const allowed = configured.length > 0 ? configured : [req.nextUrl.origin];
-  return allowed.includes(origin);
+  const host =
+    req.headers.get("x-forwarded-host")?.split(",")[0]?.trim() || req.headers.get("host");
+  return URL.canParse(origin) && new URL(origin).host === host;
 }
 
 function reject(status: number, error: string) {

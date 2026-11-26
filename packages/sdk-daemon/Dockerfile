@@ -1,6 +1,6 @@
 # Pulling from dhi.io needs `docker login dhi.io` with a Docker Hub account. The build stage is the same Debian
 # release as the runtime stage, so the pruned node_modules link against the same glibc.
-FROM dhi.io/node:24-debian13-dev@sha256:dee4bb11f4cb32ad31000287af8795f772ac801338a166a0e9fbbadd9674a2f8 AS build
+FROM dhi.io/node:24-debian13-dev@sha256:e1b6dd02ec91bf4e4345230c672b97cd21ce63e269e7531298a8420e44ca1c07 AS build
 # The dev image ships bash; don't depend on /bin/sh being present.
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 RUN npm install --global pnpm@11.1.2
@@ -26,7 +26,7 @@ RUN pnpm install --frozen-lockfile --offline \
   && install -d -m 0700 /rootfs/run/zama /rootfs/var/lib/zama
 
 # Node.js only: no shell or package manager, and no entrypoint, so CMD names node.
-FROM dhi.io/node:24-debian13@sha256:84adaf3bdd9fa350e753078db2928a1584e481e11225d14f96014b17ffc96c5a
+FROM dhi.io/node:24-debian13@sha256:4f76f8507955f0cd1700b532da30629030ef44cd15691d1df6146d405be29fa5
 ARG RUNTIME_UID=10000
 ARG RUNTIME_GID=10001
 ENV NODE_ENV=production

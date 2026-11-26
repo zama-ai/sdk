@@ -23,13 +23,12 @@ We aim to acknowledge reports within **48 hours** and provide an initial assessm
 In scope:
 
 - The published `@zama-fhe/sdk` and `@zama-fhe/react-sdk` packages from this repo.
-- The browser FHE worker assumes WASM is loaded from `cdn.zama.org` over HTTPS with an SHA-384 integrity check, not bundled — keep that in mind when modeling the trust boundary.
+- The browser FHE worker assumes WASM is loaded from `cdn.zama.org` over HTTPS with an SHA-384 integrity check, not bundled. Keep that in mind when modeling the trust boundary.
 
 ## Out of Scope
 
-- Vulnerabilities in third-party dependencies (`viem`, `ethers`, `wagmi`, etc.) — please report those to the upstream projects.
-- Vulnerabilities in the underlying Zama Protocol contracts — see the [fhEVM security policy](https://github.com/zama-ai/fhevm/security/policy).
-- Vulnerabilities in `@zama-fhe/relayer-sdk` (the legacy low-level SDK) — same channels as this policy: a draft advisory on its repo if enabled, or <security@zama.ai>.
+- Vulnerabilities in third-party dependencies (`viem`, `ethers`, `wagmi`, etc.): report them to the upstream projects.
+- Vulnerabilities in the underlying Zama Protocol contracts: report them to <security@zama.ai>.
 
 ## Supported Versions
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useResumeUnshield, usePendingUnshield } from "@zama-fhe/react-sdk";
-import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
+import { type TokenWrapperPairWithMetadata, UnshieldAlreadyFinalizedError } from "@zama-fhe/sdk";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
 
 interface PendingUnshieldCardProps {
@@ -15,7 +15,14 @@ export function PendingUnshieldCard({ token, onSuccess }: PendingUnshieldCardPro
 
   const { data: pendingTxHash, isError: loadError } = usePendingUnshield(tokenAddress);
 
-  const resume = useResumeUnshield(tokenAddress, { onSuccess });
+  const resume = useResumeUnshield(tokenAddress, {
+    onSuccess,
+    // The request was already finalized (an earlier attempt, another tab, or another account): the funds arrived.
+    onError: (error) => {
+      if (error instanceof UnshieldAlreadyFinalizedError) onSuccess?.();
+    },
+  });
+  const alreadyFinalized = resume.error instanceof UnshieldAlreadyFinalizedError;
 
   if (loadError) {
     return (
@@ -29,12 +36,10 @@ export function PendingUnshieldCard({ token, onSuccess }: PendingUnshieldCardPro
     );
   }
 
-  // Keep the card mounted when resume.isSuccess so the "Unshielded!" alert is
-  // visible. pendingTxHash comes from usePendingUnshield's query cache, which is
-  // invalidated (not synchronously cleared) on resume success — without this
-  // guard, a null pendingTxHash from a completed refetch would unmount the card
-  // before the success message has had a chance to be seen.
-  if (!pendingTxHash && !resume.isSuccess) return null;
+  // Keep the card mounted once the resume completes (or was already finalized):
+  // the pending-unshield query refetches to null and would unmount the card
+  // before the message shows.
+  if (!pendingTxHash && !resume.isSuccess && !alreadyFinalized) return null;
 
   return (
     <section className="card">
@@ -58,10 +63,15 @@ export function PendingUnshieldCard({ token, onSuccess }: PendingUnshieldCardPro
           </form>
         </div>
       )}
-      {resume.isError && (
+      {resume.isError && !alreadyFinalized && (
         <div className="alert alert-error card-status" role="alert">
           {resume.error?.message}
         </div>
+      )}
+      {alreadyFinalized && (
+        <output className="alert alert-success card-status">
+          This unshield was already finalized. The funds arrived.
+        </output>
       )}
       {resume.isSuccess && resume.data?.txHash && (
         <output className="alert alert-success card-status">

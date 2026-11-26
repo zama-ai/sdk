@@ -1,0 +1,7 @@
+# Safe Chain's package-age policy. Keep it in line with minimumReleaseAge and
+# minimumReleaseAgeExclude in pnpm-workspace.yaml.
+safe-chain:
+  minimumPackageAgeHours: 72
+  npm:
+    minimumPackageAgeExclusions:
+      - "@fhevm/sdk"

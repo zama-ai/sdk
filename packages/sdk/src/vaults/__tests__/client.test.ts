@@ -1,4 +1,4 @@
-import { decodeFunctionData, getAddress, type Address, type Hex } from "viem";
+import { decodeFunctionData, getAddress, zeroHash, type Address, type Hex } from "viem";
 import { vi } from "vitest";
 import { confidentialWrapperAbi } from "../../abi/confidential-wrapper.abi";
 import {
@@ -98,6 +98,8 @@ interface BatchFacts {
   currentBatchId?: bigint;
   /** The state of the batch before the current one, defaults to finalized. */
   previousState?: number;
+  /** The batcher's first batch id; a batch before it does not exist. Defaults to 1. */
+  firstBatchId?: bigint;
   /** What `closed()` returns; `"reverts"` for a batcher deployed before it. Defaults to false. */
   closed?: boolean | "reverts";
 }
@@ -144,6 +146,9 @@ function mockChain(
       case "fromToken":
         return fromTokens[batcher];
       case "batchState":
+        if ((args[0] as bigint) < (batch?.firstBatchId ?? 1n)) {
+          throw new Error(`execution reverted: BatchNonexistent(${String(args[0])})`);
+        }
         return args[0] === current - 1n ? (batch?.previousState ?? 2) : (batch?.state ?? 0);
       case "batchCreatedAt":
         return batch?.createdAt ?? NOW - 10n;
@@ -162,7 +167,9 @@ function mockChain(
       case "currentBatchId":
         return current;
       case "unwrapRequestId":
-        return `0x${"cd".repeat(32)}`;
+        return (args[0] as bigint) < (batch?.firstBatchId ?? 1n)
+          ? zeroHash
+          : `0x${"cd".repeat(32)}`;
       case "unwrapAmount":
         return `0x${"ef".repeat(32)}`;
       default:
@@ -293,7 +300,7 @@ describe("config checks, where the config is used", () => {
       }),
     );
     const big = defineVaultGroup({ id: "big", vaults: [ALPHA_VAULT, BETA_VAULT, ...extra] });
-    await expect(createVaultClient(sdk).prepareDeposit(big, input)).rejects.toThrow(/more than 8/);
+    await expect(createVaultClient(sdk).prepareDeposit(big, input)).rejects.toThrow(/more than 4/);
   });
 
   test("refuses a vault id twice", async ({ sdk }) => {
@@ -394,21 +401,54 @@ describe("prepareDeposit", () => {
     expect(structuredClone(prepared)).toEqual(prepared);
   });
 
-  test("refuses when any vault's batcher is paused, without the balance check", async ({
-    sdk,
-    provider,
-    relayer,
-  }) => {
-    mockChain(provider, { paused: [BETA.depositBatcher] });
-    mockEncryption(relayer);
-    await expect(
-      createVaultClient(sdk).prepareDeposit(STABLE, {
-        vaultId: "alpha",
+  test.for([
+    ["paused", { paused: [BETA.depositBatcher] }, "cannot be joined until one resumes"],
+    [
+      "closed",
+      { batches: { [BETA.depositBatcher]: { createdAt: 0n, closed: true } } },
+      "is closed, so the vault takes no joins",
+    ],
+  ] as const)(
+    "refuses when the chosen vault's batchers are all %s, without the balance check",
+    async ([, chain, message], { sdk, provider, relayer }) => {
+      mockChain(provider, chain);
+      mockEncryption(relayer);
+      const joining = createVaultClient(sdk).prepareDeposit(STABLE, {
+        vaultId: "beta",
         account: USER,
         amount: 10n,
-      }),
-    ).rejects.toBeInstanceOf(VaultBatcherPausedError);
-  });
+      });
+      await expect(joining).rejects.toBeInstanceOf(VaultBatcherPausedError);
+      await expect(joining).rejects.toMatchObject({
+        batcher: BETA.depositBatcher,
+        vaultId: "beta",
+      });
+      await expect(joining).rejects.toThrow(message);
+      expect(Token.batchBalancesOf).not.toHaveBeenCalled();
+    },
+  );
+
+  test.for([
+    ["paused", { paused: [BETA.depositBatcher] }],
+    ["closed", { batches: { [BETA.depositBatcher]: { createdAt: 0n, closed: true } } }],
+  ] as const)(
+    "leaves out a member whose batchers are all %s",
+    async ([, chain], { sdk, provider, relayer }) => {
+      mockChain(provider, chain);
+      mockEncryption(relayer);
+      for (const route of ["router", "direct"] as const) {
+        const prepared = await createVaultClient(sdk).prepareDeposit(
+          STABLE,
+          { vaultId: "alpha", account: USER, amount: 10n },
+          { route },
+        );
+        expect(prepared.legs.map((leg) => [leg.vaultId, leg.amount])).toStrictEqual([
+          ["alpha", 10n],
+        ]);
+        expect(prepared.calls).toHaveLength(1);
+      }
+    },
+  );
 
   test("refuses a short balance unless told to skip the check", async ({
     sdk,
@@ -568,6 +608,25 @@ describe("proof binding", () => {
 });
 
 describe("prepareRedeem", () => {
+  test.for([
+    ["paused", { paused: [ALPHA.redeemBatcher] }],
+    ["closed", { batches: { [ALPHA.redeemBatcher]: { createdAt: 0n, closed: true } } }],
+  ] as const)(
+    "leaves out a member whose redeem batchers are all %s, and asks no approval for it",
+    async ([, chain], { sdk, provider, relayer }) => {
+      mockChain(provider, { operators: false, ...chain });
+      mockEncryption(relayer);
+      const prepared = await createVaultClient(sdk).prepareRedeem(STABLE, {
+        vaultId: "beta",
+        account: USER,
+        amount: 10n,
+      });
+      expect(prepared.legs.map((leg) => leg.vaultId)).toStrictEqual(["beta"]);
+      expect(kinds(prepared.calls)).toStrictEqual(["operatorApproval", "join"]);
+      expect(prepared.calls[0]).toMatchObject({ to: BETA.share, vaultId: "beta" });
+    },
+  );
+
   test("approves the router as operator on every share token it lacks, for a year, then joins", async ({
     sdk,
     provider,
@@ -693,6 +752,16 @@ describe("several batchers in one direction", () => {
       },
     });
     expect(await nextBatcher(sdk)).toMatchObject({ batcher: LATE });
+  });
+
+  test("joins the first batch of a batcher whose ids start past 1", async ({ sdk, provider }) => {
+    mockChain(provider, {
+      batches: {
+        [EARLY]: { createdAt: NOW, minAge: 100n, firstBatchId: 7n },
+        [LATE]: { createdAt: NOW, minAge: 600n },
+      },
+    });
+    expect(await nextBatcher(sdk)).toMatchObject({ batcher: EARLY });
   });
 
   test("when every batch waits on its previous one, takes the one due first", async ({
@@ -955,17 +1024,25 @@ describe("batch actions", () => {
   test("prepareFinalize settles a dispatched batch with its public decryption", async ({
     sdk,
     provider,
+    relayer,
   }) => {
     mockChain(provider, { batches: { [ALPHA.depositBatcher]: { state: 1 } } });
-    const handle = `0x${"ef".repeat(32)}` as Hex;
-    vi.spyOn(sdk.decryption, "decryptPublicValues").mockResolvedValue({
-      clearValues: { [handle]: 42n },
-      decryptionProof: "0x1234",
+    vi.mocked(relayer.decryptPublicValuesWithSignatures).mockResolvedValueOnce({
+      clearValues: [{ type: "uint64", value: 42n }],
+      checkSignaturesArgs: {
+        handlesList: [`0x${"ef".repeat(32)}`],
+        abiEncodedCleartexts: "0x2a",
+        decryptionProof: "0x1234",
+      },
     } as never);
     const prepared = await createVaultClient(sdk).prepareFinalize({
       chainId: CHAIN_ID,
       batcher: ALPHA.depositBatcher,
       batchId: 3n,
+    });
+    expect(relayer.decryptPublicValuesWithSignatures).toHaveBeenCalledWith({
+      encryptedValues: [`0x${"ef".repeat(32)}`],
+      options: { operation: "vault-finalize" },
     });
     expect(prepared).toMatchObject({ unwrapAmountCleartext: 42n, decryptionProof: "0x1234" });
     expect(decode(prepared.call)).toMatchObject({
@@ -1010,6 +1087,13 @@ describe("readBatch", () => {
     const batch = await createVaultClient(sdk).readBatch(ref);
     expect(batch.actions).toStrictEqual(["dispatch"]);
     expect(batch.deposit).toBeNull();
+  });
+
+  test("reads the first batch of a batcher whose ids start past 1", async ({ sdk, provider }) => {
+    mockChain(provider, {
+      batches: { [ALPHA.depositBatcher]: { createdAt: NOW - 200n, firstBatchId: 7n } },
+    });
+    expect((await createVaultClient(sdk).readBatch(ref)).actions).toStrictEqual(["dispatch"]);
   });
 
   test("cannot be dispatched while the previous batch is in flight", async ({ sdk, provider }) => {
@@ -1059,6 +1143,37 @@ describe("readOpenBatches", () => {
       { vaultId: "alpha", batcher: ALPHA.depositBatcher, batchId: 7n, observedAt: NOW },
       { vaultId: "beta", batcher: BETA.depositBatcher, batchId: 7n, observedAt: NOW },
     ]);
+  });
+
+  test("leaves out a group member whose batchers are all closed, and keeps a paused one", async ({
+    sdk,
+    provider,
+  }) => {
+    mockChain(provider, { batches: { [ALPHA.depositBatcher]: { createdAt: 0n, closed: true } } });
+    expect(await createVaultClient(sdk).readOpenBatches(STABLE, "deposit")).toMatchObject([
+      { vaultId: "beta", paused: false },
+    ]);
+    mockChain(provider, { paused: [ALPHA.depositBatcher] });
+    expect(await createVaultClient(sdk).readOpenBatches(STABLE, "deposit")).toMatchObject([
+      { vaultId: "alpha", paused: true },
+      { vaultId: "beta", paused: false },
+    ]);
+  });
+
+  test("refuses a group whose members are all closed", async ({ sdk, provider }) => {
+    mockChain(provider, {
+      batches: {
+        [ALPHA.depositBatcher]: { createdAt: 0n, closed: true },
+        [BETA.depositBatcher]: { createdAt: 0n, closed: true },
+      },
+    });
+    const reading = createVaultClient(sdk).readOpenBatches(STABLE, "deposit");
+    await expect(reading).rejects.toMatchObject({
+      name: "VaultBatcherPausedError",
+      batcher: ALPHA.depositBatcher,
+      vaultId: "alpha",
+    });
+    await expect(reading).rejects.toThrow(/every vault in group "stable" is closed/);
   });
 });
 
@@ -1149,6 +1264,26 @@ describe("deposit and redeem", () => {
     });
     expect(signer.writeContract).toHaveBeenCalledTimes(1);
   });
+
+  test.for(["deposit", "redeem"] as const)(
+    "%s returns no batch for a member left out of the join",
+    async (direction, { sdk, provider, relayer }) => {
+      const [alpha, beta] =
+        direction === "deposit"
+          ? [ALPHA.depositBatcher, BETA.depositBatcher]
+          : [ALPHA.redeemBatcher, BETA.redeemBatcher];
+      mockChain(provider, { paused: [alpha] });
+      mockEncryption(relayer);
+      mockReceipt(provider, [beta]);
+      const { batches } = await createVaultClient(sdk)[direction](STABLE, {
+        vaultId: "beta",
+        amount: 10n,
+      });
+      expect(batches).toStrictEqual([
+        { vaultId: "beta", chainId: CHAIN_ID, batcher: beta, batchId: 3n },
+      ]);
+    },
+  );
 
   test("throws when the receipt does not confirm every leg", async ({ sdk, provider, relayer }) => {
     mockChain(provider);

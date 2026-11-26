@@ -12,7 +12,7 @@ import {
   zenithTrexTestnet as fheZenith,
   type FheChain,
 } from "@zama-fhe/sdk/chains";
-import { defineChain, type Chain } from "viem";
+import { defineChain, getAddress, isAddress, type Chain } from "viem";
 import { bscTestnet, hoodi, mainnet, polygon, sepolia } from "viem/chains";
 
 export interface Network {
@@ -27,26 +27,36 @@ export interface Network {
   explorerUrl: string;
   /** The test tokens expose `mint(address,uint256)`; real tokens do not. */
   canMint: boolean;
-  /** ConfidentialVault demo (`confidentialTransferAndCall`). Deployed on Sepolia only. */
-  vault?: { address: Address; confidentialToken: Address };
+  /** Confidential ERC-4626 vaults for the Vaults tab, each set by its two batchers. */
+  vaults: BatchVault[];
 }
 
-interface NetworkInput extends Omit<Network, "chain" | "fhe"> {
+export interface BatchVault {
+  /** The chain the vault is on: the vault hooks read it and refuse writes from another chain. */
+  chainId: number;
+  depositBatcher: Address;
+  redeemBatcher: Address;
+}
+
+interface NetworkInput extends Omit<Network, "chain" | "fhe" | "vaults"> {
   chain: Chain;
   /** A preset from `@zama-fhe/sdk/chains`; every preset names its public RPC as a URL. */
   fhe: FheChain & { network: string };
   /** `NEXT_PUBLIC_<KEY>_RPC_URL`. Falls back to the preset's public RPC. */
   rpcUrl: string | undefined;
+  /** `NEXT_PUBLIC_<KEY>_VAULTS`, read with {@link vaultsFromEnv}. */
+  vaults: Omit<BatchVault, "chainId">[];
 }
 
 // Use || not ?? — Next.js replaces unset NEXT_PUBLIC_* variables with "" at build time, not
 // undefined, and "" is not nullish.
-function defineNetwork({ chain, fhe, rpcUrl, ...rest }: NetworkInput): Network {
+function defineNetwork({ chain, fhe, rpcUrl, vaults, ...rest }: NetworkInput): Network {
   const network = rpcUrl || fhe.network;
   return {
     ...rest,
     chain: defineChain({ ...chain, rpcUrls: { default: { http: [network] } } }),
     fhe: { ...fhe, network },
+    vaults: vaults.map((vault) => ({ ...vault, chainId: chain.id })),
   };
 }
 
@@ -62,6 +72,33 @@ const zenith = defineChain({
   },
 });
 
+// One `depositBatcher:redeemBatcher` pair per vault, comma-separated. The name is passed with
+// the value because Next.js inlines a NEXT_PUBLIC_* variable only where the code names it.
+function vaultsFromEnv(name: string, value: string | undefined): Omit<BatchVault, "chainId">[] {
+  return (value ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const [depositBatcher, redeemBatcher, ...rest] = entry.split(":").map((part) => part.trim());
+      if (!depositBatcher || !redeemBatcher || rest.length > 0) {
+        throw new Error(`${name}: expected depositBatcher:redeemBatcher, got "${entry}"`);
+      }
+      return {
+        depositBatcher: envAddress(name, depositBatcher),
+        redeemBatcher: envAddress(name, redeemBatcher),
+      };
+    });
+}
+
+// Checksummed, so query keys built from it match addresses the SDK returns.
+function envAddress(name: string, value: string): Address {
+  if (!isAddress(value)) {
+    throw new Error(`${name} is not a valid address: ${value}`);
+  }
+  return getAddress(value);
+}
+
 export const networks = {
   sepolia: defineNetwork({
     label: "Sepolia",
@@ -71,32 +108,30 @@ export const networks = {
     transport: "relayer",
     explorerUrl: "https://eth-sepolia.blockscout.com",
     canMint: true,
-    // A minimal confidential escrow bound to one confidential token (cUSDC). The vault
-    // cards only render when that token is selected. See contracts/src/ConfidentialVault.sol.
-    vault: {
-      address: (process.env.NEXT_PUBLIC_VAULT_ADDRESS ||
-        "0xb13720bec167A576D715F5aA7C7d68b3dB0A4Ad7") as Address,
-      confidentialToken: (process.env.NEXT_PUBLIC_VAULT_CONFIDENTIAL_TOKEN ||
-        "0x7c5BF43B851c1dff1a4feE8dB225b87f2C223639") as Address,
-    },
+    vaults: vaultsFromEnv("NEXT_PUBLIC_SEPOLIA_VAULTS", process.env.NEXT_PUBLIC_SEPOLIA_VAULTS),
+  }),
+  "bnb-testnet": defineNetwork({
+    label: "BNB Testnet",
+    chain: bscTestnet,
+    fhe: fheBscTestnet,
+    rpcUrl: process.env.NEXT_PUBLIC_BNB_TESTNET_RPC_URL,
+    vaults: vaultsFromEnv(
+      "NEXT_PUBLIC_BNB_TESTNET_VAULTS",
+      process.env.NEXT_PUBLIC_BNB_TESTNET_VAULTS,
+    ),
+    transport: "relayer",
+    explorerUrl: "https://testnet.bscscan.com",
+    canMint: true,
   }),
   // Cleartext rows are development deployments: "encrypted" values are stored in cleartext
   // on-chain and there is no relayer or KMS. They exist to integrate against the SDK on
   // chains without the full FHE stack, not for production use.
-  "bnb-testnet": defineNetwork({
-    label: "BNB Testnet · Cleartext",
-    chain: bscTestnet,
-    fhe: fheBscTestnet,
-    rpcUrl: process.env.NEXT_PUBLIC_BNB_TESTNET_RPC_URL,
-    transport: "cleartext",
-    explorerUrl: "https://testnet.bscscan.com",
-    canMint: true,
-  }),
   hoodi: defineNetwork({
     label: "Hoodi · Cleartext",
     chain: hoodi,
     fhe: fheHoodi,
     rpcUrl: process.env.NEXT_PUBLIC_HOODI_RPC_URL,
+    vaults: vaultsFromEnv("NEXT_PUBLIC_HOODI_VAULTS", process.env.NEXT_PUBLIC_HOODI_VAULTS),
     transport: "cleartext",
     explorerUrl: "https://eth-hoodi.blockscout.com",
     canMint: true,
@@ -106,6 +141,7 @@ export const networks = {
     chain: zenith,
     fhe: fheZenith,
     rpcUrl: process.env.NEXT_PUBLIC_ZENITH_RPC_URL,
+    vaults: vaultsFromEnv("NEXT_PUBLIC_ZENITH_VAULTS", process.env.NEXT_PUBLIC_ZENITH_VAULTS),
     transport: "cleartext",
     explorerUrl: "https://explorer.testnet.t-rex.zenith.network",
     canMint: true,
@@ -117,6 +153,7 @@ export const networks = {
     chain: mainnet,
     fhe: fheMainnet,
     rpcUrl: process.env.NEXT_PUBLIC_MAINNET_RPC_URL,
+    vaults: vaultsFromEnv("NEXT_PUBLIC_MAINNET_VAULTS", process.env.NEXT_PUBLIC_MAINNET_VAULTS),
     transport: "relayer",
     explorerUrl: "https://etherscan.io",
     canMint: false,
@@ -126,6 +163,7 @@ export const networks = {
     chain: polygon,
     fhe: fhePolygon,
     rpcUrl: process.env.NEXT_PUBLIC_POLYGON_RPC_URL,
+    vaults: vaultsFromEnv("NEXT_PUBLIC_POLYGON_VAULTS", process.env.NEXT_PUBLIC_POLYGON_VAULTS),
     transport: "relayer",
     explorerUrl: "https://polygonscan.com",
     canMint: false,

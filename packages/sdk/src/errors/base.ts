@@ -104,7 +104,7 @@ export const ZamaErrorCode = {
   InvalidationTimestampTooLow: "INVALIDATION_TIMESTAMP_TOO_LOW",
   /** `invalidateDecryptionSignatures` was given a cutoff in the future; the ACL only accepts now or earlier. */
   InvalidationTimestampInFuture: "INVALIDATION_TIMESTAMP_IN_FUTURE",
-  /** The unwrap request was already finalized on-chain; there is nothing left to resume. */
+  /** The unwrap request was already finalized on-chain; there is nothing left to finalize. */
   UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED",
   /** The unwrap behind a resumed unshield is not mined yet; its entry is kept. */
   UnwrapNotMined: "UNWRAP_NOT_MINED",

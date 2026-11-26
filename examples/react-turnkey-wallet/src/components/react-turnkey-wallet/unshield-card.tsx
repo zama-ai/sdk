@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useUnshield, useResumeUnshield } from "@zama-fhe/react-sdk";
+import { UnshieldAlreadyFinalizedError } from "@zama-fhe/sdk";
 import type { Address, Hex } from "viem";
 import { parseAmountSafe, shortAddr, txLink } from "@/lib/react-turnkey-wallet/utils";
 import { MutationStatus } from "./mutation-status";
@@ -30,6 +31,12 @@ export function UnshieldCard({
         onSuccess: () => {
           setPhase(1);
           onSuccess();
+        },
+        onError: (error) => {
+          // The request was already finalized (an earlier attempt, another tab, or another account): the funds arrived.
+          if (error instanceof UnshieldAlreadyFinalizedError) {
+            onSuccess();
+          }
         },
       },
     );
@@ -105,7 +112,22 @@ export function ResumeUnshieldCard({
           {shortAddr(txHash)}
         </a>
       </p>
-      <form action={() => resumeUnshield.mutate({ unwrapTxHash: txHash }, { onSuccess })}>
+      <form
+        action={() =>
+          resumeUnshield.mutate(
+            { unwrapTxHash: txHash },
+            {
+              onSuccess,
+              onError: (error) => {
+                // The request was already finalized (an earlier attempt, another tab, or another account): the funds arrived.
+                if (error instanceof UnshieldAlreadyFinalizedError) {
+                  onSuccess();
+                }
+              },
+            },
+          )
+        }
+      >
         <button
           type="submit"
           disabled={resumeUnshield.isPending}

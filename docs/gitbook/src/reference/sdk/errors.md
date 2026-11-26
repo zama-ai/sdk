@@ -117,56 +117,56 @@ Exactly seven error classes are retryable today: `RpcRateLimitError`, `RelayerRe
 
 ## Error summary
 
-| Error class                               | Code                                     | Description                                                                                                                       |
-| ----------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `SigningRejectedError`                    | `SIGNING_REJECTED`                       | User rejected the wallet signature                                                                                                |
-| `SigningFailedError`                      | `SIGNING_FAILED`                         | Wallet signature failed (connectivity, firmware)                                                                                  |
-| `EncryptionFailedError`                   | `ENCRYPTION_FAILED`                      | FHE encryption failed in the WASM runtime                                                                                         |
-| `EncryptOffloadUnavailableError`          | `ENCRYPT_OFFLOAD_UNAVAILABLE`            | `offloadEncrypt: true` required the encrypt worker, which is unavailable                                                          |
-| `DecryptionFailedError`                   | `DECRYPTION_FAILED`                      | FHE decryption failed                                                                                                             |
-| `TransactionRevertedError`                | `TRANSACTION_REVERTED`                   | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                    |
-| `HcuBlockLimitExceededError`              | `HCU_BLOCK_LIMIT_EXCEEDED`               | Gas estimation found too little FHE compute (HCU) left in the block; retry in the next block (retryable)                          |
-| `HcuTransactionLimitExceededError`        | `HCU_TRANSACTION_LIMIT_EXCEEDED`         | The transaction needs more FHE compute (HCU), in total or in one sequential chain, than one transaction may use                   |
-| `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request behind a resumed unshield was already finalized — funds delivered, nothing to resume                           |
-| `InvalidationTimestampTooLowError`        | `INVALIDATION_TIMESTAMP_TOO_LOW`         | Invalidation cutoff was not strictly later than the account's current one                                                         |
-| `InvalidationTimestampInFutureError`      | `INVALIDATION_TIMESTAMP_IN_FUTURE`       | Invalidation cutoff was in the future                                                                                             |
-| `UnwrapNotMinedError`                     | `UNWRAP_NOT_MINED`                       | The unwrap behind a resumed unshield is not mined yet; its entry is kept (retryable)                                              |
-| `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | Every batcher of a vault in the join is paused or closed, so the whole join would revert                                          |
-| `VaultBatcherReadFailedError`             | `VAULT_BATCHER_READ_FAILED`              | A batcher of a vault could not be read, so the SDK cannot tell which batch a join reaches                                         |
-| `VaultBatchNotDispatchedError`            | `VAULT_BATCH_NOT_DISPATCHED`             | A vault batch cannot be finalized because it is not dispatched: it is still pending, or it was already finalized or canceled      |
-| `VaultJoinUnconfirmedError`               | `VAULT_JOIN_UNCONFIRMED`                 | A vault join was mined, but its receipt has no matching `Joined` event for at least one leg                                       |
-| `InvalidTransportKeyPairError`            | `INVALID_KEYPAIR`                        | Relayer rejected transport key pair (stale or malformed)                                                                          |
-| `TransportKeyPairExpiredError`            | `KEYPAIR_EXPIRED`                        | Transport key pair expired — user must re-sign                                                                                    |
-| `RevokedKmsContextError`                  | `REVOKED_KMS_CONTEXT`                    | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                                   |
-| `NoCiphertextError`                       | `NO_CIPHERTEXT`                          | No encrypted balance for this account                                                                                             |
-| `KeyWrappingError`                        | `KEY_WRAPPING_FAILED`                    | At-rest encryption or decryption of the transport private key failed (`transportKeyPairDerivationSecret`)                         |
-| `TransportKeyPairChangedError`            | `TRANSPORT_KEY_PAIR_CHANGED`             | Transport key pair changed between `preparePermit` and `registerPermit`                                                           |
-| `PreparedPermitChainMismatchError`        | `PREPARED_PERMIT_CHAIN_MISMATCH`         | The chain embedded in `prepared.eip712` doesn't match the chain `registerPermit` is running against                               |
-| `PreparedPermitExpiredError`              | `PREPARED_PERMIT_EXPIRED`                | A prepared permit's validity window elapsed before its signature was registered                                                   |
-| `RelayerRequestFailedError`               | `RELAYER_REQUEST_FAILED`                 | Relayer HTTP request failed                                                                                                       |
-| `NotEntitledError`                        | `NOT_ENTITLED`                           | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`) |
-| `RpcRateLimitError`                       | `RPC_RATE_LIMITED`                       | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)                                                  |
-| `ConfigurationError`                      | `CONFIGURATION`                          | Invalid SDK configuration or FHE runtime failed to initialize                                                                     |
-| `InsufficientConfidentialBalanceError`    | `INSUFFICIENT_CONFIDENTIAL_BALANCE`      | Confidential balance too low for transfer or unshield                                                                             |
-| `InsufficientERC20BalanceError`           | `INSUFFICIENT_ERC20_BALANCE`             | ERC-20 balance too low for shield                                                                                                 |
-| `InsufficientAllowanceError`              | `INSUFFICIENT_ALLOWANCE`                 | ERC-20 allowance too low for a manual `wrap` (approve first)                                                                      |
-| `BalanceCheckUnavailableError`            | `BALANCE_CHECK_UNAVAILABLE`              | Balance validation impossible (no stored permits)                                                                                 |
-| `ERC20ReadFailedError`                    | `ERC20_READ_FAILED`                      | Public ERC-20 read failed (network or contract error)                                                                             |
-| `DelegationSelfNotAllowedError`           | `DELEGATION_SELF_NOT_ALLOWED`            | Delegate equals connected wallet                                                                                                  |
-| `DelegationDelegateEqualsContractError`   | `DELEGATION_DELEGATE_EQUALS_CONTRACT`    | Delegate equals contract address                                                                                                  |
-| `DelegationDelegateCannotBeWildcardError` | `DELEGATION_DELEGATE_CANNOT_BE_WILDCARD` | Delegate address is the wildcard address                                                                                          |
-| `DelegationExpiryUnchangedError`          | `DELEGATION_EXPIRY_UNCHANGED`            | New expiry matches the current value                                                                                              |
-| `DelegationNotFoundError`                 | `DELEGATION_NOT_FOUND`                   | No active delegation exists                                                                                                       |
-| `DelegationExpiredError`                  | `DELEGATION_EXPIRED`                     | Delegation has expired                                                                                                            |
-| `DelegationCooldownError`                 | `DELEGATION_COOLDOWN`                    | Same-block delegate/revoke not allowed                                                                                            |
-| `DelegationContractIsSelfError`           | `DELEGATION_CONTRACT_IS_SELF`            | Contract address equals caller                                                                                                    |
-| `DelegationExpirationTooSoonError`        | `DELEGATION_EXPIRATION_TOO_SOON`         | Expiration date less than 1 hour in the future                                                                                    |
-| `DelegationNotPropagatedError`            | `DELEGATION_NOT_PROPAGATED`              | Delegated decrypt failed transiently (gateway not synced yet, or delegator ACL read stale) — retry                                |
-| `SignerNotConfiguredError`                | `SIGNER_NOT_CONFIGURED`                  | SDK operation needs a signer but none is configured                                                                               |
-| `WalletNotConnectedError`                 | `WALLET_NOT_CONNECTED`                   | Signer exists but has no connected wallet account                                                                                 |
-| `WalletAccountNotReadyError`              | `WALLET_ACCOUNT_NOT_READY`               | Async signer adapter has not resolved its account yet                                                                             |
-| `ChainMismatchError`                      | `CHAIN_MISMATCH`                         | Signer and provider are on different chains, or the signer is not on the vault group's or batch's `chainId`                       |
-| `AclPausedError`                          | `ACL_PAUSED`                             | ACL contract is paused                                                                                                            |
+| Error class                               | Code                                     | Description                                                                                                                               |
+| ----------------------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `SigningRejectedError`                    | `SIGNING_REJECTED`                       | User rejected the wallet signature                                                                                                        |
+| `SigningFailedError`                      | `SIGNING_FAILED`                         | Wallet signature failed (connectivity, firmware)                                                                                          |
+| `EncryptionFailedError`                   | `ENCRYPTION_FAILED`                      | FHE encryption failed in the WASM runtime                                                                                                 |
+| `EncryptOffloadUnavailableError`          | `ENCRYPT_OFFLOAD_UNAVAILABLE`            | `offloadEncrypt: true` required the encrypt worker, which is unavailable                                                                  |
+| `DecryptionFailedError`                   | `DECRYPTION_FAILED`                      | FHE decryption failed                                                                                                                     |
+| `TransactionRevertedError`                | `TRANSACTION_REVERTED`                   | On-chain transaction reverted (includes failed ERC-20 approvals during shield)                                                            |
+| `HcuBlockLimitExceededError`              | `HCU_BLOCK_LIMIT_EXCEEDED`               | Gas estimation found too little FHE compute (HCU) left in the block; retry in the next block (retryable)                                  |
+| `HcuTransactionLimitExceededError`        | `HCU_TRANSACTION_LIMIT_EXCEEDED`         | The transaction needs more FHE compute (HCU), in total or in one sequential chain, than one transaction may use                           |
+| `UnshieldAlreadyFinalizedError`           | `UNSHIELD_ALREADY_FINALIZED`             | The unwrap request was already finalized (by another tab or account, or by an earlier attempt): funds delivered, nothing left to finalize |
+| `InvalidationTimestampTooLowError`        | `INVALIDATION_TIMESTAMP_TOO_LOW`         | Invalidation cutoff was not strictly later than the account's current one                                                                 |
+| `InvalidationTimestampInFutureError`      | `INVALIDATION_TIMESTAMP_IN_FUTURE`       | Invalidation cutoff was in the future                                                                                                     |
+| `UnwrapNotMinedError`                     | `UNWRAP_NOT_MINED`                       | The unwrap behind a resumed unshield is not mined yet; its entry is kept (retryable)                                                      |
+| `VaultBatcherPausedError`                 | `VAULT_BATCHER_PAUSED`                   | Every batcher of the chosen vault is paused or closed, so the join would revert                                                           |
+| `VaultBatcherReadFailedError`             | `VAULT_BATCHER_READ_FAILED`              | A batcher of a vault could not be read, so the SDK cannot tell which batch a join reaches                                                 |
+| `VaultBatchNotDispatchedError`            | `VAULT_BATCH_NOT_DISPATCHED`             | A vault batch cannot be finalized because it is not dispatched: it is still pending, or it was already finalized or canceled              |
+| `VaultJoinUnconfirmedError`               | `VAULT_JOIN_UNCONFIRMED`                 | A vault join was mined, but its receipt has no matching `Joined` event for at least one leg                                               |
+| `InvalidTransportKeyPairError`            | `INVALID_KEYPAIR`                        | Relayer rejected transport key pair (stale or malformed)                                                                                  |
+| `TransportKeyPairExpiredError`            | `KEYPAIR_EXPIRED`                        | Transport key pair expired; user must re-sign                                                                                             |
+| `RevokedKmsContextError`                  | `REVOKED_KMS_CONTEXT`                    | Permit's KMS context revoked on-chain; the automatic recovery could not restore a usable permit                                           |
+| `NoCiphertextError`                       | `NO_CIPHERTEXT`                          | No encrypted balance for this account                                                                                                     |
+| `KeyWrappingError`                        | `KEY_WRAPPING_FAILED`                    | At-rest encryption or decryption of the transport private key failed (`transportKeyPairDerivationSecret`)                                 |
+| `TransportKeyPairChangedError`            | `TRANSPORT_KEY_PAIR_CHANGED`             | Transport key pair changed between `preparePermit` and `registerPermit`                                                                   |
+| `PreparedPermitChainMismatchError`        | `PREPARED_PERMIT_CHAIN_MISMATCH`         | The chain embedded in `prepared.eip712` doesn't match the chain `registerPermit` is running against                                       |
+| `PreparedPermitExpiredError`              | `PREPARED_PERMIT_EXPIRED`                | A prepared permit's validity window elapsed before its signature was registered                                                           |
+| `RelayerRequestFailedError`               | `RELAYER_REQUEST_FAILED`                 | Relayer HTTP request failed                                                                                                               |
+| `NotEntitledError`                        | `NOT_ENTITLED`                           | Direct signer lacks ACL permission to decrypt this encrypted value (don't retry; delegated path → `DelegationNotPropagatedError`)         |
+| `RpcRateLimitError`                       | `RPC_RATE_LIMITED`                       | Consumer's RPC provider rate-limited an on-chain read (HTTP 429 / -32005; retry)                                                          |
+| `ConfigurationError`                      | `CONFIGURATION`                          | Invalid SDK configuration or FHE runtime failed to initialize                                                                             |
+| `InsufficientConfidentialBalanceError`    | `INSUFFICIENT_CONFIDENTIAL_BALANCE`      | Confidential balance too low for transfer or unshield                                                                                     |
+| `InsufficientERC20BalanceError`           | `INSUFFICIENT_ERC20_BALANCE`             | ERC-20 balance too low for shield                                                                                                         |
+| `InsufficientAllowanceError`              | `INSUFFICIENT_ALLOWANCE`                 | ERC-20 allowance too low for a manual `wrap` (approve first)                                                                              |
+| `BalanceCheckUnavailableError`            | `BALANCE_CHECK_UNAVAILABLE`              | Balance validation impossible (no stored permits)                                                                                         |
+| `ERC20ReadFailedError`                    | `ERC20_READ_FAILED`                      | Public ERC-20 read failed (network or contract error)                                                                                     |
+| `DelegationSelfNotAllowedError`           | `DELEGATION_SELF_NOT_ALLOWED`            | Delegate equals connected wallet                                                                                                          |
+| `DelegationDelegateEqualsContractError`   | `DELEGATION_DELEGATE_EQUALS_CONTRACT`    | Delegate equals contract address                                                                                                          |
+| `DelegationDelegateCannotBeWildcardError` | `DELEGATION_DELEGATE_CANNOT_BE_WILDCARD` | Delegate address is the wildcard address                                                                                                  |
+| `DelegationExpiryUnchangedError`          | `DELEGATION_EXPIRY_UNCHANGED`            | New expiry matches the current value                                                                                                      |
+| `DelegationNotFoundError`                 | `DELEGATION_NOT_FOUND`                   | No active delegation exists                                                                                                               |
+| `DelegationExpiredError`                  | `DELEGATION_EXPIRED`                     | Delegation has expired                                                                                                                    |
+| `DelegationCooldownError`                 | `DELEGATION_COOLDOWN`                    | Same-block delegate/revoke not allowed                                                                                                    |
+| `DelegationContractIsSelfError`           | `DELEGATION_CONTRACT_IS_SELF`            | Contract address equals caller                                                                                                            |
+| `DelegationExpirationTooSoonError`        | `DELEGATION_EXPIRATION_TOO_SOON`         | Expiration date less than 1 hour in the future                                                                                            |
+| `DelegationNotPropagatedError`            | `DELEGATION_NOT_PROPAGATED`              | Delegated decrypt failed transiently (gateway not synced yet, or delegator ACL read stale); retry                                         |
+| `SignerNotConfiguredError`                | `SIGNER_NOT_CONFIGURED`                  | SDK operation needs a signer but none is configured                                                                                       |
+| `WalletNotConnectedError`                 | `WALLET_NOT_CONNECTED`                   | Signer exists but has no connected wallet account                                                                                         |
+| `WalletAccountNotReadyError`              | `WALLET_ACCOUNT_NOT_READY`               | Async signer adapter has not resolved its account yet                                                                                     |
+| `ChainMismatchError`                      | `CHAIN_MISMATCH`                         | Signer and provider are on different chains, or the signer is not on the vault group's or batch's `chainId`                               |
+| `AclPausedError`                          | `ACL_PAUSED`                             | ACL contract is paused                                                                                                                    |
 
 ## Error details
 
@@ -197,6 +197,14 @@ try {
 Thrown when a signer adapter is configured but does not currently have a connected wallet account.
 
 **How to handle:** Prompt the user to connect or unlock their wallet.
+
+### WalletAccountNotReadyError
+
+**Code:** `WALLET_ACCOUNT_NOT_READY`
+
+Thrown when an async signer adapter has not resolved its wallet account yet. The error carries the `operation` name that was attempted.
+
+**How to handle:** Retry once the account resolves. The error is retryable, so `isRetryable(error)` is `true`.
 
 ### ChainMismatchError
 
@@ -294,7 +302,7 @@ matchZamaError(error, {
 });
 ```
 
-**How to handle:** Inspect the revert reason. Common causes: insufficient balance or an expired operator approval. Finalizing an already-finalized unwrap through `resumeUnshield()` or `unshield()` throws the more specific `UnshieldAlreadyFinalizedError` instead. `sdk.permits.invalidateDecryptionSignatures()` throws the more specific `InvalidationTimestampTooLowError` / `InvalidationTimestampInFutureError` for a rejected cutoff.
+**How to handle:** Inspect the revert reason. Common causes: insufficient balance or an expired operator approval. Finalizing an already-finalized unwrap through `unshield()`, `unshieldAll()` or `resumeUnshield()` throws the more specific `UnshieldAlreadyFinalizedError` instead, and a revert from the protocol's FHE compute limits throws `HcuBlockLimitExceededError` or `HcuTransactionLimitExceededError`. `sdk.permits.invalidateDecryptionSignatures()` throws the more specific `InvalidationTimestampTooLowError` / `InvalidationTimestampInFutureError` for a rejected cutoff.
 
 ### InvalidationTimestampTooLowError
 
@@ -324,7 +332,6 @@ matchZamaError(error, {
 ```
 
 **How to handle:** Pass a timestamp no later than now, or omit it to let the chain resolve the cutoff from the current block timestamp — which also sidesteps client clock skew.
-**How to handle:** Inspect the revert reason. Common causes: insufficient balance or an expired operator approval. Finalizing an already-finalized unwrap through `resumeUnshield()` or `unshield()` throws the more specific `UnshieldAlreadyFinalizedError` instead, and a revert from the protocol's FHE compute limits throws `HcuBlockLimitExceededError` or `HcuTransactionLimitExceededError`.
 
 ### HcuBlockLimitExceededError
 
@@ -359,15 +366,15 @@ matchZamaError(error, {
 
 **Code:** `UNSHIELD_ALREADY_FINALIZED`
 
-Thrown by `resumeUnshield()` when the unwrap request no longer exists on-chain: it was already finalized, so the underlying ERC-20 tokens were delivered. `unshield()` and `unshieldAll()` throw it too when a concurrent finalize wins the race. The SDK clears the matching entry before throwing, so `getPendingUnshield()` no longer returns this `unwrapTxHash`. The error carries `unwrapTxHash` and `unwrapRequestId`.
+Thrown by `resumeUnshield()` when the unwrap request no longer exists on-chain: it was already finalized, so the underlying ERC-20 tokens were delivered. `unshield()` and `unshieldAll()` throw it too when the unwrap request was already finalized, for example by another tab or account. The SDK clears the matching entry before throwing, so `getPendingUnshield()` no longer returns this `unwrapTxHash`. The error carries `unwrapTxHash` and `unwrapRequestId`.
 
 ```ts
 matchZamaError(error, {
-  UNSHIELD_ALREADY_FINALIZED: () => dismissResumePrompt(), // the funds already arrived
+  UNSHIELD_ALREADY_FINALIZED: () => markUnshieldComplete(), // the funds already arrived
 });
 ```
 
-**How to handle:** Treat it as completion, not a failure: dismiss the "resume unshield" prompt and refresh balances. `useResumeUnshield` invalidates the affected queries automatically. Do not retry; nothing is left to finalize.
+**How to handle:** Treat it as completion, not a failure: show the unshield as complete (or dismiss the resume prompt) and refresh balances. `useUnshield`, `useUnshieldAll` and `useResumeUnshield` invalidate the affected queries automatically. Do not retry; nothing is left to finalize.
 
 ### UnwrapNotMinedError
 
@@ -381,7 +388,7 @@ Thrown by `resumeUnshield()` when the unwrap has no receipt: it is still pending
 
 **Code:** `VAULT_BATCHER_PAUSED`
 
-Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()` and `prepareRedeem()` when no batcher of a vault the join reaches is open (each one is paused or closed), before anything is sent. `readOpenBatches()` also throws it when every batcher of a vault is closed. The error carries one paused or closed `batcher` of that vault and the `vaultId`.
+Thrown by `VaultClient.deposit()`, `redeem()`, `prepareDeposit()` and `prepareRedeem()` when no batcher of the chosen vault is open (each one is paused or closed), before anything is sent. A group member in that state is left out of the join instead. `readOpenBatches()` also throws it when every batcher of a vault on its own, or of every vault of a group, is closed. The error carries one paused or closed `batcher` of that vault and the `vaultId`.
 
 **How to handle:** Not retryable until a batcher of the vault is unpaused. A closed batcher never reopens, so a vault whose batchers are all closed takes no joins until you list a new batcher for it. Claims and quits still work. Show which vault takes no joins. See [Paused batchers](../../guides/vaults/advanced.md#paused-batchers).
 
