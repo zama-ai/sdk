@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.9.1-beta.1](https://github.com/zama-ai/sdk/compare/v3.9.0...v3.9.1-beta.1) (2026-11-26)
+
+### Bug Fixes
+
+- **sdk:** verify prepared offline transaction matches the checked chain and calldata ([#1021](https://github.com/zama-ai/sdk/issues/1021)) ([6e0ad6a]())
+
 ## [3.9.0](https://github.com/zama-ai/sdk/compare/v3.8.0...v3.9.0) (2026-11-26)
 
 ### Features
