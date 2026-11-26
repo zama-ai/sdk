@@ -1,12 +1,9 @@
 import type { FheChain } from "./types";
 
-// `protocolConfigContractAddress` (required for V2/wildcard permit signing to
-// succeed) is wired in below for every built-in config with a deployed
-// `ProtocolConfig` contract. `hoodi`, `ingenTestnet`, `bscTestnet`, and
-// `hardhat`/`anvil` don't have one deployed yet, so they omit it — V1 permits
-// don't need it at all, and V2/wildcard permits simply aren't usable on those
-// presets until one exists. Pass it in a custom `FheChain` for any other
-// network whose deployed `ProtocolConfig` address you already know.
+// V2 (unified) permits, wildcard ones included, need `protocolConfigContractAddress`.
+// Presets without a deployed `ProtocolConfig` (`hoodi`, `zenithTrexTestnet`,
+// `hardhat`/`anvil`) omit it: address-list permits fall back to V1 there and wildcard
+// permits are unavailable.
 
 /**
  * Mainnet network configuration (chainId 1).
@@ -140,6 +137,7 @@ export const bscTestnet = Object.freeze({
   verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
   verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
   registryAddress: "0x84c5B9669b1BA109D31096c64AFEF1473Ac4Db43",
+  protocolConfigContractAddress: "0xC320dd3d4e15D8E4c20dff42fE09Aa936A88b3ED",
   keyVerification: { chain: sepolia },
 } as const satisfies FheChain);
 
