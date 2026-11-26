@@ -1,15 +1,15 @@
 ---
-title: Handle wallet prompts, upgrades and custom sending
-description: Wallet prompts, paused batchers, batcher upgrades, bundling wallets, and sending vault calls through your own pipeline.
+title: Handle wallet prompts, batchers and custom sending
+description: Wallet prompts, paused batchers, several batchers per vault, bundling wallets, and sending vault calls through your own pipeline.
 ---
 
-# Handle wallet prompts, upgrades and custom sending
+# Handle wallet prompts, batchers and custom sending
 
 {% hint style="info" %}
 Available in the Core SDK and React SDK.
 {% endhint %}
 
-This page covers what an integration needs beyond [Vault deposits and redemptions](deposits.md): planning wallet prompts, handling paused and upgraded batchers, and sending calls yourself. It uses the `STABLE` group from [step 1](deposits.md#1-define-a-group) of that guide.
+This page covers what an integration needs beyond [Vault deposits and redemptions](deposits.md): planning wallet prompts, handling paused batchers and vaults with several batchers, and sending calls yourself. It uses the `STABLE` group from [step 1](deposits.md#1-define-a-group) of that guide.
 
 ## Wallet prompts
 
@@ -28,13 +28,15 @@ The router's address comes from `vaultRouterAddress` in the [chain preset](../..
 
 ## Paused batchers
 
-A paused batcher rejects joins. A group join sends a leg to every vault, so one paused batcher blocks every join of its group. `deposit` and `redeem` check this first and throw `VaultBatcherPausedError`, naming the paused vault. Claims and quits still work, so existing deposits are never stuck.
+A paused batcher rejects joins. When a vault has [several batchers](#several-batchers), joins go to the others. When every batcher of a vault is paused or closed, the vault takes no joins. A group join leaves that vault out and sends a leg to every other vault, so the group still takes joins; the vault takes no joins from anyone, so leaving it out does not reveal the chosen one. When the chosen vault takes no joins, `deposit` and `redeem` check this first and throw `VaultBatcherPausedError`, naming the vault. `readOpenBatches` leaves a closed group member out too, and throws it for a vault on its own, or a group, whose batchers are all closed. Claims and quits still work, so existing deposits are never stuck.
 
-To disable the form before the user submits, read `paused` from [`readOpenBatches`](deposits.md#show-the-open-batches).
+A group join hides the chosen vault among the vaults that take joins at that time. While only one does, every join goes to it, and anyone can see that.
 
-## Upgrade a batcher
+To disable a vault before the user picks it, read its `paused` from [`readOpenBatches`](deposits.md#show-the-open-batches). A group member with no entry is closed and takes no joins.
 
-When a vault's batcher is replaced, batches on the old one must stay readable, claimable and quittable. Replace the plain address with a `BatcherHistory` that keeps the old batcher as retired:
+## Several batchers
+
+A direction can have several batchers. A vault whose redemptions take days can run several redeem batchers with staggered batches, so that a batch leaves every day. A replaced batcher also stays in the list, so its batches stay readable, claimable and quittable. List them all:
 
 ```ts
 import { defineVault } from "@zama-fhe/sdk/vaults";
@@ -43,22 +45,31 @@ export const ALPHA = defineVault({
   id: "alpha",
   chainId: 1,
   batchers: {
-    deposit: {
-      retired: [{ address: "0xAlphaDepositV1", lastBatchId: 41n }],
-      latest: "0xAlphaDepositV2",
-    },
-    redeem: "0xAlphaRedeem",
+    deposit: [{ address: "0xAlphaDepositV1", lastBatchId: 41n }, "0xAlphaDepositV2"],
+    redeem: ["0xAlphaRedeemA", "0xAlphaRedeemB", "0xAlphaRedeemC"],
   },
 });
 ```
 
-Joins keep landing on the old batcher until its batch `lastBatchId` is dispatched, then go to `latest`. The switch follows the chain, not the clock, so you can ship the new definition before it happens. Stored batches name their own batcher, so they keep working.
+The client reads every batcher when it prepares a join, and the join goes to the open batch that is dispatched next. It skips a batcher that is:
 
-To upgrade again, move the current `latest` to the end of `retired` with its `lastBatchId`, and set the new `latest`.
+- paused,
+- closed on chain, or
+- past its `lastBatchId`. Set `lastBatchId` only for a batcher whose contract has no `closed()`.
+
+Among the open batches, the join goes to the first match:
+
+1. The batch due soonest that is due at least a minute from now and whose previous batch is not still in flight. A batch due sooner, or already due, can be dispatched before the join lands.
+2. The batch due soonest whose previous batch is still in flight. Its wait has already started, while a join that misses a dispatch waits behind the batch that just left.
+3. The open batch due soonest.
+
+Ties go to the lowest batcher address, so every client picks the same batch. The choice follows the chain, not the clock, so you can ship a new list before a batcher opens or closes. Stored batches name their own batcher, so they keep working. [`readOpenBatches`](deposits.md#show-the-open-batches) shows the batch the next join reaches.
 
 {% hint style="warning" %}
-Never remove a retired entry, even once its batches settled. Every batcher of a vault, retired ones included, must serve the same ERC-4626 vault with the same asset and share token.
+Never remove a batcher from the list, even once its batches settled. Every batcher of a vault direction must serve the same ERC-4626 vault with the same asset and share token.
 {% endhint %}
+
+The earlier `BatcherHistory` form (`{ retired, latest }`) is deprecated. It still works, and reads as the list `[...retired, latest]`. So `latest` now takes joins as soon as it is open, even before a retired batcher reaches its `lastBatchId`.
 
 ## Bundling wallets
 

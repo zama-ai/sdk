@@ -1,9 +1,8 @@
 "use client";
 
 import type { UseQueryOptions } from "@tanstack/react-query";
-import type { DecryptResult } from "@zama-fhe/sdk/query";
+import type { DecryptInput, DecryptResult } from "@zama-fhe/sdk/query";
 import { decryptValuesQueryOptions } from "@zama-fhe/sdk/query";
-import type { EncryptedInput } from "@zama-fhe/sdk/query/user-decrypt";
 import { useZamaSDK } from "../provider";
 import { useQuery } from "../utils/query";
 import { useWalletAccount } from "../utils/wallet-account";
@@ -13,12 +12,12 @@ import { useWalletAccount } from "../utils/wallet-account";
  * `decryptValuesQueryOptions` with `useQuery` semantics.
  */
 export function useDecryptValues(
-  encryptedInputs: EncryptedInput[],
+  inputs: DecryptInput[],
   options?: Omit<UseQueryOptions<DecryptResult>, "queryKey" | "queryFn">,
 ) {
   const sdk = useZamaSDK();
   const walletAccount = useWalletAccount(sdk);
-  const queryOpts = decryptValuesQueryOptions(sdk, encryptedInputs, { walletAccount });
+  const queryOpts = decryptValuesQueryOptions(sdk, inputs, { walletAccount });
   return useQuery<DecryptResult>({
     ...queryOpts,
     ...options,

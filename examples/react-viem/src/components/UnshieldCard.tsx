@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useActionState } from "react";
-import type { TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
+import { type TokenWrapperPairWithMetadata, UnshieldAlreadyFinalizedError } from "@zama-fhe/sdk";
 import { useUnshield, useHasPermit } from "@zama-fhe/react-sdk";
 import { parseAmount, minAmount } from "@/lib/parseAmount";
 import { SEPOLIA_EXPLORER_URL } from "@/lib/config";
@@ -27,7 +27,7 @@ export function UnshieldCard({ token, disabled, onSuccess }: UnshieldCardProps) 
   const pendingLabel = step === 2 ? "Unshielding… (2/2)" : "Unshielding… (1/2)";
 
   const [state, submitUnshield, isPending] = useActionState<
-    { error: string } | { data: NonNullable<typeof unshield.data> } | null,
+    { error: string } | { data: NonNullable<typeof unshield.data> } | { completed: true } | null,
     FormData
   >(async (_, formData) => {
     const parsedAmount = parseAmount(formData.get("amount") as string, decimals);
@@ -41,6 +41,11 @@ export function UnshieldCard({ token, disabled, onSuccess }: UnshieldCardProps) 
       });
       return { data };
     } catch (e) {
+      // Another tab or account finalized the request first: the funds arrived.
+      if (e instanceof UnshieldAlreadyFinalizedError) {
+        onSuccess?.();
+        return { completed: true };
+      }
       const error = e instanceof Error ? e : new Error(String(e));
       return { error: error.message };
     }
@@ -84,6 +89,11 @@ export function UnshieldCard({ token, disabled, onSuccess }: UnshieldCardProps) 
         <div className="alert alert-error card-status" role="alert">
           {state.error}
         </div>
+      )}
+      {state && "completed" in state && (
+        <output className="alert alert-success card-status">
+          This unshield was already finalized. The funds arrived.
+        </output>
       )}
       {state && "data" in state && state.data.txHash && (
         <output className="alert alert-success card-status">

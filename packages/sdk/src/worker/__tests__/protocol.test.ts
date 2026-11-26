@@ -273,6 +273,7 @@ function realisticInitPayload(): WireInitPayload {
         metadata: { relayerUrl: "https://relayer.example", chainId: 11155111 },
       },
     } as unknown as WireInitPayload["clientOptions"],
+    keyVerification: undefined,
     runtime: {
       wasmAssetLoadMode: "auto",
       singleThread: false,

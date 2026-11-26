@@ -23,7 +23,7 @@ packageExtensions:
 
 overrides:
   "minimatch@^10.0.0": ">=11.0.1 <12"
-  next: ">=16.4.1"
+  next: ">=16.4.6"
   "@walletconnect/ethereum-provider": "^2.23.7"
   lodash: ">=4.18.0"
   lodash-es: ">=4.18.0"
@@ -49,6 +49,7 @@ overrides:
 # Only install packages published at least 3 days ago (4320 minutes),
 # reducing exposure to supply-chain attacks via newly published versions.
 # https://pnpm.io/settings#minimumreleaseage
+# Safe Chain ignores these two settings and reads its own copy from .aikido.
 minimumReleaseAge: 4320
 minimumReleaseAgeExclude:
   - "@fhevm/sdk"

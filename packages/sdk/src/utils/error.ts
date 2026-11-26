@@ -11,26 +11,26 @@ export function toError(error: unknown): Error {
 
 /**
  * Returns true if the error is a contract call revert (as opposed to a network/transport error).
- * Detects viem's ContractFunctionExecutionError / ContractFunctionRevertedError
- * and ethers' CALL_EXCEPTION.
+ * Looks through the cause chain, since viem wraps every `readContract` failure, transport ones
+ * included, in a `ContractFunctionExecutionError`.
  */
 export function isContractCallError(error: unknown): boolean {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-  // viem: ContractFunctionExecutionError, ContractFunctionRevertedError
+  return findInErrorChain(error, nodeIsContractRevert) !== undefined;
+}
+
+function nodeIsContractRevert(node: Record<string, unknown>): boolean {
   if (
-    error.name === "ContractFunctionExecutionError" ||
-    error.name === "ContractFunctionRevertedError"
+    node.name === "ContractFunctionRevertedError" ||
+    node.name === "ContractFunctionZeroDataError" ||
+    node.code === "CALL_EXCEPTION"
   ) {
     return true;
   }
-  // ethers: error.code === "CALL_EXCEPTION"
-  if ("code" in error && error.code === "CALL_EXCEPTION") {
-    return true;
-  }
   // Fallback: common revert message patterns from various providers
-  const msg = error.message.toLowerCase();
+  if (typeof node.message !== "string") {
+    return false;
+  }
+  const msg = node.message.toLowerCase();
   return msg.includes("execution reverted") || msg.includes("call revert exception");
 }
 

@@ -98,6 +98,7 @@ impl Client {
                     account,
                     storage,
                     permit_storage,
+                    client_language: generated::ClientLanguage::Rust as i32,
                     transport_key_pair_derivation_secret,
                 },
                 |mut inner, r| async move { inner.create_context(r).await },

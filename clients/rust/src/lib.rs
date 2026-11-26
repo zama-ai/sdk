@@ -53,7 +53,7 @@ pub use alloy_primitives::{Address, B256, U256};
 pub use async_trait::async_trait;
 pub use builder::SdkBuilder;
 pub use client::Client;
-pub use config::{ChainConfig, RelayerAuth, SdkConfig};
+pub use config::{ChainConfig, KeyVerification, RelayerAuth, SdkConfig};
 pub use config_options::{
     CompatibilityCheck, DerivationSecret, FheCrsBytes, FheEncryptionKey, FheEncryptionKeyMetadata,
     FhePublicKeyBytes, KmsVersion, ModuleVersions, PinnedModuleVersions, ProcessRuntime,

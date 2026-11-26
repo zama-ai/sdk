@@ -13,9 +13,10 @@ export interface UnshieldAlreadyFinalizedDetails {
 
 /**
  * The unwrap request was already finalized on-chain: the underlying ERC-20
- * tokens were delivered and there is nothing left to resume. The SDK clears
- * the persisted pending-unshield pointer before throwing, so treat this as a
- * success signal: refresh balances and dismiss any "resume unshield" prompt.
+ * tokens were delivered and there is nothing left to finalize. The SDK clears
+ * the persisted pending-unshield entry before throwing, so treat this as a
+ * success signal: show the unshield as complete, refresh balances, and dismiss
+ * any "resume unshield" prompt.
  */
 export class UnshieldAlreadyFinalizedError extends ZamaError {
   /** Transaction hash of the original unwrap request. */
@@ -28,6 +29,21 @@ export class UnshieldAlreadyFinalizedError extends ZamaError {
     this.name = "UnshieldAlreadyFinalizedError";
     this.unwrapTxHash = details.unwrapTxHash;
     this.unwrapRequestId = details.unwrapRequestId;
+  }
+}
+
+/**
+ * `resumeUnshield()` found no receipt for the unwrap: it is still pending, or
+ * it was dropped or replaced. Its pending-unshield entry is kept; retry later.
+ */
+export class UnwrapNotMinedError extends ZamaError {
+  /** Transaction hash of the unwrap that is not mined. */
+  readonly unwrapTxHash: Hex;
+
+  constructor(message: string, unwrapTxHash: Hex, options?: ErrorOptions) {
+    super(ZamaErrorCode.UnwrapNotMined, message, options);
+    this.name = "UnwrapNotMinedError";
+    this.unwrapTxHash = unwrapTxHash;
   }
 }
 

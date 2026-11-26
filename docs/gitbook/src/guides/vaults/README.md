@@ -34,15 +34,15 @@ A keeper is an off-chain service that watches the batchers. It dispatches each b
 
 ## A group hides which vault you chose
 
-A **vault group** is a set of vaults that take deposits in the same confidential asset. A join into a group sends a leg to every vault of the group: the vault you chose gets the amount, and the others get an encrypted zero. An observer sees the same transactions whichever vault you picked.
+A **vault group** is a set of vaults that take deposits in the same confidential asset. A join into a group sends a leg to every vault of the group that takes joins: the vault you chose gets the amount, and the others get an encrypted zero. A vault whose batchers are all [paused or closed](advanced.md#paused-batchers) is left out. An observer sees the same transactions whichever vault you picked.
 
 The SDK builds every group join this way. What it cannot enforce is up to your app:
 
 - **Join through the group.** A vault can also be joined on its own, which is simpler but shows on-chain which vault was chosen.
-- **Never change a group once users have joined it.** All users of a group must join the same vaults in the same order, or their transactions stop looking alike. To change the vaults, define a new group.
+- **Never change a group once users have joined it.** All users of a group must join the same vaults in the same order, or their transactions stop looking alike. A vault that takes no joins is left out of every join. To change the vaults, define a new group.
 - **Quit every leg, or none.** A quit is sent by the user and is public. Quitting only the chosen vault's batch shows which vault it was.
 - **Decrypt every leg together.** Decrypting only the chosen vault's balance or deposit tells the relayer which vault the user cares about.
-- **Keep the chosen vault in the user's own storage.** The batches of a join name every vault of the group, so they reveal nothing. A record of the chosen vault does, and so does a `PreparedJoin`, which holds the chosen vault and the amount in cleartext.
+- **Keep the chosen vault in the user's own storage.** The batches of a join name every vault of the group that takes joins, so they reveal nothing. A record of the chosen vault does, and so does a `PreparedJoin`, which holds the chosen vault and the amount in cleartext.
 
 These follow the router's [rules for clients](https://docs.zama.org/protocol/confidential-vault/concepts/multi-vault-router#rules-for-clients).
 
@@ -65,7 +65,7 @@ Every action exists in two forms:
 
 🟨 Go to [**Building a vault UI**](building-a-ui.md) for what to show and offer in each batch state.
 
-🟨 Go to [**Handle wallet prompts, upgrades and custom sending**](advanced.md) for wallet prompts, paused and upgraded batchers, bundling wallets and your own pipeline.
+🟨 Go to [**Handle wallet prompts, batchers and custom sending**](advanced.md) for wallet prompts, paused batchers, several batchers per vault, bundling wallets and your own pipeline.
 
 For the API, see [**VaultClient**](../../reference/sdk/VaultClient.md) and the vault hooks in the [React reference](../../reference/react/README.md).
 

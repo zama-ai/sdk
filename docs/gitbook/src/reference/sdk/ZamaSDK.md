@@ -196,7 +196,7 @@ Every event extends a common shape (an optional `tokenAddress`, a `timestamp`, a
 | `DelegationSubmitted` / `RevokeDelegationSubmitted`                                                                                                                                  | A delegation grant or revoke transaction is submitted — see [Delegation events](./delegation.md#events).                                                                                                                                                                                                                                                                                        |
 | `UnshieldPhase1Submitted` / `UnshieldPhase2Started` / `UnshieldPhase2Submitted`                                                                                                      | The two-phase unshield flow's request and finalize steps progress.                                                                                                                                                                                                                                                                                                                              |
 
-`TransactionError` and `PermitError` usually carry the same classified error your `await` also throws or rejects with, so you can wire similar handling into telemetry — but don't assume they always match exactly. One documented exception: finalizing an already-finalized unshield concurrently (two tabs, a double click) emits `TransactionError` with the raw `TransactionRevertedError` from the losing finalize attempt, then `unshield()`/`unshieldAll()`/`resumeUnshield()` translates that into the more specific [`UnshieldAlreadyFinalizedError`](./errors.md#unshieldalreadyfinalizederror) before it reaches your `await`.
+`TransactionError` and `PermitError` usually carry the same classified error your `await` also throws or rejects with, so you can wire similar handling into telemetry, but don't assume they always match exactly. One documented exception: the unwrap request was already finalized, for example by another tab or account. The SDK then emits `TransactionError` with the raw `TransactionRevertedError` from the failed finalize. `unshield()`, `unshieldAll()` and `resumeUnshield()` translate it into the more specific [`UnshieldAlreadyFinalizedError`](./errors.md#unshieldalreadyfinalizederror) before it reaches your `await`.
 
 ```ts
 import { ZamaSDKEvents, type TransactionErrorEvent, type PermitErrorEvent } from "@zama-fhe/sdk";
@@ -396,11 +396,11 @@ await sdk.permits.registerPermit(prepared, signature);
 
 **Throws:**
 
-- `ConfigurationError` - `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a process boundary and was corrupted)
-- `PreparedPermitChainMismatchError` - the chain embedded in `prepared.eip712` doesn't match the currently active chain
-- `PreparedPermitExpiredError` - the permit's validity window has already elapsed
-- `TransportKeyPairChangedError` - no transport key pair is stored for `prepared.signerAddress`, or it no longer matches the public key `prepared.eip712` was built against (e.g. a TTL expiry or eviction in between); call `preparePermit` again
-- `SigningFailedError` - the signature is invalid or malformed
+- [`ConfigurationError`](errors.md#configurationerror) - `prepared` doesn't match the `PreparedPermit` shape (e.g. it crossed a process boundary and was corrupted)
+- [`PreparedPermitChainMismatchError`](errors.md#preparedpermitchainmismatcherror) - the chain embedded in `prepared.eip712` doesn't match the currently active chain
+- [`PreparedPermitExpiredError`](errors.md#preparedpermitexpirederror) - the permit's validity window has already elapsed
+- [`TransportKeyPairChangedError`](errors.md#transportkeypairchangederror) - no transport key pair is stored for `prepared.signerAddress`, or it no longer matches the public key `prepared.eip712` was built against (e.g. a TTL expiry or eviction in between); call `preparePermit` again
+- [`SigningFailedError`](errors.md#signingfailederror) - the signature is invalid or malformed
 
 See the [Offline reference](./Offline.md#preparepermit) for `preparePermit`'s request/response shape and the [Offline signing guide](../../guides/offline.md#offline-permits) for the full workflow.
 

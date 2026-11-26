@@ -11,7 +11,7 @@ export interface PendingUnshieldQueryConfig {
 }
 
 /**
- * Query options for reading the unwrap tx hash of an unshield that was
+ * Query options for reading the unwrap tx hash of the oldest unshield that was
  * interrupted between its two phases (returns `null` if none is pending).
  *
  * Backed by {@link ZamaSDK} storage via `WrappedToken.getPendingUnshield()`.

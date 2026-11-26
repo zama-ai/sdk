@@ -27,6 +27,8 @@ pnpm build
 pnpm test:run
 ```
 
+`pnpm install` also turns on the pre-commit hook in `.githooks/` by setting `core.hooksPath`. All worktrees of a clone share that setting, but the hook runs with each worktree's own `node_modules`, so run `pnpm install` in a new worktree before you commit there.
+
 ### Monorepo Structure
 
 pnpm workspaces are defined in `pnpm-workspace.yaml` (`packages/*`, `tools/*`, `test/*`, `codemods/*`):
@@ -133,7 +135,7 @@ pnpm test:run -- packages/sdk/src/token/__tests__/token.test.ts
 # With coverage
 pnpm test:coverage
 
-# E2E tests (requires build first; auto-starts hardhat + next dev)
+# E2E tests (requires build first; auto-starts anvil and the Next.js and Vite test apps)
 pnpm e2e:test
 ```
 
@@ -174,13 +176,32 @@ dc run --rm rust
 
 Partner-facing pages live in [`docs/gitbook/src/native/`](docs/gitbook/src/native/README.md) and the shared guides; follow [`docs/agents/daemon.md`](docs/agents/daemon.md) when editing them.
 
+### Example apps
+
+Each app in `examples/` is a standalone npm project that pins a published SDK release, so on `main` it works when copied out of the repo. Never point an example at the workspace in its `package.json`. To try an SDK change in an example, install the workspace build without touching `package.json` or the lockfile. The script builds the SDK with turbo, so run `pnpm install` at the repo root first:
+
+```bash
+pnpm examples:local react-viem   # builds and packs the SDK, then `npm install --no-save` into examples/react-viem
+pnpm examples:local              # all examples
+```
+
+Run `npm ci` in the example to go back to the published version.
+
+Put the SDK change and the example change in the same PR. `Examples CI` runs each example against this branch's SDK (`<example> (workspace SDK)`). On `main` it also runs it against the pinned release (`<example> (published SDK)`).
+
+On `beta` and `alpha`, examples can use API newer than their pins. The bump PR (see [Release Automation](#release-automation)) updates the pins on `main` after each stable release. They reach `beta` with the next merge from `main`, and `alpha` when it syncs from `beta`.
+
 ### Code Style
 
-- **ESM-only** — all packages use `"type": "module"`
-- **oxfmt + oxlint** — enforced via pre-commit hooks (Husky + lint-staged); ast-grep adds custom AST lint rules
-- **Unused variables** — prefix with `_` (e.g., `_unused`)
-- **Tests** — place in `__tests__/` directories adjacent to source files, use vitest with `vi.fn()` for mocks
-- **React SDK** — all source files use `"use client"` directive
+- **ESM-only**: all packages use `"type": "module"`
+- **oxfmt + oxlint**: enforced by the pre-commit hook (lint-staged); ast-grep adds custom AST lint rules
+  - A new ast-grep rule in `tools/ast-grep/rules/` sets `url:` and `metadata: { escapes, added }` to the PRs that motivated it. Each quarter, delete the rules that people suppress instead of fixing the code.
+- **No new em dashes**: pre-commit and CI fail when a change adds an em dash (U+2014). Rephrase using commas, colons, parentheses, or separate sentences. Run `pnpm lint:em-dash` to check staged changes, or `pnpm lint:em-dash --base <rev>` to check against a base.
+  - An edited line counts as added, so replace any em dash on a line you touch. That includes Markdown table rows that oxfmt realigns.
+  - A moved file keeps its em dashes only while git still pairs it with the old path (at least 50% similar). A copied file counts as new.
+- **Unused variables**: prefix with `_` (e.g., `_unused`)
+- **Tests**: place in `__tests__/` directories adjacent to source files, use vitest with `vi.fn()` for mocks
+- **React SDK**: all source files use `"use client"` directive
 
 ## Pull Request Process
 
@@ -189,6 +210,7 @@ Partner-facing pages live in [`docs/gitbook/src/native/`](docs/gitbook/src/nativ
 3. **Update types** — if you change public APIs, update TypeScript types accordingly
 4. **Run all checks** — ensure `pnpm typecheck && pnpm lint && pnpm test:run && pnpm build` passes; if you changed public APIs or docs/corpus sources, also run `pnpm api-report:check` and `pnpm llm:check`
 5. **Use a Conventional Commit PR title** — examples: `fix: handle signer timeout`, `feat(react-sdk): add cached token balance hook`
+6. **Run `/pre-push-review` in Claude Code before you open the PR.** It fixes what it finds and writes a `## Pre-push review` section for the PR description. It proposes a new check only for a mistake that already escaped twice or is expensive to miss. For review comments that still reach the PR, run `/review-retro <pr>`.
 
 ### Release Automation
 
@@ -205,6 +227,7 @@ Release behavior:
 7. Each release also pushes the `ghcr.io/zama-ai/sdk-daemon` image (`linux/amd64`, `linux/arm64`) with the workflow `GITHUB_TOKEN`, tagged with the version and the channel. Each platform digest is pushed untagged first, scanned with Trivy (any CRITICAL or HIGH finding blocks the tags unless it was risk-accepted in `.trivyignore`, reviewed by its owners in `CODEOWNERS`), then signed with GitHub artifact attestations (build provenance and an SPDX SBOM). The scan reads `.trivyignore` from the tip of the release branch, not from the release commit: when a CVE disclosed after `Daemon CI` passed blocks the image, risk-accept it on the branch and re-run the failed `publish-image` jobs; npm, the crate and the Go tag are already out by then. The manifest list gets a provenance attestation too, so `gh attestation verify oci://ghcr.io/zama-ai/sdk-daemon:<version> --repo zama-ai/sdk` works on the tag. The job summary prints the digest to pin.
 8. Each release also publishes the `zama_sdk` crate to crates.io through Trusted Publishing.
 9. Each release also tags `clients/go/v<version>` for the Go module. Before a major bump, change the module path in `clients/go/go.mod` to `/v<major>`.
+10. Each stable release also opens a `chore(no-release): bump examples to SDK <version>` PR on `main` when the pins change, which pins every app in `examples/` to the new version. It skips a version that is no longer npm `latest`, so re-runs never downgrade. Prereleases don't bump the examples. The PR is merged by hand, and its `chore` type keeps that merge from cutting another release.
 
 Release workflows:
 
@@ -230,10 +253,15 @@ Install channels:
 
 ### Adding a New Signer Adapter
 
-1. Implement the `GenericSigner` interface in a new file under `packages/sdk/src/<library>/`
-2. Add a corresponding entry point in `package.json` exports
-3. Configure tsup to build the new entry point
-4. Add tests
+1. Implement the `GenericSigner` interface under `packages/sdk/src/<library>/`, exported from `index.ts`
+2. Expose it as a subpath export (see [Adding a Subpath Export](#adding-a-subpath-export))
+3. Add tests
+
+### Adding a Subpath Export
+
+1. Add `"<name>/index": "src/<name>/index.ts"` to the package's `rolldown.config.ts` (`entryPoints` in `packages/sdk`, `input` in `packages/react-sdk`).
+2. Add `./<name>` to the package's `package.json` `exports` by copying an existing entry, keeping `"@zama-fhe/source"` first and pointing at the `src` entry file so workspace typecheck and tests resolve it from source. In `packages/sdk`, also add it to `typesVersions`. `pnpm test:run` checks both.
+3. Optional: to track its public API, add an `api-extractor.<name>.json` (copy `api-extractor.vaults.json`), add it to the package's `api-report` and `api-report:check` scripts and the root `api-report:check:<package>` script, then run `pnpm api-report`.
 
 ### Adding React Hooks
 

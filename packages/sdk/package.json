@@ -1,6 +1,6 @@
 {
   "name": "@zama-fhe/sdk",
-  "version": "3.8.0",
+  "version": "3.9.0-beta.16",
   "description": "TypeScript SDK for Zama fhEVM confidential smart contracts",
   "keywords": [
     "blockchain",
@@ -70,6 +70,7 @@
   },
   "exports": {
     ".": {
+      "@zama-fhe/source": "./src/index.ts",
       "import": {
         "types": "./dist/esm/index.d.ts",
         "default": "./dist/esm/index.js"
@@ -81,6 +82,7 @@
       "default": "./dist/esm/index.js"
     },
     "./cleartext": {
+      "@zama-fhe/source": "./src/cleartext/index.ts",
       "import": {
         "types": "./dist/esm/cleartext/index.d.ts",
         "default": "./dist/esm/cleartext/index.js"
@@ -92,6 +94,7 @@
       "default": "./dist/esm/cleartext/index.js"
     },
     "./query": {
+      "@zama-fhe/source": "./src/query/index.ts",
       "import": {
         "types": "./dist/esm/query/index.d.ts",
         "default": "./dist/esm/query/index.js"
@@ -103,6 +106,7 @@
       "default": "./dist/esm/query/index.js"
     },
     "./viem": {
+      "@zama-fhe/source": "./src/viem/index.ts",
       "import": {
         "types": "./dist/esm/viem/index.d.ts",
         "default": "./dist/esm/viem/index.js"
@@ -114,6 +118,7 @@
       "default": "./dist/esm/viem/index.js"
     },
     "./ethers": {
+      "@zama-fhe/source": "./src/ethers/index.ts",
       "import": {
         "types": "./dist/esm/ethers/index.d.ts",
         "default": "./dist/esm/ethers/index.js"
@@ -125,6 +130,7 @@
       "default": "./dist/esm/ethers/index.js"
     },
     "./web": {
+      "@zama-fhe/source": "./src/web/index.ts",
       "import": {
         "types": "./dist/esm/web/index.d.ts",
         "default": "./dist/esm/web/index.js"
@@ -136,6 +142,7 @@
       "default": "./dist/esm/web/index.js"
     },
     "./node": {
+      "@zama-fhe/source": "./src/node/index.ts",
       "import": {
         "types": "./dist/esm/node/index.d.ts",
         "default": "./dist/esm/node/index.js"
@@ -147,6 +154,7 @@
       "default": "./dist/esm/node/index.js"
     },
     "./chains": {
+      "@zama-fhe/source": "./src/chains/index.ts",
       "import": {
         "types": "./dist/esm/chains/index.d.ts",
         "default": "./dist/esm/chains/index.js"
@@ -158,6 +166,7 @@
       "default": "./dist/esm/chains/index.js"
     },
     "./vaults": {
+      "@zama-fhe/source": "./src/vaults/index.ts",
       "import": {
         "types": "./dist/esm/vaults/index.d.ts",
         "default": "./dist/esm/vaults/index.js"
@@ -173,6 +182,7 @@
       "default": "./package.json"
     },
     "./internal": {
+      "@zama-fhe/source": "./src/internal/index.ts",
       "import": {
         "types": "./dist/esm/internal/index.d.ts",
         "default": "./dist/esm/internal/index.js"
@@ -195,14 +205,14 @@
     "api-report:check": "api-extractor run -c api-extractor.json && api-extractor run -c api-extractor.web.json && api-extractor run -c api-extractor.viem.json && api-extractor run -c api-extractor.ethers.json && api-extractor run -c api-extractor.node.json && api-extractor run -c api-extractor.query.json && api-extractor run -c api-extractor.vaults.json"
   },
   "dependencies": {
-    "@fhevm/sdk": "0.13.2",
+    "@fhevm/sdk": "0.13.9",
     "viem": ">=2",
     "zod": ">=4"
   },
   "devDependencies": {
     "@dfns/sdk": "^0.8.20",
     "@dfns/sdk-keysigner": "^0.8.20",
-    "@tanstack/query-core": "^5.107.0",
+    "@tanstack/query-core": "^5.108.2",
     "comlink": "^4.4.2"
   },
   "peerDependencies": {

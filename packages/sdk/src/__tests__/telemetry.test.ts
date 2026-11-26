@@ -46,6 +46,25 @@ describe("telemetryRequestOptions", () => {
       "zama_sdk_operation",
     );
   });
+
+  test("reports the daemon runtime and client when the state names a daemon client", () => {
+    const base = telemetry("header");
+    const marked = { ...base, state: { ...base.state, daemonClient: "go" as const } };
+    expect(telemetryRequestOptions(marked, "unshield").headers).toEqual({
+      "x-zama-sdk-version": SDK_VERSION,
+      "x-zama-sdk-layer": "core",
+      "x-zama-sdk-runtime": "daemon",
+      "x-zama-sdk-client": "go",
+      "x-zama-sdk-operation": "unshield",
+    });
+    const query = { ...marked, mode: "query" as const };
+    expect(telemetryRequestOptions(query, undefined).query).toEqual({
+      zama_sdk_version: SDK_VERSION,
+      zama_sdk_layer: "core",
+      zama_sdk_runtime: "daemon",
+      zama_sdk_client: "go",
+    });
+  });
 });
 
 describe("parseTelemetryMode", () => {

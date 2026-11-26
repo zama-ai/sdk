@@ -53,6 +53,17 @@ describe("EncryptWorkerClient lifecycle", () => {
       expect(rpcRequest).toBeNull();
     });
 
+    test("sends the key-verification chain's RPC URL into init", async () => {
+      const chain = { id: 1 } as never;
+      const { client, api } = makeClient({
+        keyVerification: { chain, network: "https://verifier.example" },
+      });
+      await client.init();
+
+      const [payload] = api.init.mock.calls[0]! as unknown as [{ keyVerification?: unknown }];
+      expect(payload.keyVerification).toEqual({ chain, rpcUrl: "https://verifier.example" });
+    });
+
     test("hands the main-thread-prefetched key to the worker's client options", async () => {
       const { client, api, prefetchKey } = makeClient();
       await client.init();

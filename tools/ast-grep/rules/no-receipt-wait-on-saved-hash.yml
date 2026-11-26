@@ -1,0 +1,25 @@
+id: no-receipt-wait-on-saved-hash
+language: TypeScript
+severity: error
+message: >-
+  waitForTransactionReceipt never returns on ethers for a dropped or replaced
+  transaction. Wait only on a hash you just submitted (utils/submit-transaction.ts).
+  To check a saved hash, use lookUpReceipt (utils/receipt-lookup.ts).
+note: >-
+  A saved hash (pending unshield, resume) may never be mined. lookUpReceipt
+  returns null when there is no receipt, after at most a short wait.
+files:
+  - packages/sdk/src/**/*.ts
+  - packages/react-sdk/src/**/*.ts
+  - packages/react-sdk/src/**/*.tsx
+ignores:
+  - "**/__tests__/**"
+  - packages/sdk/src/test-fixtures/**
+  - packages/sdk/src/utils/submit-transaction.ts
+  - packages/sdk/src/utils/receipt-lookup.ts
+  # Provider adapters implement the method itself.
+  - packages/sdk/src/viem/viem-provider.ts
+  - packages/sdk/src/ethers/ethers-provider.ts
+  - packages/react-sdk/src/wagmi/wagmi-provider.ts
+rule:
+  pattern: $X.waitForTransactionReceipt($$$)

@@ -75,6 +75,8 @@ await unwrap({ amount: 1000n });
 
 The mutation resolves with an `UnwrapResult` -- `{ txHash: Hex, receipt: TransactionReceipt, unwrapRequestId: EncryptedValue }`. Pass the result straight to [`useFinalizeUnwrap`](./useFinalizeUnwrap.md); its `unwrapRequestId` is decoded for you, so there's no need to parse the `UnwrapRequested` event yourself.
 
+On success, the hook invalidates the confidential balance, underlying allowance, pending-unshield and wagmi balance queries.
+
 {% include ".gitbook/includes/mutation-result.md" %}
 
 ## Related

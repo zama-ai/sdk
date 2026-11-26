@@ -9,11 +9,7 @@
         "declaration": true,
         "jsx": "react-jsx",
         "strict": true,
-        "skipLibCheck": true,
-        "paths": {
-          "@zama-fhe/sdk": ["./packages/sdk/src"],
-          "@zama-fhe/react-sdk": ["./packages/react-sdk/src"]
-        }
+        "skipLibCheck": true
       }
     }
   },

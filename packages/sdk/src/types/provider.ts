@@ -49,6 +49,12 @@ export interface GenericProvider {
   /** Wait for a transaction to be mined and return its receipt. */
   waitForTransactionReceipt(hash: Hex): Promise<TransactionReceipt>;
   /**
+   * Return the receipt of a mined transaction, or `null` when it is not mined.
+   * Does not wait. Optional: without it, the SDK waits for the receipt with a
+   * short timeout where it only needs to check a transaction.
+   */
+  getTransactionReceipt?(hash: Hex): Promise<TransactionReceipt | null>;
+  /**
    * Return the latest block timestamp in seconds, on `chainId` when given
    * (see {@link ReadContractConfig.chainId}).
    */

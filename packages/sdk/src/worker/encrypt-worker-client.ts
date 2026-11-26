@@ -1,4 +1,5 @@
 import { proxy, transfer, wrap, type Remote } from "comlink";
+import type { FhevmChain } from "@fhevm/sdk/chains";
 import type { EIP1193Provider } from "viem";
 import { EncryptOffloadUnavailableError } from "../errors/encryption";
 import type { FhevmClientOptions } from "../relayer/types";
@@ -156,9 +157,13 @@ function createWorkerGeneration(): WorkerGeneration {
 }
 
 export type EncryptWorkerClientConfig = {
-  readonly initPayload: Omit<WireInitPayload, "rpcUrl">;
+  readonly initPayload: Omit<WireInitPayload, "rpcUrl" | "keyVerification">;
   /** The chain's RPC endpoint: a URL crosses into the worker; a provider is proxied per request. */
   readonly network: EIP1193Provider | string;
+  /** Verifying chain for a non-Ethereum host chain. Only a URL network reaches the worker, so offload must be blocked for a provider. */
+  readonly keyVerification?:
+    | { readonly chain: FhevmChain; readonly network: EIP1193Provider | string }
+    | undefined;
   /** Fetches the FHE key on the calling thread, where the chain's auth applies; the worker realm never downloads it itself. */
   readonly prefetchKey: () => Promise<FhevmClientOptions["fheEncryptionKey"]>;
   readonly createInlineClient: () => EncryptOffloadBackend;
@@ -339,7 +344,7 @@ export class EncryptWorkerClient implements EncryptOffloadBackend {
     const fheEncryptionKey = await this.#config.prefetchKey();
     try {
       const api = await this.#spawn(generation);
-      const network = this.#config.network;
+      const { network, keyVerification: verifier } = this.#config;
       const rpcRequest =
         typeof network === "string"
           ? null
@@ -384,6 +389,10 @@ export class EncryptWorkerClient implements EncryptOffloadBackend {
                 fheEncryptionKey: wireKey.key,
               },
               rpcUrl: typeof network === "string" ? network : undefined,
+              keyVerification:
+                verifier && typeof verifier.network === "string"
+                  ? { chain: verifier.chain, rpcUrl: verifier.network }
+                  : undefined,
             },
             wireKey.transfers,
           ),

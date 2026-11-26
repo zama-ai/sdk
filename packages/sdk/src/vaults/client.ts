@@ -9,7 +9,6 @@ import {
   BalanceCheckUnavailableError,
   ChainMismatchError,
   ConfigurationError,
-  DecryptionFailedError,
   EncryptionFailedError,
   SignerNotConfiguredError,
   VaultBatcherPausedError,
@@ -29,28 +28,21 @@ import type {
   TransactionResult,
   WriteContractConfig,
 } from "../types";
+import { decryptPublicUint } from "../relayer/public-decrypt";
 import { requireWriteChain } from "../utils/alignment";
 import { assertConfidentialBalance } from "../utils/assert-balance";
-import { assertBigint, assertNonNullable } from "../utils/assertions";
+import { assertNonNullable } from "../utils/assertions";
 import { isEncryptedValueZero } from "../utils/handles";
 import { submitTransaction } from "../utils/submit-transaction";
 import type { ZamaSDK } from "../zama-sdk";
-import {
-  historyOf,
-  scopeOf,
-  type BatcherHistory,
-  type Vault,
-  type VaultGroup,
-  type VaultIdOf,
-} from "./config";
+import { scopeOf, type Vault, type VaultGroup, type VaultIdOf } from "./config";
+import { readBatchState, readNextBatches, waitsOnPrevious } from "./next-batch";
 import {
   batchCallbackDeadlineContract,
   batchCreatedAtContract,
   batchDispatchedAtContract,
   batchMinBatchAgeContract,
-  batchStateContract,
   claimContract,
-  currentBatchIdContract,
   depositsContract,
   dispatchBatchCallbackContract,
   dispatchBatchContract,
@@ -68,7 +60,6 @@ import type {
   Batch,
   BatchAction,
   BatchRef,
-  BatchState,
   BatcherRef,
   Call,
   JoinCall,
@@ -90,9 +81,6 @@ import type {
 
 // A router pulls a share token only for its holder's join, so a year-long approval is safe.
 const OPERATOR_APPROVAL_VALIDITY_SECONDS = 365n * 24n * 60n * 60n;
-
-// The contract's uint8 enum, by index.
-const BATCH_STATES: readonly BatchState[] = ["pending", "dispatched", "finalized", "canceled"];
 
 const ENCRYPT_OPERATION = {
   deposit: "vault-deposit",
@@ -132,6 +120,24 @@ function memberOf(group: VaultGroup, vaultId: string | undefined): Vault {
     throw new ConfigurationError(`Vault group "${group.id}" has no vault "${vaultId}"`);
   }
   return vault;
+}
+
+/** Why a vault with no open batcher takes no join: a closed batcher never resumes, a paused one can. */
+function noOpenBatcher(
+  direction: JoinDirection,
+  vault: Vault,
+  offer: { readonly status: "paused" | "closed"; readonly batcher: Address },
+  group?: VaultGroup,
+): VaultBatcherPausedError {
+  const where = group === undefined ? "" : ` in group "${group.id}"`;
+  const why =
+    offer.status === "closed"
+      ? "is closed, so the vault takes no joins"
+      : "is paused or closed, so the vault cannot be joined until one resumes";
+  return new VaultBatcherPausedError(
+    `Every ${direction} batcher of vault "${vault.id}"${where} ${why}`,
+    { batcher: offer.batcher, vaultId: vault.id },
+  );
 }
 
 function nonEmpty<T>(values: readonly T[]): readonly [T, ...T[]] {
@@ -175,15 +181,18 @@ export class VaultClient {
    * account's balance before sending.
    *
    * @throws if the provider is not on the vault's chain while a wallet is connected. {@link ChainMismatchError}
-   * @throws if the provider is on another chain with no wallet connected, or a batcher address or `lastBatchId` is invalid. {@link ConfigurationError}
-   * @throws if a batcher the join reaches is paused, even with `skipBalanceCheck`. {@link VaultBatcherPausedError}
+   * @throws if the provider is on another chain with no wallet connected, a vault lists no batcher, or a batcher address or `lastBatchId` is invalid. {@link ConfigurationError}
+   * @throws if no batcher of the vault is open, even with `skipBalanceCheck`. {@link VaultBatcherPausedError}
+   * @throws if a batcher of any vault of the target cannot be read. {@link VaultBatcherReadFailedError}
    * @throws if the balance is less than `amount` and `skipBalanceCheck` is not set. {@link InsufficientConfidentialBalanceError}
    * @throws if `skipBalanceCheck` is not set and no signer is connected, `account` is not the signer's, or the balance cannot be read. {@link BalanceCheckUnavailableError}
    * @throws if encryption returns a different number of values than the join has legs. {@link EncryptionFailedError}
    */
   prepareDeposit(vault: Vault, input: JoinInput, options?: JoinOptions): Promise<PreparedJoin>;
   /**
-   * Build a deposit into one vault of a group, with a leg for every vault.
+   * Build a deposit into one vault of a group, with a leg for every vault
+   * that takes joins. A vault whose batchers are all paused or closed gets no
+   * leg; when it is the chosen vault, this throws {@link VaultBatcherPausedError}.
    * With `route: "direct"`, send the calls as one atomic bundle, and with
    * `skipBalanceCheck`, decrypt every leg's token together: doing either for
    * only some legs shows which vault was chosen.
@@ -214,11 +223,11 @@ export class VaultClient {
   prepareRedeem(vault: Vault, input: JoinInput, options?: JoinOptions): Promise<PreparedJoin>;
   /**
    * Build a redemption of the shares of one vault of a group, with a leg for
-   * every vault. On the router route, `calls` starts with a year-long operator
-   * approval on each share token the account has not approved. With
-   * `route: "direct"`, send the calls as one atomic bundle, and with
-   * `skipBalanceCheck`, decrypt every leg's token together: doing either for
-   * only some legs shows which vault was chosen.
+   * every vault that takes joins, as {@link prepareDeposit}. On the router
+   * route, `calls` starts with a year-long operator approval on each share
+   * token the account has not approved. With `route: "direct"`, send the calls
+   * as one atomic bundle, and with `skipBalanceCheck`, decrypt every leg's
+   * token together: doing either for only some legs shows which vault was chosen.
    *
    * @throws as {@link prepareDeposit} for a group, except that the batchers may take different tokens.
    */
@@ -267,7 +276,7 @@ export class VaultClient {
    * @throws if the batch is not dispatched. {@link VaultBatchNotDispatchedError}
    * @throws if the provider is not on the batch's chain while a wallet is connected. {@link ChainMismatchError}
    * @throws if the provider is not on the batch's chain with no wallet connected, or the batcher reports an unknown batch state. {@link ConfigurationError}
-   * @throws if public decryption returns no value for the batch's handle. {@link DecryptionFailedError}
+   * @throws if public decryption of the batch's unwrap amount fails. {@link DecryptionFailedError}
    */
   async prepareFinalize(batch: BatchRef): Promise<PreparedFinalize> {
     return (await this.#planFinalize(batch)).call;
@@ -276,7 +285,7 @@ export class VaultClient {
   async #planFinalize(batch: BatchRef): Promise<Planned<PreparedFinalize>> {
     const batcher = getAddress(batch.batcher);
     const [state, requestId, wrapper] = await Promise.all([
-      this.#batchState(batch.chainId, batcher, batch.batchId),
+      readBatchState(this.#sdk.provider, batch.chainId, batcher, batch.batchId),
       this.#read(batch.chainId, unwrapRequestIdContract(batcher, batch.batchId)),
       this.#fromToken(batch.chainId, batcher),
     ]);
@@ -289,28 +298,17 @@ export class VaultClient {
     }
     const handle = await this.#read(batch.chainId, unwrapAmountContract(wrapper, requestId));
     await this.#requireProviderChain(batch.chainId, "vault finalize");
-    const { clearValues, decryptionProof } = await this.#sdk.decryption.decryptPublicValues(
-      [handle],
-      { operation: "vault-finalize" },
-    );
-    const cleartext = clearValues[handle];
-    if (cleartext === undefined) {
-      throw new DecryptionFailedError(`Public decryption returned no value for ${handle}`);
-    }
-    assertBigint(cleartext, "finalize: clearValues[handle]");
-    const config = dispatchBatchCallbackContract(
-      batcher,
-      batch.batchId,
-      cleartext,
-      decryptionProof,
-    );
+    const { value, decryptionProof } = await decryptPublicUint(this.#sdk.relayer, handle, {
+      operation: "vault-finalize",
+    });
+    const config = dispatchBatchCallbackContract(batcher, batch.batchId, value, decryptionProof);
     return {
       config,
       call: {
         chainId: batch.chainId,
         batcher,
         batchId: batch.batchId,
-        unwrapAmountCleartext: cleartext,
+        unwrapAmountCleartext: value,
         decryptionProof,
         call: toCall(config),
       },
@@ -335,7 +333,7 @@ export class VaultClient {
   ): Promise<JoinOutcome>;
   /**
    * Deposit into one vault of a group with the SDK's signer, with a leg for
-   * every vault.
+   * every vault that takes joins, as {@link prepareDeposit}.
    *
    * @throws as the single-vault overload, and as {@link prepareDeposit} for a group.
    */
@@ -448,23 +446,35 @@ export class VaultClient {
     const { chainId, batchId } = batch;
     const batcher = getAddress(batch.batcher);
     const depositor = account === undefined ? undefined : getAddress(account);
-    const [state, createdAt, minAge, dispatchedAt, deadline, paused, rate, decimals, deposit, now] =
-      await Promise.all([
-        this.#batchState(chainId, batcher, batchId),
-        this.#read(chainId, batchCreatedAtContract(batcher, batchId)),
-        this.#read(chainId, batchMinBatchAgeContract(batcher, batchId)),
-        this.#read(chainId, batchDispatchedAtContract(batcher, batchId)),
-        this.#read(chainId, batchCallbackDeadlineContract(batcher, batchId)),
-        this.#read(chainId, pausedContract(batcher)),
-        this.#read(chainId, exchangeRateContract(batcher, batchId)),
-        this.#memo(`decimals:${chainId}:${batcher}`, () =>
-          this.#read(chainId, exchangeRateDecimalsContract(batcher)),
-        ),
-        depositor === undefined
-          ? null
-          : this.#read(chainId, depositsContract(batcher, batchId, depositor)),
-        this.#sdk.provider.getBlockTimestamp(chainId),
-      ]);
+    const [
+      state,
+      createdAt,
+      minAge,
+      dispatchedAt,
+      deadline,
+      paused,
+      rate,
+      decimals,
+      deposit,
+      now,
+      blocked,
+    ] = await Promise.all([
+      readBatchState(this.#sdk.provider, chainId, batcher, batchId),
+      this.#read(chainId, batchCreatedAtContract(batcher, batchId)),
+      this.#read(chainId, batchMinBatchAgeContract(batcher, batchId)),
+      this.#read(chainId, batchDispatchedAtContract(batcher, batchId)),
+      this.#read(chainId, batchCallbackDeadlineContract(batcher, batchId)),
+      this.#read(chainId, pausedContract(batcher)),
+      this.#read(chainId, exchangeRateContract(batcher, batchId)),
+      this.#memo(`decimals:${chainId}:${batcher}`, () =>
+        this.#read(chainId, exchangeRateDecimalsContract(batcher)),
+      ),
+      depositor === undefined
+        ? null
+        : this.#read(chainId, depositsContract(batcher, batchId, depositor)),
+      this.#sdk.provider.getBlockTimestamp(chainId),
+      waitsOnPrevious(this.#sdk.provider, chainId, batcher, batchId),
+    ]);
     const dispatchableAt = createdAt + minAge;
     const cancelsAt = dispatchedAt + deadline;
     // A literal zero handle means the account never joined this batch.
@@ -473,7 +483,7 @@ export class VaultClient {
       [
         ["claim", member && state === "finalized"],
         ["quit", member && (state === "pending" || state === "canceled")],
-        ["dispatch", state === "pending" && !paused && dispatchableAt <= now],
+        ["dispatch", state === "pending" && !paused && !blocked && dispatchableAt <= now],
         ["finalize", state === "dispatched"],
       ] as const
     ).flatMap(([action, allowed]): BatchAction[] => (allowed ? [action] : []));
@@ -500,37 +510,50 @@ export class VaultClient {
     }
   }
 
-  /** The open batch of a vault's active batcher, or of each vault of a group, with when it can be dispatched. */
+  /**
+   * The batch a join reaches now, for a vault or each vault of a group, with
+   * when it can be dispatched. When no batcher of a vault is open, it is a
+   * paused batcher's batch with `paused: true`. A group member whose batchers
+   * are all closed is left out, since it never takes a join again.
+   *
+   * @throws if a vault lists no batcher, or an address or `lastBatchId` is invalid. {@link ConfigurationError}
+   * @throws if every batcher of a vault on its own, or of every vault of a group, is closed. {@link VaultBatcherPausedError}
+   * @throws if a batcher cannot be read. {@link VaultBatcherReadFailedError}
+   */
   async readOpenBatches(
     target: Vault | VaultGroup,
     direction: JoinDirection,
   ): Promise<readonly OpenBatch[]> {
-    const { vaults, chainId } = scopeOf(target);
-    const [now, batches] = await Promise.all([
-      this.#sdk.provider.getBlockTimestamp(chainId),
-      Promise.all(
-        vaults.map(async (vault) => {
-          const batcher = await this.#activeBatcher(vault, direction);
-          const [batchId, paused] = await Promise.all([
-            this.#read(chainId, currentBatchIdContract(batcher)),
-            this.#read(chainId, pausedContract(batcher)),
-          ]);
-          const [createdAt, minAge] = await Promise.all([
-            this.#read(chainId, batchCreatedAtContract(batcher, batchId)),
-            this.#read(chainId, batchMinBatchAgeContract(batcher, batchId)),
-          ]);
-          return {
-            vaultId: vault.id,
-            chainId,
-            batcher,
-            batchId,
-            dispatchableAt: createdAt + minAge,
-            paused,
-          };
-        }),
-      ),
-    ]);
-    return batches.map((batch) => ({ ...batch, observedAt: now }));
+    const { group, vaults, chainId } = scopeOf(target);
+    const { now, next } = await readNextBatches(this.#sdk.provider, chainId, vaults, direction);
+    const batches = next.flatMap(({ vault, offer }): OpenBatch[] => {
+      if (offer.status === "closed") {
+        if (group !== undefined) {
+          return [];
+        }
+        throw noOpenBatcher(direction, vault, offer);
+      }
+      const { status, batcher, batchId, dispatchableAt } = offer;
+      return [
+        {
+          vaultId: vault.id,
+          chainId,
+          batcher,
+          batchId,
+          dispatchableAt,
+          paused: status === "paused",
+          observedAt: now,
+        },
+      ];
+    });
+    if (group !== undefined && batches.length === 0) {
+      const { vault, offer } = at(next, 0);
+      throw new VaultBatcherPausedError(
+        `Every ${direction} batcher of every vault in group "${group.id}" is closed, so the group takes no joins`,
+        { batcher: offer.batcher, vaultId: vault.id },
+      );
+    }
+    return batches;
   }
 
   async #planJoin(
@@ -547,22 +570,32 @@ export class VaultClient {
     // Encryption runs on the provider's chain, so check it before anything prompts.
     await this.#requireProviderChain(chainId, `vault ${direction}`);
     const router = group !== undefined && route === "router" ? this.#router(group) : undefined;
-    const batchers = await Promise.all(
-      vaults.map((vault) => this.#activeBatcher(vault, direction)),
-    );
-    const [tokens] = await Promise.all([
-      Promise.all(batchers.map((batcher) => this.#fromToken(chainId, batcher))),
-      this.#assertNotPaused(chainId, group, vaults, batchers),
-    ]);
+    // A paused batcher reverts the whole join, so a member with no open batch gets no leg;
+    // that reveals nothing, since it takes joins from no one.
+    const { next } = await readNextBatches(this.#sdk.provider, chainId, vaults, direction);
+    const mine = next.find(({ vault }) => vault === chosen);
+    assertNonNullable(mine, `vault ${chosen.id}`);
+    if (mine.offer.status !== "open") {
+      throw noOpenBatcher(direction, chosen, mine.offer, group);
+    }
     const legs = nonEmpty(
-      vaults.map((vault, index): VaultLeg => ({
-        vaultId: vault.id,
-        batcher: at(batchers, index),
-        token: at(tokens, index),
-        amount: vault === chosen ? input.amount : 0n,
-      })),
+      await Promise.all(
+        next.flatMap(({ vault, offer }) =>
+          offer.status === "open"
+            ? [
+                this.#fromToken(chainId, offer.batcher).then((token): VaultLeg => ({
+                  vaultId: vault.id,
+                  batcher: offer.batcher,
+                  token,
+                  amount: vault === chosen ? input.amount : 0n,
+                })),
+              ]
+            : [],
+        ),
+      ),
     );
-    const target = at(legs, vaults.indexOf(chosen));
+    const target = legs.find((leg) => leg.vaultId === chosen.id);
+    assertNonNullable(target, `vault leg ${chosen.id}`);
     // A group deposits one asset: the router transfers it once and splits it into the legs.
     const stray = legs.find((leg) => direction === "deposit" && leg.token !== target.token);
     if (stray !== undefined) {
@@ -690,20 +723,6 @@ export class VaultClient {
     return { batches, txHashes };
   }
 
-  // Never cached: the switch happens when the last configured batch is dispatched.
-  async #activeBatcher(vault: Vault, direction: JoinDirection): Promise<Address> {
-    const history: BatcherHistory = historyOf(vault, direction);
-    const current = await Promise.all(
-      history.retired.map((entry) =>
-        this.#read(vault.chainId, currentBatchIdContract(entry.address)),
-      ),
-    );
-    return (
-      history.retired.find((entry, index) => at(current, index) <= entry.lastBatchId)?.address ??
-      history.latest
-    );
-  }
-
   #router(group: VaultGroup): Address {
     const { chainId } = scopeOf(group);
     const router = this.#sdk.chains.find((chain) => chain.id === chainId)?.vaultRouterAddress;
@@ -720,29 +739,6 @@ export class VaultClient {
     return this.#memo(`fromToken:${chainId}:${batcher}`, async () =>
       getAddress(await this.#read(chainId, fromTokenContract(batcher))),
     );
-  }
-
-  // One paused batcher reverts the whole join, so every leg's batcher is read.
-  async #assertNotPaused(
-    chainId: number,
-    group: VaultGroup | undefined,
-    vaults: readonly Vault[],
-    batchers: readonly Address[],
-  ): Promise<void> {
-    const paused = await Promise.all(
-      batchers.map((batcher) => this.#read(chainId, pausedContract(batcher))),
-    );
-    const index = paused.indexOf(true);
-    if (index !== -1) {
-      const vault = at(vaults, index);
-      const batcher = at(batchers, index);
-      throw new VaultBatcherPausedError(
-        group !== undefined
-          ? `Batcher ${batcher} of vault "${vault.id}" in group "${group.id}" is paused, so no vault of the group can be joined until it resumes`
-          : `Batcher ${batcher} of vault "${vault.id}" is paused, so the vault cannot be joined until it resumes`,
-        { batcher, vaultId: vault.id },
-      );
-    }
   }
 
   // A short balance joins every batch with nothing and still costs the transaction.
@@ -866,17 +862,6 @@ export class VaultClient {
         },
       };
     });
-  }
-
-  async #batchState(chainId: number, batcher: Address, batchId: bigint): Promise<BatchState> {
-    const index = await this.#read(chainId, batchStateContract(batcher, batchId));
-    const state = BATCH_STATES[index];
-    if (state === undefined) {
-      throw new ConfigurationError(
-        `Batcher ${batcher} returned unknown batch state ${index} for batch ${batchId}; is it a vault batcher?`,
-      );
-    }
-    return state;
   }
 
   #signer(operation: string): GenericSigner {

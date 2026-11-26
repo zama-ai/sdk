@@ -568,15 +568,32 @@ export interface BatchDecryptResult {
 export const bscTestnet: Readonly<{
     readonly id: 97;
     readonly gatewayChainId: 10901;
-    readonly relayerUrl: "";
+    readonly relayerUrl: "https://relayer.testnet.zama.org";
     readonly network: "https://bsc-testnet.bnbchain.org";
-    readonly aclContractAddress: "0x52470e945521E247Cb4754088a836Dc4b838AFBE";
-    readonly kmsContractAddress: "0x788F5BB2d93aB4Cb67Fe2277757aE95006504F6F";
-    readonly inputVerifierContractAddress: "0x49e0BAB39904E4192c30CFB58573Cbe27B7E398E";
-    readonly verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64";
-    readonly verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810";
-    readonly registryAddress: "0xc0E8B73b1C58D846e1d4f8fAE2E1466C85BCeAeC";
-    readonly executorAddress: "0x5985e48689550c1b2893ABfBbe4cc0eE3A22cc54";
+    readonly aclContractAddress: "0x9Adac873Ae2f737AF011f0778305Cff0B220ac36";
+    readonly kmsContractAddress: "0x1F7CAD0c05fDED5F988683AdfDB4F242b310cdcB";
+    readonly inputVerifierContractAddress: "0xDd378841F0125656b97818d9d371e1027Df4c424";
+    readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
+    readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
+    readonly registryAddress: "0x84c5B9669b1BA109D31096c64AFEF1473Ac4Db43";
+    readonly keyVerification: {
+        readonly chain: Readonly<{
+            readonly id: 11155111;
+            readonly gatewayChainId: 10901;
+            readonly relayerUrl: "https://relayer.testnet.zama.org";
+            readonly network: "https://ethereum-sepolia-rpc.publicnode.com";
+            readonly aclContractAddress: "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D";
+            readonly kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A";
+            readonly inputVerifierContractAddress: "0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0";
+            readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
+            readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
+            readonly registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
+            readonly vaultRouterAddress: "0xD5BBFF95F3401aeC3B111664F6b72EdAe73814e8";
+            readonly keyVerification: {
+                readonly contract: "0x77389113d7000EcBCfc2bDed57202f5f46109934";
+            };
+        }>;
+    };
 }>;
 
 // @public
@@ -8151,8 +8168,10 @@ export interface ErrorForCode {
     [ZamaErrorCode.TransactionReverted]: TransactionRevertedError;
     [ZamaErrorCode.TransportKeyPairChanged]: TransportKeyPairChangedError;
     [ZamaErrorCode.UnshieldAlreadyFinalized]: UnshieldAlreadyFinalizedError;
+    [ZamaErrorCode.UnwrapNotMined]: UnwrapNotMinedError;
     [ZamaErrorCode.VaultBatchNotDispatched]: VaultBatchNotDispatchedError;
     [ZamaErrorCode.VaultBatcherPaused]: VaultBatcherPausedError;
+    [ZamaErrorCode.VaultBatcherReadFailed]: VaultBatcherReadFailedError;
     [ZamaErrorCode.VaultJoinUnconfirmed]: VaultJoinUnconfirmedError;
     [ZamaErrorCode.WalletAccountNotReady]: WalletAccountNotReadyError;
     [ZamaErrorCode.WalletNotConnected]: WalletNotConnectedError;
@@ -8166,6 +8185,7 @@ export interface FheChain<TId extends number = number> {
     readonly gatewayChainId: number;
     readonly id: TId;
     readonly inputVerifierContractAddress: Address;
+    readonly keyVerification?: FheKeyVerification | undefined;
     readonly kmsContractAddress: Address;
     readonly network: EIP1193Provider | string;
     readonly registryAddress: Address | undefined;
@@ -8183,6 +8203,17 @@ export type FheChainAuth = {
     __type: "ApiKeyHeader";
     header?: string;
     value: string;
+};
+
+// @public
+export type FheKeyVerification = {
+    readonly contract: Address;
+} | {
+    readonly chain: FheChain & {
+        readonly keyVerification: {
+            readonly contract: Address;
+        };
+    };
 };
 
 // @public
@@ -9380,6 +9411,7 @@ export interface GenericLogger {
 export interface GenericProvider {
     getBlockTimestamp(chainId?: number): Promise<bigint>;
     getChainId(): Promise<number>;
+    getTransactionReceipt?(hash: Hex): Promise<TransactionReceipt | null>;
     multicall?<const TCalls extends readonly ReadContractConfig[]>(params: {
         readonly calls: TCalls;
         readonly chainId?: number;
@@ -13548,6 +13580,9 @@ export const mainnet: Readonly<{
     readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
     readonly registryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0";
     readonly vaultRouterAddress: "0x11c6Acfd368DDFAB97d15649eB8043C0197fac4C";
+    readonly keyVerification: {
+        readonly contract: "0xf102cC9A9D2174630c394f5b7B7D63104E348daa";
+    };
 }>;
 
 // @public
@@ -13808,6 +13843,24 @@ export const polygon: Readonly<{
     readonly verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24";
     readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
     readonly registryAddress: "0xc8908569868758dAF814B5a8b96bBc44D1653d54";
+    readonly keyVerification: {
+        readonly chain: Readonly<{
+            readonly id: 1;
+            readonly gatewayChainId: 261131;
+            readonly relayerUrl: "https://relayer.mainnet.zama.org";
+            readonly network: "https://ethereum-rpc.publicnode.com";
+            readonly aclContractAddress: "0xcA2E8f1F656CD25C01F05d0b243Ab1ecd4a8ffb6";
+            readonly kmsContractAddress: "0x77627828a55156b04Ac0DC0eb30467f1a552BB03";
+            readonly inputVerifierContractAddress: "0xCe0FC2e05CFff1B719EFF7169f7D80Af770c8EA2";
+            readonly verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24";
+            readonly verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287";
+            readonly registryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0";
+            readonly vaultRouterAddress: "0x11c6Acfd368DDFAB97d15649eB8043C0197fac4C";
+            readonly keyVerification: {
+                readonly contract: "0xf102cC9A9D2174630c394f5b7B7D63104E348daa";
+            };
+        }>;
+    };
 }>;
 
 // @public
@@ -13822,6 +13875,24 @@ export const polygonAmoy: Readonly<{
     readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
     readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
     readonly registryAddress: undefined;
+    readonly keyVerification: {
+        readonly chain: Readonly<{
+            readonly id: 11155111;
+            readonly gatewayChainId: 10901;
+            readonly relayerUrl: "https://relayer.testnet.zama.org";
+            readonly network: "https://ethereum-sepolia-rpc.publicnode.com";
+            readonly aclContractAddress: "0xf0Ffdc93b7E186bC2f8CB3dAA75D86d1930A433D";
+            readonly kmsContractAddress: "0xbE0E383937d564D7FF0BC3b46c51f0bF8d5C311A";
+            readonly inputVerifierContractAddress: "0xBBC1fFCdc7C316aAAd72E807D9b0272BE8F84DA0";
+            readonly verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478";
+            readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
+            readonly registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
+            readonly vaultRouterAddress: "0xD5BBFF95F3401aeC3B111664F6b72EdAe73814e8";
+            readonly keyVerification: {
+                readonly contract: "0x77389113d7000EcBCfc2bDed57202f5f46109934";
+            };
+        }>;
+    };
 }>;
 
 // @public
@@ -15338,6 +15409,9 @@ export const sepolia: Readonly<{
     readonly verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955";
     readonly registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e";
     readonly vaultRouterAddress: "0xD5BBFF95F3401aeC3B111664F6b72EdAe73814e8";
+    readonly keyVerification: {
+        readonly contract: "0x77389113d7000EcBCfc2bDed57202f5f46109934";
+    };
 }>;
 
 // @public
@@ -21771,6 +21845,12 @@ export function unwrapFromBalanceContract(encryptedErc20: Address, from: Address
 };
 
 // @public
+export class UnwrapNotMinedError extends ZamaError {
+    constructor(message: string, unwrapTxHash: Hex, options?: ErrorOptions);
+    readonly unwrapTxHash: Hex;
+}
+
+// @public
 export interface UnwrapRequest {
     amount: bigint;
     from: Address;
@@ -22943,6 +23023,21 @@ export interface VaultBatcherPausedDetails {
 // @public
 export class VaultBatcherPausedError extends ZamaError {
     constructor(message: string, details: VaultBatcherPausedDetails, options?: ErrorOptions);
+    readonly batcher: Address;
+    readonly vaultId: string;
+}
+
+// @public
+export interface VaultBatcherReadFailedDetails {
+    readonly batcher: Address;
+    readonly vaultId: string;
+}
+
+// @public
+export class VaultBatcherReadFailedError extends ZamaError {
+    constructor(message: string, details: VaultBatcherReadFailedDetails, options?: ErrorOptions & {
+        retryable?: boolean;
+    });
     readonly batcher: Address;
     readonly vaultId: string;
 }
@@ -24372,7 +24467,9 @@ export const ZamaErrorCode: {
     readonly PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH";
     readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
     readonly UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED";
+    readonly UnwrapNotMined: "UNWRAP_NOT_MINED";
     readonly VaultBatcherPaused: "VAULT_BATCHER_PAUSED";
+    readonly VaultBatcherReadFailed: "VAULT_BATCHER_READ_FAILED";
     readonly VaultBatchNotDispatched: "VAULT_BATCH_NOT_DISPATCHED";
     readonly VaultJoinUnconfirmed: "VAULT_JOIN_UNCONFIRMED";
 };

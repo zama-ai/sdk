@@ -53,12 +53,18 @@ export {
   ERC20ReadFailedError,
   type BalanceErrorDetails,
 } from "./balance";
-export { UnshieldAlreadyFinalizedError, type UnshieldAlreadyFinalizedDetails } from "./unshield";
+export {
+  UnshieldAlreadyFinalizedError,
+  UnwrapNotMinedError,
+  type UnshieldAlreadyFinalizedDetails,
+} from "./unshield";
 export {
   VaultBatcherPausedError,
+  VaultBatcherReadFailedError,
   VaultBatchNotDispatchedError,
   VaultJoinUnconfirmedError,
   type VaultBatcherPausedDetails,
+  type VaultBatcherReadFailedDetails,
   type VaultBatchNotDispatchedDetails,
   type VaultJoinUnconfirmedDetails,
 } from "./vaults";

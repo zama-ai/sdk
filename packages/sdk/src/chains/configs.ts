@@ -15,6 +15,7 @@ export const mainnet = Object.freeze({
   verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287",
   registryAddress: "0xeb5015fF021DB115aCe010f23F55C2591059bBA0",
   vaultRouterAddress: "0x11c6Acfd368DDFAB97d15649eB8043C0197fac4C",
+  keyVerification: { contract: "0xf102cC9A9D2174630c394f5b7B7D63104E348daa" },
 } as const satisfies FheChain);
 
 /**
@@ -31,6 +32,7 @@ export const polygon = Object.freeze({
   verifyingContractAddressDecryption: "0x0f6024a97684f7d90ddb0fAAD79cB15F2C888D24",
   verifyingContractAddressInputVerification: "0xcB1bB072f38bdAF0F328CdEf1Fc6eDa1DF029287",
   registryAddress: "0xc8908569868758dAF814B5a8b96bBc44D1653d54",
+  keyVerification: { chain: mainnet },
 } as const satisfies FheChain);
 
 /**
@@ -48,6 +50,7 @@ export const sepolia = Object.freeze({
   verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
   registryAddress: "0x2f0750Bbb0A246059d80e94c454586a7F27a128e",
   vaultRouterAddress: "0xD5BBFF95F3401aeC3B111664F6b72EdAe73814e8",
+  keyVerification: { contract: "0x77389113d7000EcBCfc2bDed57202f5f46109934" },
 } as const satisfies FheChain);
 
 /**
@@ -67,6 +70,7 @@ export const polygonAmoy = Object.freeze({
   verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
   verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
   registryAddress: undefined,
+  keyVerification: { chain: sepolia },
 } as const satisfies FheChain);
 
 /**
@@ -112,22 +116,19 @@ export const zenithTrexTestnet = Object.freeze({
 
 /**
  * BNB Smart Chain testnet configuration (chainId 97, Chapel).
- *
- * BSC testnet does not have full FHE infrastructure — use with `cleartext()` transport.
- * Contract addresses match the cleartext deployment.
  */
 export const bscTestnet = Object.freeze({
   id: 97,
   gatewayChainId: 10901,
-  relayerUrl: "",
+  relayerUrl: "https://relayer.testnet.zama.org",
   network: "https://bsc-testnet.bnbchain.org",
-  aclContractAddress: "0x52470e945521E247Cb4754088a836Dc4b838AFBE",
-  kmsContractAddress: "0x788F5BB2d93aB4Cb67Fe2277757aE95006504F6F",
-  inputVerifierContractAddress: "0x49e0BAB39904E4192c30CFB58573Cbe27B7E398E",
-  verifyingContractAddressDecryption: "0x5ffdaAB0373E62E2ea2944776209aEf29E631A64",
-  verifyingContractAddressInputVerification: "0x812b06e1CDCE800494b79fFE4f925A504a9A9810",
-  registryAddress: "0xc0E8B73b1C58D846e1d4f8fAE2E1466C85BCeAeC",
-  executorAddress: "0x5985e48689550c1b2893ABfBbe4cc0eE3A22cc54",
+  aclContractAddress: "0x9Adac873Ae2f737AF011f0778305Cff0B220ac36",
+  kmsContractAddress: "0x1F7CAD0c05fDED5F988683AdfDB4F242b310cdcB",
+  inputVerifierContractAddress: "0xDd378841F0125656b97818d9d371e1027Df4c424",
+  verifyingContractAddressDecryption: "0x5D8BD78e2ea6bbE41f26dFe9fdaEAa349e077478",
+  verifyingContractAddressInputVerification: "0x483b9dE06E4E4C7D35CCf5837A1668487406D955",
+  registryAddress: "0x84c5B9669b1BA109D31096c64AFEF1473Ac4Db43",
+  keyVerification: { chain: sepolia },
 } as const satisfies FheChain);
 
 /**

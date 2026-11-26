@@ -1,10 +1,11 @@
 import { describe, expect, test, vi } from "../../test-fixtures";
-import { hardhat } from "../../chains";
+import { hardhat, sepolia } from "../../chains";
 import { ConfigurationError } from "../../errors";
 import type { RelayerSDK } from "../../relayer/types";
 import { createConfig } from "../create";
 import { LoggerService } from "../../services/logger-service";
 import type { RelayerConfig } from "../types";
+import { web } from "../web";
 import { ZamaSDK } from "../../zama-sdk";
 
 function mockRelayerConfig(relayer: RelayerSDK): RelayerConfig {
@@ -190,6 +191,30 @@ describe("createConfig validation", () => {
     });
 
     expect(sink.warn).not.toHaveBeenCalled();
+  });
+
+  test("rejects a real-FHE chain with no KMSGeneration contract at createConfig", ({
+    provider,
+  }) => {
+    const custom = {
+      ...sepolia,
+      aclContractAddress: "0x0000000000000000000000000000000000000001",
+      keyVerification: undefined,
+    } as const;
+
+    expect(() =>
+      createConfig({ chains: [custom], relayers: { [custom.id]: web() }, provider }),
+    ).toThrow(ConfigurationError);
+  });
+
+  test("accepts a spread preset with the preset's id and ACL, inheriting its keyVerification", ({
+    provider,
+  }) => {
+    const spread = { ...sepolia, keyVerification: undefined };
+
+    expect(() =>
+      createConfig({ chains: [spread], relayers: { [spread.id]: web() }, provider }),
+    ).not.toThrow();
   });
 });
 

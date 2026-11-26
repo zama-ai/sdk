@@ -4,7 +4,9 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     try {
-      await import("@/lib/relayers");
+      const { keyStorageOrigins } = await import("@/lib/relayers");
+      // Fills the cache, so the first page request does not wait for the relayers.
+      void keyStorageOrigins();
     } catch (err) {
       console.error(err);
       process.exit(1);

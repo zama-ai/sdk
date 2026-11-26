@@ -57,7 +57,7 @@ export {
   sepolia,
   zenithTrexTestnet,
 } from "./chains";
-export type { FheChain, FheChainAuth } from "./chains/types";
+export type { FheChain, FheChainAuth, FheKeyVerification } from "./chains/types";
 
 // ERC-165 interface IDs
 export {
@@ -124,7 +124,9 @@ export {
   TransportKeyPairChangedError,
   TransportKeyPairExpiredError,
   UnshieldAlreadyFinalizedError,
+  UnwrapNotMinedError,
   VaultBatcherPausedError,
+  VaultBatcherReadFailedError,
   VaultBatchNotDispatchedError,
   VaultJoinUnconfirmedError,
   WalletAccountNotReadyError,
@@ -136,6 +138,7 @@ export {
   type SigningErrorMetadata,
   type UnshieldAlreadyFinalizedDetails,
   type VaultBatcherPausedDetails,
+  type VaultBatcherReadFailedDetails,
   type VaultBatchNotDispatchedDetails,
   type VaultJoinUnconfirmedDetails,
 } from "./errors";

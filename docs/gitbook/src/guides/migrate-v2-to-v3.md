@@ -98,6 +98,8 @@ migration.
 | `Handle` (type), `ClearValueType`                                                         | `EncryptedValue` (term), `ClearValue`                                                                                                | [5 · Encrypt/decrypt][s5] |
 | `ZERO_HANDLE` / `isZeroHandle()`                                                          | `ZERO_ENCRYPTED_VALUE` / `isEncryptedValueZero()`                                                                                    | [5 · Encrypt/decrypt][s5] |
 | `UserDecryptParams`, `PublicDecryptResult`, `DelegatedUserDecryptParams`, `DecryptHandle` | `DecryptValuesParams`, `DecryptPublicValuesResult`, `DelegatedDecryptValuesParams`, `DecryptInput`                                   | [5 · Encrypt/decrypt][s5] |
+| `/query`: `userDecryptQueryOptions`, `publicDecryptMutationOptions`                       | `decryptValuesQueryOptions`, `decryptPublicValuesMutationOptions`                                                                    | [5 · Encrypt/decrypt][s5] |
+| `/query`: `delegatedDecryptMutationOptions`                                               | `delegatedDecryptValuesMutationOptions`                                                                                              | [5 · Encrypt/decrypt][s5] |
 | `applyDecryptedValues`, `DecryptCache`                                                    | **removed** — handled by the SDK's internal cache                                                                                    | [5 · Encrypt/decrypt][s5] |
 | `KeypairType` / `Keypair`; `generateKeypair()` / `warmKeypair()`                          | `TransportKeyPair`; `generateTransportKeyPair()` / `warmTransportKeyPair()`                                                          | [5 · Encrypt/decrypt][s5] |
 | relayer `getPublicKey()`; `PublicKeyData`                                                 | `fetchFheEncryptionKeyBytes()`; `FheEncryptionKey`                                                                                   | [5 · Encrypt/decrypt][s5] |
@@ -331,7 +333,7 @@ Relayers are no longer classes you instantiate; they are factories placed in a
 
 `cleartext()` is **new in v3** — the relayer for cleartext-mode chains (no FHE,
 KMS, or gateway): local dev (`hardhat`) and the cleartext testnets (`hoodi`,
-`zenithTrexTestnet`, `bscTestnet`).
+`zenithTrexTestnet`).
 
 ```ts
 // Before

@@ -4,20 +4,21 @@ import { networkForChain, networks, type Network, type NetworkKey } from "@/lib/
 import { erc20BalanceKey } from "@/lib/queryKeys";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useZamaSDK } from "@zama-fhe/react-sdk";
-import type { Address, TokenWrapperPairWithMetadata } from "@zama-fhe/sdk";
+import type { Address, TokenWrapperPairWithMetadata, ZamaSDK } from "@zama-fhe/sdk";
 import { balanceOfContract } from "@zama-fhe/sdk";
 import { parseAbi, parseUnits } from "viem";
 import { useConnection } from "wagmi";
 
 // Networks the server can serve (see /api/networks): cleartext rows always, relayer rows
-// only when the server has a relayer URL for them. Fetched once per page load.
+// only when the server has a relayer URL for them. `custom` lists the ones it also serves in
+// the custom environment. Fetched once per page load.
 export function useEnabledNetworks() {
   return useQuery({
     queryKey: ["enabled-networks"],
     queryFn: async () => {
       const res = await fetch("/api/networks");
       if (!res.ok) throw new Error(`Failed to load networks (${res.status})`);
-      return ((await res.json()) as { enabled: NetworkKey[] }).enabled;
+      return (await res.json()) as { enabled: NetworkKey[]; custom: NetworkKey[] };
     },
     staleTime: Infinity,
   });
@@ -54,6 +55,25 @@ export function useUnderlyingBalance(
   });
 }
 
+/** Mints `amount` of a test ERC-20 to `account` and waits for the receipt. */
+export async function mintUnderlying(
+  sdk: ZamaSDK,
+  underlying: Address,
+  account: Address,
+  amount: bigint,
+) {
+  const signer = sdk.signer;
+  if (!signer) throw new Error("Connect a wallet before minting tokens.");
+  const txHash = await signer.writeContract({
+    address: underlying,
+    abi: MINT_ABI,
+    functionName: "mint",
+    args: [account, amount],
+  });
+  await sdk.provider.waitForTransactionReceipt(txHash);
+  return txHash;
+}
+
 // Mints 10 units of the underlying ERC-20 to the connected account (dev convenience).
 export function useMintUnderlying(
   token: TokenWrapperPairWithMetadata,
@@ -62,18 +82,8 @@ export function useMintUnderlying(
 ) {
   const sdk = useZamaSDK();
   return useMutation({
-    mutationFn: async () => {
-      const signer = sdk.signer;
-      if (!signer) throw new Error("Connect a wallet before minting tokens.");
-      const txHash = await signer.writeContract({
-        address: token.tokenAddress,
-        abi: MINT_ABI,
-        functionName: "mint",
-        args: [account, parseUnits("10", token.underlying.decimals)],
-      });
-      await sdk.provider.waitForTransactionReceipt(txHash);
-      return txHash;
-    },
+    mutationFn: () =>
+      mintUnderlying(sdk, token.tokenAddress, account, parseUnits("10", token.underlying.decimals)),
     onSuccess: options?.onSuccess,
   });
 }

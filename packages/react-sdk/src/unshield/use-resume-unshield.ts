@@ -3,9 +3,9 @@
 import type { UseMutationOptions } from "@tanstack/react-query";
 import { useMutation } from "@tanstack/react-query";
 import type { Address, TransactionResult } from "@zama-fhe/sdk";
-import { UnshieldAlreadyFinalizedError } from "@zama-fhe/sdk";
 import {
   invalidateAfterUnshield,
+  invalidateAfterUnshieldError,
   type ResumeUnshieldParams,
   resumeUnshieldMutationOptions,
 } from "@zama-fhe/sdk/query";
@@ -21,7 +21,11 @@ import { useWrappedToken } from "../token/use-wrapped-token";
  *   funds delivered; the SDK cleared the stale pending state and this hook refreshed
  *   the affected queries, so dismiss the resume prompt
  * - {@link DecryptionFailedError} — public decryption failed during finalize
- * - {@link TransactionRevertedError} — on-chain transaction reverted
+ * - {@link TransactionRevertedError}: an on-chain transaction reverted. When the
+ *   unwrap itself reverted, the SDK cleared its pending state and this hook
+ *   refreshed {@link usePendingUnshield}, which then returns the next one
+ * - {@link UnwrapNotMinedError}: the unwrap is not mined yet. The SDK kept its
+ *   pending state; retry later
  *
  * @param address - Address of the confidential wrapper contract.
  * @param options - React Query mutation options.
@@ -47,11 +51,7 @@ export function useResumeUnshield(
     },
     onError: (error, variables, onMutateResult, context) => {
       options?.onError?.(error, variables, onMutateResult, context);
-      // Unlike other errors, this one means the unshield settled: refresh so
-      // the pending-unshield banner and balances converge.
-      if (error instanceof UnshieldAlreadyFinalizedError) {
-        invalidateAfterUnshield(context.client, token.address);
-      }
+      invalidateAfterUnshieldError(context.client, token.address, error);
     },
   });
 }

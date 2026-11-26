@@ -7,6 +7,7 @@ import type { TransactionResult } from "../../types";
 import { assertNonNullable } from "../../utils/assertions";
 import type { VaultClient } from "../client";
 import { chainIdOf, type Vault, type VaultGroup, type VaultIdOf } from "../config";
+import { JOIN_MARGIN_SECONDS } from "../next-batch";
 import type {
   Batch,
   BatchRef,
@@ -63,6 +64,11 @@ export interface BatchQueryConfig {
   query?: { readonly enabled?: boolean };
 }
 
+// One second past chain time `at`, so the read lands after the change.
+function refetchAt(at: bigint, observedAt: bigint): number {
+  return Math.min(Number(at - observedAt) * 1000 + 1000, MAX_REFETCH_MS);
+}
+
 /** How long to wait before reading a batch again, or `false` once it is finalized or canceled. */
 function batchRefetchInterval(read: Batch | undefined): number | false {
   if (read === undefined || read.state === "finalized" || read.state === "canceled") {
@@ -71,10 +77,7 @@ function batchRefetchInterval(read: Batch | undefined): number | false {
   if (read.nextChangeAt === null) {
     return KEEPER_POLL_MS;
   }
-  const untilEdge = Math.min(
-    Number(read.nextChangeAt - read.observedAt) * 1000 + 1000,
-    MAX_REFETCH_MS,
-  );
+  const untilEdge = refetchAt(read.nextChangeAt, read.observedAt);
   // A dispatched batch waits for a settlement from the start, so it polls before its deadline too.
   return read.state === "dispatched" ? Math.min(untilEdge, KEEPER_POLL_MS) : untilEdge;
 }
@@ -115,7 +118,26 @@ export type OpenBatchesQueryConfig = VaultSelection & {
   direction: JoinDirection;
 };
 
-/** Query options that read the open batch of every vault of a group, or of a vault on its own. */
+/**
+ * Reads again one second after the soonest batch comes within {@link JOIN_MARGIN_SECONDS} of its
+ * due time, when joins may move on, then every {@link KEEPER_POLL_MS} until a keeper dispatches it.
+ * `false` while no batch is open.
+ */
+function openBatchesRefetchInterval(read: readonly OpenBatch[] | undefined): number | false {
+  const waits = (read ?? [])
+    .filter((batch) => !batch.paused)
+    .map((batch) => {
+      const movesAt = batch.dispatchableAt - JOIN_MARGIN_SECONDS;
+      return movesAt > batch.observedAt ? refetchAt(movesAt, batch.observedAt) : KEEPER_POLL_MS;
+    });
+  return waits.length === 0 ? false : Math.min(...waits);
+}
+
+/**
+ * Query options that read the open batch of each vault of a group that is not closed, or of a vault on its own.
+ * They refetch when a batch comes within a minute of its due time, and poll until a keeper
+ * dispatches it; a `refetchInterval` passed to `useQuery` replaces both.
+ */
 export function openBatchesQueryOptions(
   client: VaultClient,
   config: OpenBatchesQueryConfig,
@@ -127,6 +149,7 @@ export function openBatchesQueryOptions(
 > {
   const target = selected(config);
   return {
+    refetchInterval: (query) => openBatchesRefetchInterval(query.state.data),
     queryKey: vaultQueryKeys.openBatches(target, config.direction),
     queryFn: async () => client.readOpenBatches(target, config.direction),
   };

@@ -1,0 +1,2 @@
+# Moves installs that still use husky to the hooks in the git dir, which branches cannot change.
+command -v node >/dev/null 2>&1 && node scripts/setup-claude.mjs --hooks || true

@@ -1,5 +1,106 @@
 # Changelog
 
+## [3.9.0-beta.16](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.15...v3.9.0-beta.16) (2026-11-26)
+
+### Bug Fixes
+
+- **react-sdk:** stop leaking a non-exported sdk path into published types ([#1006](https://github.com/zama-ai/sdk/issues/1006)) ([fd0687d]())
+- **vaults:** lower MAX_GROUP_VAULTS from 8 to 4 ([#1001](https://github.com/zama-ai/sdk/issues/1001)) ([d9bf684]())
+
+### Code Refactoring
+
+- **sdk:** decrypt one public uint through one internal helper ([#1004](https://github.com/zama-ai/sdk/issues/1004)) ([f35e3ed]()), closes [#961]()
+
+## [3.9.0-beta.15](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.14...v3.9.0-beta.15) (2026-11-24)
+
+### Features
+
+- **examples:** split react-wagmi into Tokens, Delegation and Vaults tabs ([#914](https://github.com/zama-ai/sdk/issues/914)) ([811b3bd]())
+
+## [3.9.0-beta.14](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.13...v3.9.0-beta.14) (2026-11-24)
+
+### Bug Fixes
+
+- **vaults:** read the batch before a batcher's first one as the contract does ([#998](https://github.com/zama-ai/sdk/issues/998)) ([13b0283]()), closes [zama-ai/super-app#874]()
+
+## [3.9.0-beta.13](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.12...v3.9.0-beta.13) (2026-11-24)
+
+### Bug Fixes
+
+- **react-sdk:** refresh balances when someone else finalizes the unshield ([#984](https://github.com/zama-ai/sdk/issues/984)) ([2af12db]()), closes [#967]()
+
+## [3.9.0-beta.12](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.11...v3.9.0-beta.12) (2026-11-23)
+
+### Bug Fixes
+
+- **vaults:** leave a paused member out of a group join instead of refusing the group ([#978](https://github.com/zama-ai/sdk/issues/978)) ([0c34f7b]())
+
+## [3.9.0-beta.11](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.10...v3.9.0-beta.11) (2026-11-23)
+
+### Features
+
+- **sdk:** update bsc testnet addresses ([#944](https://github.com/zama-ai/sdk/issues/944)) ([4272f44]()), closes [zama-ai/fhevm#4723]()
+
+## [3.9.0-beta.10](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.9...v3.9.0-beta.10) (2026-11-23)
+
+### Bug Fixes
+
+- route daemon ownership to security team ([#981](https://github.com/zama-ai/sdk/issues/981)) ([d7590db]())
+
+## [3.9.0-beta.9](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.8...v3.9.0-beta.9) (2026-11-23)
+
+### Features
+
+- **sdk:** verify the FHE public key and CRS against KMSGeneration (beta, @fhevm/sdk 0.13.9) ([#974](https://github.com/zama-ai/sdk/issues/974)) ([011ef7c]()), closes [#943]() [zama-ai/fhevm#5028]() [#943]()
+
+## [3.9.0-beta.8](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.7...v3.9.0-beta.8) (2026-11-23)
+
+### Bug Fixes
+
+- **daemon:** drop the CVE-2026-76844 waiver from the image scan ([#980](https://github.com/zama-ai/sdk/issues/980)) ([59ca2d3]()), closes [#906]() [#931]()
+
+## [3.9.0-beta.7](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.6...v3.9.0-beta.7) (2026-11-23)
+
+### Bug Fixes
+
+- **daemon:** risk-accept CVE-2026-124709 in the image scan ([#979](https://github.com/zama-ai/sdk/issues/979)) ([d5ea321]())
+
+## [3.9.0-beta.6](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.5...v3.9.0-beta.6) (2026-11-20)
+
+### Build System
+
+- **sdk:** bump @fhevm/sdk from 0.13.2 to 0.13.7 ([#971](https://github.com/zama-ai/sdk/issues/971)) ([3985b7c]())
+
+## [3.9.0-beta.5](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.4...v3.9.0-beta.5) (2026-11-20)
+
+### Bug Fixes
+
+- **sdk:** keep interrupted unshields recoverable, checked under every interleaving ([#967](https://github.com/zama-ai/sdk/issues/967)) ([03c80c6]()), closes [unshield#1]() [#956]()
+
+## [3.9.0-beta.4](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.3...v3.9.0-beta.4) (2026-11-19)
+
+### Features
+
+- **vaults:** route a join to the next batch among several batchers ([#959](https://github.com/zama-ai/sdk/issues/959)) ([5bbc963]())
+
+## [3.9.0-beta.3](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.2...v3.9.0-beta.3) (2026-11-19)
+
+### Features
+
+- **examples:** offer Sepolia alongside the custom environment in react-wagmi ([#952](https://github.com/zama-ai/sdk/issues/952)) ([59d9236]())
+
+## [3.9.0-beta.2](https://github.com/zama-ai/sdk/compare/v3.9.0-beta.1...v3.9.0-beta.2) (2026-11-17)
+
+### Bug Fixes
+
+- **deps:** raise the Next.js floor to 16.4.6 in the examples and test app ([#955](https://github.com/zama-ai/sdk/issues/955)) ([c83d715]())
+
+## [3.9.0-beta.1](https://github.com/zama-ai/sdk/compare/v3.8.0...v3.9.0-beta.1) (2026-11-17)
+
+### Features
+
+- **daemon:** report daemon traffic in telemetry ([#947](https://github.com/zama-ai/sdk/issues/947)) ([d640d72]())
+
 ## [3.8.0](https://github.com/zama-ai/sdk/compare/v3.7.2...v3.8.0) (2026-11-16)
 
 ### ⚠ BREAKING CHANGES

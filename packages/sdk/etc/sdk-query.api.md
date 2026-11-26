@@ -434,6 +434,8 @@ export interface FheChain<TId extends number = number> {
     readonly gatewayChainId: number;
     readonly id: TId;
     readonly inputVerifierContractAddress: Address;
+    // Warning: (ae-forgotten-export) The symbol "FheKeyVerification" needs to be exported by the entry point index.d.ts
+    readonly keyVerification?: FheKeyVerification | undefined;
     readonly kmsContractAddress: Address;
     readonly network: EIP1193Provider | string;
     readonly registryAddress: Address | undefined;
@@ -508,6 +510,7 @@ export interface GenericLogger {
 export interface GenericProvider {
     getBlockTimestamp(chainId?: number): Promise<bigint>;
     getChainId(): Promise<number>;
+    getTransactionReceipt?(hash: Hex): Promise<TransactionReceipt | null>;
     multicall?<const TCalls extends readonly ReadContractConfig[]>(params: {
         readonly calls: TCalls;
         readonly chainId?: number;
@@ -572,6 +575,9 @@ export function invalidateAfterTransfer(queryClient: QueryClientLike, tokenAddre
 
 // @public
 export function invalidateAfterUnshield(queryClient: QueryClientLike, tokenAddress: Address): void;
+
+// @public
+export function invalidateAfterUnshieldError(queryClient: QueryClientLike, tokenAddress: Address, error: unknown): void;
 
 // @public
 export function invalidateAfterUnshieldSettled(queryClient: QueryClientLike, tokenAddress: Address): void;
@@ -1394,7 +1400,9 @@ export const ZamaErrorCode: {
     readonly PreparedPermitChainMismatch: "PREPARED_PERMIT_CHAIN_MISMATCH";
     readonly PreparedPermitExpired: "PREPARED_PERMIT_EXPIRED";
     readonly UnshieldAlreadyFinalized: "UNSHIELD_ALREADY_FINALIZED";
+    readonly UnwrapNotMined: "UNWRAP_NOT_MINED";
     readonly VaultBatcherPaused: "VAULT_BATCHER_PAUSED";
+    readonly VaultBatcherReadFailed: "VAULT_BATCHER_READ_FAILED";
     readonly VaultBatchNotDispatched: "VAULT_BATCH_NOT_DISPATCHED";
     readonly VaultJoinUnconfirmed: "VAULT_JOIN_UNCONFIRMED";
 };

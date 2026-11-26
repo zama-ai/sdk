@@ -30,6 +30,9 @@ pub struct CreateContextRequest {
     /// Omission shares storage, including its backend identity.
     #[prost(message, optional, tag = "5")]
     pub permit_storage: ::core::option::Option<StorageBinding>,
+    /// Reported in telemetry; unspecified and unknown values are accepted.
+    #[prost(enumeration = "ClientLanguage", tag = "6")]
+    pub client_language: i32,
     /// Fields 100–119 are allocated to configuration and credential protection.
     #[prost(message, optional, tag = "100")]
     pub transport_key_pair_derivation_secret: ::core::option::Option<DerivationSecret>,
@@ -600,9 +603,42 @@ pub struct ChainConfig {
     pub executor_address: ::core::option::Option<::prost::alloc::vec::Vec<u8>>,
     #[prost(message, optional, tag = "12")]
     pub auth: ::core::option::Option<ChainAuth>,
+    /// Checks the relayer's FHE public key and CRS before encryption.
+    /// When omitted, a chain with the ID and ACL of a preset inherits the preset's.
+    #[prost(message, optional, tag = "13")]
+    pub key_verification: ::core::option::Option<KeyVerification>,
     /// Fields 100–119 are allocated to configuration and credential protection.
     #[prost(message, optional, tag = "100")]
     pub provider: ::core::option::Option<HttpProviderConfig>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct KeyVerification {
+    #[prost(oneof = "key_verification::Target", tags = "1, 2")]
+    pub target: ::core::option::Option<key_verification::Target>,
+}
+/// Nested message and enum types in `KeyVerification`.
+pub mod key_verification {
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Target {
+        /// KMSGeneration address, for an Ethereum host chain.
+        #[prost(bytes, tag = "1")]
+        Contract(::prost::alloc::vec::Vec<u8>),
+        /// For any other host chain: the Ethereum chain holding its KMSGeneration contract.
+        #[prost(message, tag = "2")]
+        Chain(super::KeyVerificationChain),
+    }
+}
+/// id must name an SDK preset. Omitted fields inherit it.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct KeyVerificationChain {
+    #[prost(uint64, tag = "1")]
+    pub id: u64,
+    #[prost(string, optional, tag = "2")]
+    pub network: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(bytes = "vec", optional, tag = "3")]
+    pub kms_generation_contract_address: ::core::option::Option<
+        ::prost::alloc::vec::Vec<u8>,
+    >,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ChainAuth {
@@ -1203,6 +1239,35 @@ pub mod event_server_message {
         Delivery(super::EventDelivery),
         #[prost(message, tag = "3")]
         ReplyError(super::EventReplyError),
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum ClientLanguage {
+    Unspecified = 0,
+    Go = 1,
+    Rust = 2,
+}
+impl ClientLanguage {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "CLIENT_LANGUAGE_UNSPECIFIED",
+            Self::Go => "CLIENT_LANGUAGE_GO",
+            Self::Rust => "CLIENT_LANGUAGE_RUST",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "CLIENT_LANGUAGE_UNSPECIFIED" => Some(Self::Unspecified),
+            "CLIENT_LANGUAGE_GO" => Some(Self::Go),
+            "CLIENT_LANGUAGE_RUST" => Some(Self::Rust),
+            _ => None,
+        }
     }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]

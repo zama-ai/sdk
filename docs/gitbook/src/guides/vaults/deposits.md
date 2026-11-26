@@ -38,12 +38,12 @@ export const BETA = defineVault({
 export const STABLE = defineVaultGroup({ id: "stable", vaults: [ALPHA, BETA] });
 ```
 
-A vault names its two batchers: the one deposits join, and the one redemptions join. The ids are yours to choose. See [`defineVaultGroup`](../../reference/sdk/VaultClient.md#definevaultgroup) for how the types check `vaultId`.
+A vault names its batchers for each direction: the ones deposits join, and the ones redemptions join. Most vaults have one of each; see [Several batchers](advanced.md#several-batchers). The ids are yours to choose. See [`defineVaultGroup`](../../reference/sdk/VaultClient.md#definevaultgroup) for how the types check `vaultId`.
 
 Every method that takes a group also takes a vault on its own, such as `ALPHA`, with no `vaultId`. Join through the group, as the [privacy rules](README.md#a-group-hides-which-vault-you-chose) say.
 
 {% hint style="warning" %}
-The order of `vaults` is the leg order of every join. Never change a group once users have joined it: define a new one. See [A group hides which vault you chose](README.md#a-group-hides-which-vault-you-chose).
+The order of `vaults` is the leg order of every join. A vault that takes no joins has no leg, so match legs and batches by `vaultId`, not by position. Never change a group once users have joined it: define a new one. See [A group hides which vault you chose](README.md#a-group-hides-which-vault-you-chose).
 {% endhint %}
 
 ### 2. Create the client
@@ -83,11 +83,19 @@ await saveBatches(batches);
 {% tab title="React SDK" %}
 
 ```tsx
+import { matchZamaError } from "@zama-fhe/sdk";
 import { useDeposit } from "@zama-fhe/react-sdk/vaults";
 import { STABLE } from "./vaults";
 
 function DepositButton() {
-  const deposit = useDeposit({ onSuccess: ({ batches }) => saveBatches(batches) });
+  const deposit = useDeposit({
+    onSuccess: ({ batches }) => saveBatches(batches),
+    // VAULT_JOIN_UNCONFIRMED: the join was mined, so a retry would deposit twice.
+    onError: (error) =>
+      matchZamaError(error, {
+        VAULT_JOIN_UNCONFIRMED: (e) => showUnconfirmedJoin(e.txHash, e.unconfirmedVaultIds),
+      }),
+  });
 
   return (
     <button
@@ -109,7 +117,7 @@ Before sending, the SDK checks the confidential balance. A confidential transfer
 
 ### 4. Store the batches
 
-`batches` holds the batch every leg landed in, the zero legs included, as `{ vaultId, chainId, batcher, batchId }`. **Without them, your app cannot read, claim or quit the deposit.** Store them where the user finds them again after a reload or on another device. Store the chosen vault as the [privacy rules](README.md#a-group-hides-which-vault-you-chose) say.
+`batches` holds the batch every leg landed in, the zero legs included, as `{ vaultId, chainId, batcher, batchId }`. A vault left out of the join has no batch. **Without them, your app cannot read, claim or quit the deposit.** Store them where the user finds them again after a reload or on another device. Store the chosen vault as the [privacy rules](README.md#a-group-hides-which-vault-you-chose) say.
 
 `batchId` is a `bigint`, which `JSON.stringify` cannot serialize. Convert it to a string and back:
 
@@ -212,9 +220,17 @@ const { batches } = await vaults.redeem(STABLE, { vaultId: "beta", amount: 500n 
 {% tab title="React SDK" %}
 
 ```tsx
+import { matchZamaError } from "@zama-fhe/sdk";
 import { useRedeem } from "@zama-fhe/react-sdk/vaults";
 
-const redeem = useRedeem({ onSuccess: ({ batches }) => saveBatches(batches) });
+const redeem = useRedeem({
+  onSuccess: ({ batches }) => saveBatches(batches),
+  // VAULT_JOIN_UNCONFIRMED: the join was mined, so a retry would redeem twice.
+  onError: (error) =>
+    matchZamaError(error, {
+      VAULT_JOIN_UNCONFIRMED: (e) => showUnconfirmedJoin(e.txHash, e.unconfirmedVaultIds),
+    }),
+});
 redeem.mutate({ group: STABLE, vaultId: "beta", amount: 500n });
 ```
 
@@ -225,7 +241,7 @@ See [Wallet prompts](advanced.md#wallet-prompts) for how many prompts a group re
 
 ## Show the open batches
 
-`readOpenBatches` reads the batch the next join lands in, for every vault of a group. Use it on a form to show when that batch can be dispatched, or that a vault is [paused](advanced.md#paused-batchers):
+`readOpenBatches` reads the batch the next join lands in, for every vault of a group, without a member whose batchers are all closed. Use it on a form to show when that batch can be dispatched, or that a vault is [paused](advanced.md#paused-batchers):
 
 {% tabs %}
 {% tab title="Core SDK" %}
@@ -255,5 +271,5 @@ Writes need the vault's chain. While the wallet is on another chain, they throw 
 ## Next steps
 
 - [Building a vault UI](building-a-ui.md): what to show and offer in each batch state
-- [Handle wallet prompts, upgrades and custom sending](advanced.md): wallet prompts, batcher upgrades and your own pipeline
+- [Handle wallet prompts, batchers and custom sending](advanced.md): wallet prompts, paused batchers, several batchers and your own pipeline
 - [`VaultClient`](../../reference/sdk/VaultClient.md): the API reference

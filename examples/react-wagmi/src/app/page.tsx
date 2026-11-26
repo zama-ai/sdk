@@ -10,21 +10,27 @@ import { zamaQueryKeys } from "@zama-fhe/sdk/query";
 import {
   ActionScreen,
   AppHeader,
+  AppTabs,
   MainnetBanner,
   NetworkPicker,
   TokenSelector,
+  type AppTab,
+  type TokenView,
 } from "@/components/PageChrome";
 import { NoTokenPanel, SelectedTokenPanel } from "@/components/SelectedTokenPanel";
+import { VaultsTab } from "@/components/vaults/VaultsTab";
+import { ENVIRONMENTS, isCustomized, labelFor, networkId } from "@/lib/environment";
 import { useEnabledNetworks } from "@/lib/hooks";
 import { networkForChain, networks } from "@/lib/networks";
 import { useWalletConnection } from "@/lib/wallet";
+import { useEnvironment } from "@/providers";
 
 const TITLE = "Confidential Token Quickstart";
 
 export default function Home() {
-  // ── Wagmi hooks — wallet state managed reactively by wagmi ──────────────────
+  // ── Wagmi hooks: wallet state managed reactively by wagmi ────────────────────
   // The Zama wagmi config adapter subscribes to wagmi connection state internally,
-  // so account and chain changes are handled automatically — no manual eth_accounts
+  // so account and chain changes are handled automatically, with no manual eth_accounts
   // polling or walletKey/refSeededRef remount pattern needed.
   // Connect/disconnect go through lib/wallet.tsx, which backs them with either the Dynamic
   // connect dialog or wagmi's injected connector; wagmi state is the same in both modes.
@@ -32,16 +38,20 @@ export default function Home() {
   const { connect, disconnect, isConnecting, isDisconnecting, connectError } =
     useWalletConnection();
   const { mutate: switchChain, isPending: isSwitching, error: switchError } = useSwitchChain();
+  const [tab, setTab] = useState<AppTab>("tokens");
+  // Held here so the selected token survives a visit to the Vaults tab.
+  const [selectedTokenAddress, setSelectedTokenAddress] = useState<Address | null>(null);
 
   // Networks the server can serve: cleartext rows always, relayer rows only when it has a
   // relayer URL for them. Mainnet stays hidden until a deployment opts in.
   const {
-    data: enabledNetworks = [],
+    data: served,
     isPending: isNetworksPending,
     isFetching: isNetworksFetching,
     isError: isNetworksError,
     refetch: refetchNetworks,
   } = useEnabledNetworks();
+  const enabledNetworks = served?.enabled ?? [];
   const activeKey = networkForChain(chainId);
   const activeNetwork = activeKey && enabledNetworks.includes(activeKey) ? activeKey : undefined;
   const network = activeNetwork && networks[activeNetwork];
@@ -50,11 +60,12 @@ export default function Home() {
   // after a switch the token list would keep showing the previous network's tokens. Refetch it
   // on every chain change. Remove once the example installs a react-sdk that does this itself.
   const queryClient = useQueryClient();
+  const { env, setEnv } = useEnvironment();
   useEffect(() => {
     void queryClient.invalidateQueries({ queryKey: zamaQueryKeys.wrappersRegistry.chainId() });
   }, [chainId, queryClient]);
 
-  // Native balance via the wagmi transport — auto-updates on account or chain switch. The
+  // Native balance via the wagmi transport; it auto-updates on account or chain switch. The
   // token panel refetches this same key after actions; useBalance shares wagmi's query
   // cache by key, so this header copy updates too.
   const { data: nativeBalance } = useBalance({
@@ -62,12 +73,35 @@ export default function Home() {
     query: { enabled: isConnected && network !== undefined },
   });
 
+  // One option per network, plus one per network the custom environment changes and serves.
+  const options = enabledNetworks.flatMap((key) => {
+    const envs = served?.custom.includes(key) ? ENVIRONMENTS : (["default"] as const);
+    return envs.map((optionEnv) => ({
+      key,
+      env: optionEnv,
+      id: networkId(key, optionEnv),
+      label: labelFor(key, optionEnv),
+    }));
+  });
+
   const picker = (
     <NetworkPicker
-      options={enabledNetworks}
-      value={activeNetwork ?? ""}
+      options={options}
+      value={activeNetwork ? networkId(activeNetwork, env) : ""}
       pending={isSwitching}
-      onChange={(key) => switchChain({ chainId: networks[key].chain.id })}
+      onChange={(id) => {
+        const option = options.find((option) => option.id === id);
+        if (!option) return;
+        // Only networks the custom environment changes pick an environment. It is set before the
+        // switch: wagmi reports the new chain before the switch resolves, and the environments
+        // differ only on that chain.
+        const previous = env;
+        if (isCustomized(option.key)) setEnv(option.env);
+        const target = networks[option.key].chain.id;
+        if (target !== chainId) {
+          switchChain({ chainId: target }, { onError: () => setEnv(previous) });
+        }
+      }}
       error={switchError && "Could not switch network. Please switch manually in your wallet."}
     />
   );
@@ -95,7 +129,7 @@ export default function Home() {
     );
   }
 
-  // ── Screen 2: Unsupported network — pick one ──────────────────────────────
+  // ── Screen 2: Unsupported network, pick one ───────────────────────────────
   if (!network) {
     // Without the list, nothing is known about the wallet's chain, so don't call it unsupported.
     if (isNetworksError) {
@@ -130,10 +164,8 @@ export default function Home() {
               Encrypting and decrypting on {unserved.label} needs a relayer. To use it, run the app
               yourself with a relayer configured for {unserved.label}: either Zama's relayer with an{" "}
               <a href="https://docs.zama.org/protocol/sdk/guides/relayer-api-keys">API key</a> or a{" "}
-              <a href="https://github.com/zama-ai/fhevm/blob/main/relayer/docs/SELF_HOSTING.md">
-                relayer you host
-              </a>
-              .
+              relayer you host (for access, contact{" "}
+              <a href="mailto:support@zama.ai">support@zama.ai</a>).
             </p>
           )}
           {picker}
@@ -142,7 +174,7 @@ export default function Home() {
     );
   }
 
-  // ── Screen 3: Connected on a supported network — main UI ──────────────────
+  // ── Screen 3: Connected on a supported network, main UI ───────────────────
   return (
     <main className="app-container">
       {/* viem marks every testnet; the rows without the flag are the mainnets. */}
@@ -158,20 +190,46 @@ export default function Home() {
         disconnecting={isDisconnecting}
       />
       {picker}
-      <TokenScreen chainId={chainId} address={address} />
+      <AppTabs value={tab} onChange={setTab} />
+      <div role="tabpanel" id={`tabpanel-${tab}`} aria-labelledby={`tab-${tab}`}>
+        {tab === "vaults" ? (
+          // Remounts on an account, chain or environment switch, so no typed amount or result carries over.
+          <VaultsTab key={`${env}-${chainId}-${address}`} account={address} />
+        ) : (
+          // Remounted on an environment change: the same chain, but other tokens.
+          <TokenScreen
+            key={env}
+            chainId={chainId}
+            address={address}
+            view={tab}
+            selectedTokenAddress={selectedTokenAddress}
+            onSelectToken={setSelectedTokenAddress}
+          />
+        )}
+      </div>
     </main>
   );
 }
 
 // Mounted only on the connected screen, so the token list is never read from a chain this
 // deployment does not serve.
-function TokenScreen({ chainId, address }: { chainId: number | undefined; address: Address }) {
-  const [selectedTokenAddress, setSelectedTokenAddress] = useState<Address | null>(null);
-
+function TokenScreen({
+  chainId,
+  address,
+  view,
+  selectedTokenAddress,
+  onSelectToken,
+}: {
+  chainId: number | undefined;
+  address: Address;
+  view: TokenView;
+  selectedTokenAddress: Address | null;
+  onSelectToken: (address: Address) => void;
+}) {
   // Fetch all valid token pairs from the on-chain WrappersRegistry. The registry address
-  // comes from the connected chain's FHE config — no configuration required.
+  // comes from the connected chain's FHE config, so no configuration is required.
   // metadata: true fetches name/symbol/decimals on-chain for both tokens in each pair.
-  // isPending stays true until the first successful response — covers both the initial
+  // isPending stays true until the first successful response. That covers both the initial
   // disabled state (registry address not yet resolved internally) and the active-fetching
   // state. isLoading alone is insufficient: in TanStack Query v5, isLoading = isPending &&
   // isFetching, so it is false while the query is disabled.
@@ -205,7 +263,7 @@ function TokenScreen({ chainId, address }: { chainId: number | undefined; addres
         }))}
         pending={isRegistryPending}
         error={isRegistryError}
-        onChange={(event) => setSelectedTokenAddress(event.currentTarget.value as Address)}
+        onChange={(event) => onSelectToken(event.currentTarget.value as Address)}
       />
 
       {token && (
@@ -213,9 +271,10 @@ function TokenScreen({ chainId, address }: { chainId: number | undefined; addres
           key={`${chainId}-${address}-${token.confidentialTokenAddress}`}
           token={token}
           validPairs={validPairs}
+          view={view}
         />
       )}
-      {!token && !isRegistryPending && <NoTokenPanel />}
+      {!token && !isRegistryPending && view === "tokens" && <NoTokenPanel />}
     </>
   );
 }

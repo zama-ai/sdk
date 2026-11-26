@@ -23,6 +23,7 @@ export {
   invalidateAfterTransfer,
   invalidateAfterUnwrap,
   invalidateAfterUnshield,
+  invalidateAfterUnshieldError,
   invalidateAfterUnshieldSettled,
   invalidateAfterWrap,
   invalidateBalanceQueries,

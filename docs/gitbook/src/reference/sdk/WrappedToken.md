@@ -154,6 +154,8 @@ The returned `txHash` and `receipt` are for the finalization transaction.
 const { txHash, receipt } = await wrappedToken.unshield(500n);
 ```
 
+If the unwrap request was already finalized, for example by another tab or account, `unshield` clears the persisted pending state and throws [`UnshieldAlreadyFinalizedError`](errors.md#unshieldalreadyfinalizederror). The funds already arrived, so treat the error as completion.
+
 Options:
 
 | Option                | Type                    | Default | Description                                    |
@@ -167,7 +169,7 @@ Options:
 
 `(callbacks?: UnshieldCallbacks) => Promise<TransactionResult>`
 
-Unshields the entire confidential balance by using the on-chain encrypted balance handle directly.
+Unshields the entire confidential balance by using the on-chain encrypted balance handle directly. If the unwrap request was already finalized, it behaves the same way as `unshield`.
 
 ```ts
 await wrappedToken.unshieldAll({
@@ -184,6 +186,10 @@ Resumes an interrupted unshield after the unwrap transaction has already been su
 
 If the unwrap request was already finalized on-chain, it clears the persisted pending state and throws [`UnshieldAlreadyFinalizedError`](errors.md#unshieldalreadyfinalizederror) instead of submitting a transaction that would revert. The funds already arrived; treat the error as completion.
 
+If the unwrap reverted, or was mined without opening an unwrap request from this wrapper, it clears that entry and throws [`TransactionRevertedError`](errors.md#transactionrevertederror). `getPendingUnshield()` then returns the next pending unshield, if any.
+
+If the unwrap has no receipt (still pending, or dropped or replaced so this hash is never mined), it throws [`UnwrapNotMinedError`](errors.md#unwrapnotminederror) at once and keeps the entry. Retry later.
+
 ```ts
 const pending = await wrappedToken.getPendingUnshield();
 if (pending) {
@@ -195,9 +201,9 @@ if (pending) {
 
 `() => Promise<Hex | null>`
 
-Returns the unwrap transaction hash of an unshield that was interrupted between its two phases, or `null` if none is pending for this wrapper. The SDK persists this automatically when `unshield()` / `unshieldAll()` submit phase 1, and clears it once phase 2 finalizes.
+Returns the unwrap transaction hash of an unshield that was interrupted between its two phases, or `null` if none is pending for this wrapper. `unshield()` and `unshieldAll()` save it automatically (see [Handle interrupted unshields](../../guides/unshield-tokens.md#4-handle-interrupted-unshields)). If several unshields on this wrapper were interrupted, it returns the oldest; after resuming it, call it again for the next.
 
-The SDK verifies the persisted hash on-chain before reporting it: if the unwrap request was already finalized, it clears the record and returns `null`. If the verification read fails, the hash is returned unverified; a network error never deletes recovery state.
+The SDK verifies each saved hash on-chain before reporting it, without waiting for a receipt: an entry whose unwrap request was already finalized, or whose unwrap reverted or opened no request (replaced or cancelled in the wallet), is cleared and the next one is checked. An entry it cannot verify (a read failed, or the unwrap is not mined yet) is kept, and returned only when no other entry is verified open; a network error never deletes recovery state.
 
 Resuming stays caller-driven — surface a "resume" prompt and call `resumeUnshield()`, rather than finalizing on load and triggering a wallet transaction the user did not initiate.
 

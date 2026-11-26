@@ -924,8 +924,9 @@ export class Token {
     operation: TransactionOperation;
     config: WriteContractConfig;
     onSubmitted?: (txHash: Hex) => void;
+    beforeReceipt?: (txHash: Hex) => Promise<void>;
   }): Promise<TransactionResult> {
-    const { operation, config, onSubmitted } = params;
+    const { operation, config, onSubmitted, beforeReceipt } = params;
     return submitSdkTransaction({
       operation,
       signer: this.#requireSigner(operation),
@@ -933,6 +934,7 @@ export class Token {
       config,
       emit: (input) => this.emit(input),
       onSubmitted,
+      beforeReceipt,
       logger: this.sdk.logger,
     });
   }
