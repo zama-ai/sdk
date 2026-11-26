@@ -158,6 +158,18 @@
       "include_in_llms_full": true
     },
     {
+      "id": "doc:changelog/v3-9",
+      "title": "3.9.x",
+      "source_path": "docs/gitbook/src/changelog/v3-9.md",
+      "source_url": "https://raw.githubusercontent.com/zama-ai/sdk/beta/docs/gitbook/src/changelog/v3-9.md",
+      "source_type": "official-doc",
+      "category": "changelog",
+      "logical_path": "changelog/v3-9",
+      "description": "FHE public key and CRS verification against the KMSGeneration contract, BNB Smart Chain testnet on the real protocol, several batchers per vault direction with a 4-vault group limit, recoverable interrupted unshields, and daemon traffic in telemetry.",
+      "include_in_llms_txt": true,
+      "include_in_llms_full": true
+    },
+    {
       "id": "doc:changelog/v3-8",
       "title": "3.8.x",
       "source_path": "docs/gitbook/src/changelog/v3-8.md",
