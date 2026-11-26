@@ -19,6 +19,8 @@ description: Unreleased changes on the prerelease (beta) line — not yet in a s
 
 ### Daemon
 
+**The daemon image is now published as `ghcr.io/zama-ai/sdk/sdk-daemon`.** Update the image name in your deployment files, and use the new verify commands. See [Verify and pin the image](../native/operations/run-in-production.md#verify-and-pin-the-image).
+
 **Daemon traffic is identifiable in telemetry.** Relayer requests made by the SDK daemon now report `runtime=daemon` instead of `node`, plus a `client` field (`go`, `rust`, or `unknown`) with the client language. Nothing else changes: no new identifiers are sent, and `ZAMA_SDK_TELEMETRY=off` on the daemon process still disables telemetry. See [SDK usage telemetry](../guides/telemetry.md) and [Deploy in production](../native/operations/run-in-production.md#telemetry).
 
 ### Vaults

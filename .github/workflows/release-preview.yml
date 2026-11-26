@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DAEMON_IMAGE: ghcr.io/zama-ai/sdk-daemon
+  DAEMON_IMAGE: ghcr.io/zama-ai/sdk/sdk-daemon
   CRATE: zama_sdk
 
 jobs:
