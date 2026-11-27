@@ -23,11 +23,13 @@ on:
     branches: [main, beta, alpha]
     paths: *doc-paths
   workflow_call:
+  schedule:
+    - cron: "0 6 * * *"
 
-# Namespaced by workflow so the standalone Docs run (push/PR) and the docs job
-# reused by release.yml don't share a group on the same ref and cancel each other.
+# Namespaced by workflow and event so the standalone Docs run, the scheduled run and the
+# docs job reused by release.yml don't share a group on the same ref and cancel each other.
 concurrency:
-  group: docs-${{ github.workflow }}-${{ github.ref }}
+  group: docs-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -35,6 +37,7 @@ permissions:
 
 jobs:
   docs:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -68,12 +71,11 @@ jobs:
 
   # External link liveness for the published docs + READMEs. Internal links and
   # anchors are checked above by `pnpm docs:check-links`; this job covers `https://`
-  # targets. Runs for PRs and direct pushes to main/beta/alpha, but NOT when this
-  # workflow is reused by release.yml: there `github.workflow` is the caller's name
-  # ("Release"), so external flakiness still can't block a release. If it flakes on
-  # PRs, move to a scheduled (cron) workflow.
+  # targets. A PR checks only the Markdown files it changes, so an outage on an
+  # unrelated host can't block it. A daily run on main checks every file. It never
+  # runs in a release, so link flakiness can't block one.
   link-check:
-    if: github.workflow == 'Docs'
+    if: github.event_name == 'pull_request' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -81,8 +83,27 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           submodules: false
+          # The PR merge commit and its base parent.
+          fetch-depth: 2
+
+      # File names come from the PR and the action runs `args` through `eval`, so the
+      # filter allows only plain path characters.
+      - name: Select files to check
+        id: files
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -- ':(glob)docs/**/*.md' README.md ':(glob)packages/*/README.md'
+          if [ "$EVENT" = pull_request ]; then
+            changed=$(git diff --name-only --diff-filter=d HEAD^1 HEAD -- "$@")
+          else
+            changed=$(git ls-files -- "$@")
+          fi
+          files=$(printf '%s\n' "$changed" | { grep -E '^[A-Za-z0-9._/-]+$' || true; } | tr '\n' ' ')
+          echo "list=$files" >> "$GITHUB_OUTPUT"
 
       - name: Check external links (lychee)
+        if: steps.files.outputs.list != ''
         uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
         with:
           # Accept 403/429 so bot-hostile hosts (Discord, Etherscan) don't flake the gate.
@@ -95,6 +116,8 @@ jobs:
             --no-progress --max-retries 3 --accept 200..=299,403,429 --cache
             --host-concurrency 2 --host-request-interval 250ms
             --remap '^https://github\.com/zama-ai/sdk/(?:blob|tree)/[^/]+/([^#?]*).* file://${{ github.workspace }}/$1'
-            "docs/**/*.md" "README.md" "packages/*/README.md"
+            ${{ steps.files.outputs.list }}
           token: ${{ secrets.GITHUB_TOKEN }}
           fail: true
+          # A changed file may have no links at all.
+          failIfEmpty: false
