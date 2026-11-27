@@ -22,19 +22,14 @@ export function chunkContracts(addresses: readonly ChecksummedAddress[]): Checks
   return chunks;
 }
 
-/**
- * Whether the permit's recorded signer, and the chain and delegator in its
- * EIP-712 payload, match `scope`. A payload with no delegator is a direct
- * permit, so its delegator is the signer.
- */
+/** A message without a delegator is a direct permit, so the signer stands in as delegator. */
 export function matchesScope(permission: Permission, scope: PermissionScope): boolean {
   const { signerAddress, eip712 } = permission.serializedPermit;
   const delegatorAddress = eip712.message.delegatorAddress ?? signerAddress;
   return (
     signerAddress === scope.signerAddress &&
     Number(eip712.domain.chainId) === scope.chainId &&
-    typeof delegatorAddress === "string" &&
-    delegatorAddress.toLowerCase() === scope.delegatorAddress.toLowerCase()
+    delegatorAddress === scope.delegatorAddress
   );
 }
 

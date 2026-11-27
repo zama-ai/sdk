@@ -2,6 +2,7 @@ import type { Hex } from "viem";
 import { test as baseTest, describe, expect, vi } from "../../test-fixtures";
 import { MemoryStorage } from "../../storage/memory-storage";
 import { PermissionStore } from "../permission-store";
+import type { ChecksummedAddress } from "../../schemas/primitives";
 import type { Permission } from "../types";
 import { checksum } from "../utils";
 
@@ -21,9 +22,9 @@ function makePermission(
   overrides: Partial<Omit<Permission, "serializedPermit">> & {
     contractAddresses: Permission["contractAddresses"];
     signature?: Hex;
-    signerAddress?: Permission["serializedPermit"]["signerAddress"];
+    signerAddress?: ChecksummedAddress;
     chainId?: number;
-    delegatorAddress?: string;
+    delegatorAddress?: ChecksummedAddress;
   },
 ): Permission {
   const {
