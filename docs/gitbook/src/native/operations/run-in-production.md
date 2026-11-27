@@ -21,7 +21,7 @@ There is no network listener. Keep the application and its daemon on the same ho
 
 ## Prepare the socket and storage
 
-1. Give the daemon a socket directory owned by its UID with mode `0700`, and run the application as the same UID. The daemon refuses to start when the directory is shared with its group or other users, and the Go and Rust clients close a connection when the process that answers on the socket runs as another UID. When the socket sits on a shared volume whose root isn't private, such as a Kubernetes `emptyDir`, put it in a private subdirectory, and give write access to that volume only to containers that run as the same UID. The Compose file below sets this up.
+1. Give the daemon a socket directory owned by its UID with mode `0700`, and run the application as the same UID. The daemon refuses to start when the directory is shared with its group or other users, and the clients refuse a daemon that runs as another UID. On a shared volume whose root isn't private, such as a Kubernetes `emptyDir`, put the socket in a private subdirectory, and mount the volume writable only in containers that run as this UID. The Compose file below sets this up.
 2. For daemon SQLite storage, provision a private writable volume for this daemon and set `ZAMA_SDK_DAEMON_STORAGE_DIR` to its mount path. The daemon creates one `0700` subdirectory per named store.
 3. For application-owned storage, configure the backend in your application. The daemon needs no credential volume.
 

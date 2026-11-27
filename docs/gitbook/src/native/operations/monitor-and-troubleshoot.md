@@ -33,10 +33,10 @@ The daemon reclaims an owned stale socket only after confirming no listener is a
 ## Client cannot connect to the daemon
 
 1. Confirm the daemon is running and its healthcheck passes.
-2. Confirm the application's socket path is the daemon's socket, and that the socket volume is mounted in the application's container.
+2. Confirm the application's socket path points to the daemon's socket and, in containers, that the socket volume is mounted where the application connects.
 3. Run the application as the daemon's UID. When the UIDs differ, the client closes the connection and reports `daemon socket peer runs as UID <daemon>, expected UID <application>`.
 
-Go reports a connection failure from the first operation, as an `RPCError` without an SDK code. Rust reports it from `Client::connect` as `ErrorKind::Transport`, with the detail in the error's source chain. The Go client connects on Linux and macOS only.
+Go reports a connection failure from the first operation, as an `RPCError` with gRPC status `Unavailable` and no SDK code. Rust reports it from `Client::connect` as `ErrorKind::Transport`, with the detail in the error's source chain. On platforms other than Linux and macOS, the Go client fails every operation with `daemon socket peer check is not supported on this platform`.
 
 ## Healthcheck passes but SDK operations fail
 
