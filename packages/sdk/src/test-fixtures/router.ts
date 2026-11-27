@@ -46,7 +46,9 @@ class MockChainRouter extends ChainRouter {
       createMockChain({ id: 31337 }),
     ];
     const backendFor = (id: number): RelayerSDK =>
-      overrides.relayers?.[id] ?? overrides.relayer ?? createMockRelayer();
+      overrides.relayers?.[id] ??
+      overrides.relayer ??
+      createMockRelayer({ chain: chains.find((c) => c.id === id) });
 
     const configs = Object.fromEntries(
       chains.map((c) => [

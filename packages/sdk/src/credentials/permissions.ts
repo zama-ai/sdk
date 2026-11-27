@@ -1,4 +1,5 @@
 import type { Hex } from "viem";
+import type { PermissionScope } from "./storage-keys";
 import type { Permission } from "./types";
 import type { ChecksummedAddress } from "../schemas/primitives";
 import { MAX_CONTRACTS_PER_PERMIT, SECONDS_PER_DAY } from "./utils";
@@ -19,6 +20,17 @@ export function chunkContracts(addresses: readonly ChecksummedAddress[]): Checks
     chunks.push(addresses.slice(i, i + MAX_CONTRACTS_PER_PERMIT));
   }
   return chunks;
+}
+
+/** A message without a delegator is a direct permit, so the signer stands in as delegator. */
+export function matchesScope(permission: Permission, scope: PermissionScope): boolean {
+  const { signerAddress, eip712 } = permission.serializedPermit;
+  const delegatorAddress = eip712.message.delegatorAddress ?? signerAddress;
+  return (
+    signerAddress === scope.signerAddress &&
+    Number(eip712.domain.chainId) === scope.chainId &&
+    delegatorAddress === scope.delegatorAddress
+  );
 }
 
 /** Drop permissions that are time-expired or bound to a stale keypair. */
