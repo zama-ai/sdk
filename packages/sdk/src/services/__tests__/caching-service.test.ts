@@ -1,5 +1,7 @@
 import { getAddress, type Address } from "viem";
 import { describe, expect, test, vi } from "../../test-fixtures";
+import { DerivationSecretHolder } from "../../credentials/keypair-wrapping";
+import { MemoryStorage } from "../../storage/memory-storage";
 import type { GenericStorage } from "../../types";
 import { CachingService } from "../caching-service";
 import { LoggerService } from "../logger-service";
@@ -35,5 +37,72 @@ describe("CachingService logging", () => {
     expect(sink.warn).toHaveBeenCalledOnce();
     expect(sink.warn.mock.calls[0]![0]).toMatch(/^\[zama-sdk\] /);
     expect(sink.error).not.toHaveBeenCalled();
+  });
+});
+
+describe("CachingService with a derivation secret", () => {
+  const OTHER_HANDLE = "0xdef" as const;
+  const key = (handle: string) => `zama:decrypt:${REQUESTER}:${CONTRACT}:${handle}`;
+
+  function setup(secret = "a".repeat(64)) {
+    const storage = new MemoryStorage();
+    const cache = new CachingService(
+      storage,
+      new LoggerService(),
+      new DerivationSecretHolder(secret),
+    );
+    return { storage, cache };
+  }
+
+  test.for([42n, true, CONTRACT] as const)("round-trips %s", async (value) => {
+    const { cache } = setup();
+    await cache.set(REQUESTER, CONTRACT, HANDLE, value);
+    await expect(cache.get(REQUESTER, CONTRACT, HANDLE)).resolves.toBe(value);
+  });
+
+  test("returns an address cached in lowercase", async () => {
+    const { cache } = setup();
+    await cache.set(REQUESTER, CONTRACT, HANDLE, CONTRACT.toLowerCase());
+    await expect(cache.get(REQUESTER, CONTRACT, HANDLE)).resolves.toBe(CONTRACT);
+  });
+
+  test("an entry stored without a tag is a miss and is removed", async () => {
+    const { storage, cache } = setup();
+    await storage.set(key(HANDLE), 42n);
+    await expect(cache.get(REQUESTER, CONTRACT, HANDLE)).resolves.toBeNull();
+    await expect(storage.get(key(HANDLE))).resolves.toBeNull();
+  });
+
+  test("an entry whose value differs from the tagged one is a miss", async () => {
+    const { storage, cache } = setup();
+    await cache.set(REQUESTER, CONTRACT, HANDLE, 42n);
+    const entry = (await storage.get(key(HANDLE))) as { tag: string };
+    await storage.set(key(HANDLE), { ...entry, value: 43n });
+    await expect(cache.get(REQUESTER, CONTRACT, HANDLE)).resolves.toBeNull();
+  });
+
+  test("an entry moved to another key is a miss", async () => {
+    const { storage, cache } = setup();
+    await cache.set(REQUESTER, CONTRACT, HANDLE, 42n);
+    await storage.set(key(OTHER_HANDLE), await storage.get(key(HANDLE)));
+    await expect(cache.get(REQUESTER, CONTRACT, OTHER_HANDLE)).resolves.toBeNull();
+  });
+
+  test("an entry tagged with another secret is a miss", async () => {
+    const { storage, cache } = setup();
+    await cache.set(REQUESTER, CONTRACT, HANDLE, 42n);
+    const other = new CachingService(
+      storage,
+      new LoggerService(),
+      new DerivationSecretHolder("b".repeat(64)),
+    );
+    await expect(other.get(REQUESTER, CONTRACT, HANDLE)).resolves.toBeNull();
+  });
+
+  test("a tagged entry is a miss without a derivation secret", async () => {
+    const { storage, cache } = setup();
+    await cache.set(REQUESTER, CONTRACT, HANDLE, 42n);
+    const plain = new CachingService(storage, new LoggerService());
+    await expect(plain.get(REQUESTER, CONTRACT, HANDLE)).resolves.toBeNull();
   });
 });

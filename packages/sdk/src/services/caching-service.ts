@@ -1,17 +1,66 @@
-import { getAddress, type Address } from "viem";
+import { getAddress, toBytes, toHex, type Address } from "viem";
 import { z } from "zod/mini";
+import { deriveCacheTagKey, type DerivationSecretHolder } from "../credentials/keypair-wrapping";
 import type { ClearValue, EncryptedValue } from "../relayer/types";
-import { checksummedAddress } from "../schemas/primitives";
+import { checksummedAddress, hex } from "../schemas/primitives";
 import type { GenericLogger, GenericStorage } from "../types";
 
 const CacheValueSchema = z.union([z.bigint(), z.boolean(), checksummedAddress]);
+const TaggedCacheEntrySchema = z.object({ value: CacheValueSchema, tag: hex });
 const CacheIndexSchema = z.array(z.string());
+
+type CacheValue = z.infer<typeof CacheValueSchema>;
+type CacheEntry = CacheValue | z.infer<typeof TaggedCacheEntrySchema>;
+
+/** Converts a value to and from its stored entry; `decode` returns `null` for an entry to discard. */
+interface CacheEntryCodec {
+  encode(key: string, value: CacheValue): Promise<CacheEntry>;
+  decode(key: string, stored: unknown): Promise<CacheValue | null>;
+}
+
+const plainCodec: CacheEntryCodec = {
+  encode: async (_key, value) => value,
+  decode: async (_key, stored) => CacheValueSchema.safeParse(stored).data ?? null,
+};
+
+/** Binds the tag to the storage key, so a tagged value can't be moved to another handle. */
+function tagInput(key: string, value: CacheValue): Uint8Array<ArrayBuffer> {
+  return new TextEncoder().encode(JSON.stringify([key, typeof value, String(value)]));
+}
+
+function taggedCodec(derivationSecret: DerivationSecretHolder): CacheEntryCodec {
+  let tagKey: Promise<CryptoKey> | undefined;
+  const getTagKey = () => (tagKey ??= deriveCacheTagKey(derivationSecret));
+  return {
+    async encode(key, value) {
+      const tag = await crypto.subtle.sign("HMAC", await getTagKey(), tagInput(key, value));
+      return { value, tag: toHex(new Uint8Array(tag)) };
+    },
+    async decode(key, stored) {
+      const parsed = TaggedCacheEntrySchema.safeParse(stored);
+      if (!parsed.success) {
+        return null;
+      }
+      const { value, tag } = parsed.data;
+      const verified = await crypto.subtle.verify(
+        "HMAC",
+        await getTagKey(),
+        new Uint8Array(toBytes(tag)),
+        tagInput(key, value),
+      );
+      return verified ? value : null;
+    },
+  };
+}
 
 /**
  * Storage-backed cache for decrypted FHE plaintext values.
  *
  * Each entry is keyed by `(requester, contractAddress, handle)` so different
  * signers cannot read each other's cached decryptions.
+ *
+ * With a derivation secret, each entry is stored with a tag derived from that
+ * secret, and an entry whose tag does not verify is a miss.
  *
  * @internal
  */
@@ -20,11 +69,17 @@ export class CachingService {
   readonly #logger: GenericLogger;
   readonly #decryptNamespace = "zama:decrypt";
   readonly #decryptKeysNamespace = `${this.#decryptNamespace}:keys`;
+  readonly #codec: CacheEntryCodec;
   #indexWriteQueue: Promise<void> = Promise.resolve();
 
-  constructor(storage: GenericStorage, logger: GenericLogger) {
+  constructor(
+    storage: GenericStorage,
+    logger: GenericLogger,
+    derivationSecret?: DerivationSecretHolder,
+  ) {
     this.#storage = storage;
     this.#logger = logger;
+    this.#codec = derivationSecret ? taggedCodec(derivationSecret) : plainCodec;
   }
 
   async get(
@@ -34,16 +89,15 @@ export class CachingService {
   ): Promise<ClearValue | null> {
     try {
       const key = this.#buildStorageKey(requester, contractAddress, encryptedValue);
-      const value = await this.#storage.get(key);
+      const stored = await this.#storage.get(key);
+      if (stored === null) {
+        return null;
+      }
+      const value = await this.#codec.decode(key, stored);
       if (value === null) {
-        return null;
-      }
-      const parsed = CacheValueSchema.safeParse(value);
-      if (!parsed.success) {
         await this.delete(requester, contractAddress, encryptedValue);
-        return null;
       }
-      return parsed.data;
+      return value;
     } catch (error) {
       this.#logger.warn("CachingService.get failed", { error });
       return null;
@@ -58,7 +112,7 @@ export class CachingService {
   ): Promise<void> {
     try {
       const key = this.#buildStorageKey(requester, contractAddress, encryptedValue);
-      await this.#storage.set<ClearValue>(key, value);
+      await this.#storage.set(key, await this.#codec.encode(key, CacheValueSchema.parse(value)));
       this.#indexWriteQueue = this.#indexWriteQueue.then(() =>
         this.#addToIndex(key).catch((error) => {
           this.#logger.warn("CachingService index write failed", { error });

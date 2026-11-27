@@ -46,6 +46,9 @@ export interface ZamaSDKOptions {
    * key import; it never touches your buffer, so zeroize yours after construction.
    * The SDK never persists or exposes this value. Omit for the default:
    * plaintext at rest, security delegated to the storage backend.
+   *
+   * Cached decrypted values stay readable in storage, but each is tagged with a key
+   * derived from this secret, and a value whose tag does not verify is decrypted again.
    */
   transportKeyPairDerivationSecret?: string | Uint8Array;
 }
@@ -102,7 +105,7 @@ function derivationSecretHolder(
 }
 
 /**
- * ZamaSDK — composes a RelayerSDK with contract abstraction.
+ * ZamaSDK composes a RelayerSDK with contract abstraction.
  *
  * Exposes domain namespaces for permits, delegations, decryption, offline
  * signing, and tokens, plus an unchanged registry, a top-level `encrypt`, and
@@ -129,7 +132,7 @@ export class ZamaSDK {
   readonly delegations: Delegations;
   /** FHE decryption (user, delegated user, public). */
   readonly decryption: Decryption;
-  /** Offline-signing pipeline: `prepare` builds an unsigned tx the caller signs and broadcasts out-of-process — for HSM, policy-engine, and cross-process custody workflows. */
+  /** Offline-signing pipeline: `prepare` builds an unsigned tx the caller signs and broadcasts out-of-process. Built for HSM, policy-engine, and cross-process custody workflows. */
   readonly offline: Offline;
   readonly #registryTTL: number;
   readonly #registryAddresses: Record<number, Address>;
@@ -155,7 +158,7 @@ export class ZamaSDK {
     this.storage = config.storage;
     this.#onEvent = config.onEvent ?? function () {};
     this.#logger = config.logger;
-    this.#cachingService = new CachingService(config.storage, this.#logger);
+    this.#cachingService = new CachingService(config.storage, this.#logger, derivationSecret);
     this.#delegationService = new DelegationService({
       provider: this.provider,
       router: config.router,
@@ -315,7 +318,7 @@ export class ZamaSDK {
    * // Addresses resolved from the SDK's chain configs
    * const registry = sdk.createWrappersRegistry();
    *
-   * // Hardhat or custom chain — override per chain for this registry instance
+   * // Hardhat or custom chain: override per chain for this registry instance
    * const registry = sdk.createWrappersRegistry({ [31337]: "0xYourRegistry" });
    *
    * const pairs = await registry.getTokenPairs();

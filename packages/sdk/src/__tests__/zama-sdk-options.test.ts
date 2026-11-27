@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "../test-fixtures";
 import { ConfigurationError } from "../errors";
+import type { EncryptedValue } from "../relayer/types";
 
 const floorError =
   /transportKeyPairDerivationSecret must be a Uint8Array of at least 32 bytes or a string of at least 64 characters/;
@@ -128,5 +129,18 @@ describe("ZamaSDK options: transportKeyPairDerivationSecret", () => {
         stack.push((value as Record<string, unknown>)[key]);
       }
     }
+  });
+
+  test("tags the cached decrypted values it writes", async ({ createSDK, storage }) => {
+    const sdk = createSDK({ transportKeyPairDerivationSecret: new Uint8Array(32).fill(7) });
+    await sdk.decryption.decryptValues([
+      {
+        encryptedValue: `0x${"aa".repeat(32)}` as EncryptedValue,
+        contractAddress: "0x1a1A1A1A1a1A1A1a1A1a1a1a1a1a1a1A1A1a1a1a",
+      },
+    ]);
+
+    const [key] = (await storage.get<string[]>("zama:decrypt:keys")) ?? [];
+    expect(await storage.get(key!)).toMatchObject({ tag: expect.stringMatching(/^0x/) });
   });
 });

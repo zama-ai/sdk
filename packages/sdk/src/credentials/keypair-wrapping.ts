@@ -16,6 +16,9 @@ export const WRAPPING_SCHEME_V1 = {
   tagLengthBytes: 16,
 } as const;
 
+/** Versioned and distinct from the wrapping scheme's, so the two derived keys never coincide. */
+const CACHE_TAG_KEY_INFO = "zama-sdk-decrypt-cache-tag-v1";
+
 const AES_KEY_LENGTH_BITS = 256;
 
 /** On-disk shape of a wrapped private key. Public key and timestamps are stored alongside, unwrapped. */
@@ -27,7 +30,7 @@ export interface WrappedPrivateKey {
 /**
  * The sibling plaintext fields stored alongside the ciphertext. Bound as AES-GCM
  * additional authenticated data so a storage-level attacker who can't decrypt the
- * private key also can't silently tamper with these — e.g. mismatching `publicKey`
+ * private key also can't silently tamper with these, e.g. mismatching `publicKey`
  * against the wrapped private key, or extending `expiresAt` past its intended TTL.
  */
 export interface WrappedPrivateKeyMetadata {
@@ -37,7 +40,7 @@ export interface WrappedPrivateKeyMetadata {
   tkmsVersion?: string;
 }
 
-// `new Uint8Array(bytes)` copies into a fresh, plain ArrayBuffer-backed view — needed
+// `new Uint8Array(bytes)` copies into a fresh, plain ArrayBuffer-backed view. This is needed
 // because a consumer-supplied Uint8Array (or viem's `toBytes()` output) is typed as
 // `Uint8Array<ArrayBufferLike>`, which TS's DOM lib no longer accepts as `BufferSource`
 // (it admits `SharedArrayBuffer`, which `crypto.subtle` doesn't).
@@ -100,9 +103,9 @@ export class DerivationSecretHolder {
 
 /**
  * Derive a non-extractable AES-256-GCM key from the derivation secret's base key, bound
- * to `identity` (the same signer-address-or-scope identity used for storage keying — see
- * {@link TransportKeyPairVault} — not the storage key string itself, so a future rename
- * of storage-key formatting can never silently change already-wrapped keys).
+ * to `identity` (the same signer-address-or-scope identity used for storage keying, see
+ * {@link TransportKeyPairVault}), not the storage key string itself, so a future rename
+ * of storage-key formatting can never silently change already-wrapped keys.
  *
  * Non-extractable by construction: the raw derived key bytes can never be read back out
  * by any caller, this module included.
@@ -126,6 +129,25 @@ async function deriveWrappingKey(
   );
 }
 
+/** Derive the non-extractable HMAC-SHA-256 key that tags cached decrypted values. */
+export async function deriveCacheTagKey(
+  derivationSecret: DerivationSecretHolder,
+): Promise<CryptoKey> {
+  const ikmKey = await derivationSecret.baseKey();
+  return crypto.subtle.deriveKey(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: new Uint8Array(),
+      info: new TextEncoder().encode(CACHE_TAG_KEY_INFO),
+    },
+    ikmKey,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign", "verify"],
+  );
+}
+
 /** Wrap a private key for at-rest storage. Generates a fresh random IV every call. */
 export async function wrapPrivateKey(
   privateKey: Hex,
@@ -145,7 +167,7 @@ export async function wrapPrivateKey(
 
 /**
  * Unwrap a private key. `metadata` must be the exact sibling fields stored alongside
- * the ciphertext — mismatching any of them (or a mismatched `derivationSecret`, or a
+ * the ciphertext. Mismatching any of them (or a mismatched `derivationSecret`, or a
  * tampered ciphertext) fails the same way, closed.
  *
  * @throws a `DOMException` named `"OperationError"` on any AES-GCM authentication
@@ -173,7 +195,7 @@ export async function unwrapPrivateKey(
 }
 
 /** True for the specific AES-GCM authentication failure `unwrapPrivateKey` throws on
- * a wrong `derivationSecret`, tampered ciphertext, or tampered metadata — false for
+ * a wrong `derivationSecret`, tampered ciphertext, or tampered metadata. False for
  * anything else (e.g. `crypto.subtle` unavailable), which is not a routine mismatch
  * and should not be handled the same way. Checks `.name` rather than `instanceof
  * DOMException`/`instanceof Error`: those can disagree across realms (e.g. a VM-based
