@@ -21,7 +21,7 @@ There is no network listener. Keep the application and its daemon on the same ho
 
 ## Prepare the socket and storage
 
-1. Give the daemon a socket directory owned by its UID with mode `0700`, and run the application as the same UID. The daemon refuses to start when the directory is shared with its group or other users. When the socket sits on a shared volume whose root isn't private, such as a Kubernetes `emptyDir`, put it in a private subdirectory. The Compose file below sets this up.
+1. Give the daemon a socket directory owned by its UID with mode `0700`, and run the application as the same UID. The daemon refuses to start when the directory is shared with its group or other users, and the clients refuse a daemon that runs as another UID. On a shared volume whose root isn't private, such as a Kubernetes `emptyDir`, put the socket in a private subdirectory, and mount the volume writable only in containers that run as this UID. The Compose file below sets this up.
 2. For daemon SQLite storage, provision a private writable volume for this daemon and set `ZAMA_SDK_DAEMON_STORAGE_DIR` to its mount path. The daemon creates one `0700` subdirectory per named store.
 3. For application-owned storage, configure the backend in your application. The daemon needs no credential volume.
 
@@ -36,7 +36,7 @@ Each release signs the image in the release workflow and stores the signature, b
 Resolve the tag first, so the digest you verify is the digest you pin:
 
 ```bash
-export ZAMA_SDK_VERSION=3.9.1-beta.1
+export ZAMA_SDK_VERSION=3.9.1-beta.2
 export ZAMA_SDK_DAEMON_DIGEST="$(docker buildx imagetools inspect "ghcr.io/zama-ai/sdk-daemon:${ZAMA_SDK_VERSION}" --format '{{ .Manifest.Digest }}')"
 ```
 
@@ -96,7 +96,7 @@ services:
 Download the daemon file next to it, then start both:
 
 ```bash
-export ZAMA_SDK_VERSION=3.9.1-beta.1
+export ZAMA_SDK_VERSION=3.9.1-beta.2
 curl -fsSL -o zama-sdk-daemon.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.yaml"
 docker compose up -d --wait
 ```
@@ -110,7 +110,7 @@ When your application runs directly on a Linux host rather than in a container, 
 From the directory that will hold the daemon's files, replace `myapp` with the user your application runs as:
 
 ```bash
-export ZAMA_SDK_VERSION=3.9.1-beta.1
+export ZAMA_SDK_VERSION=3.9.1-beta.2
 curl -fsSL -o compose.yaml "https://raw.githubusercontent.com/zama-ai/sdk/v${ZAMA_SDK_VERSION}/packages/sdk-daemon/deploy/compose.host.yaml"
 sudo install -d -m 700 -o myapp -g myapp socket storage
 ZAMA_SDK_DAEMON_UID="$(id -u myapp)" ZAMA_SDK_DAEMON_GID="$(id -g myapp)" docker compose up -d --wait

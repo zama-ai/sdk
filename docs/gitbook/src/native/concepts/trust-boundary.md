@@ -26,7 +26,7 @@ Delegation grant and revoke operations can broadcast transactions through your a
 Serve one trust domain per daemon. Every process with socket access can create SDK contexts and call credential-management operations. SDK contexts are not an authorization boundary.
 {% endhint %}
 
-The socket directory must belong to the daemon's UID and exclude group and other access. The application runs as that same UID. There is no TCP listener, application authentication, or per-context access control.
+The socket directory must belong to the daemon's UID and exclude group and other access. The application runs as that same UID, and the Go and Rust clients only keep a connection to a process that runs as their own UID. There is no TCP listener, application authentication, or per-context access control.
 
 Processes with the same UID, host administrators, and operators with container control are outside this isolation boundary.
 

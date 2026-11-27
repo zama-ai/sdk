@@ -4862,7 +4862,7 @@ dependencies = [
 
 [[package]]
 name = "zama_sdk"
-version = "3.9.1-beta.1"
+version = "3.9.1-beta.2"
 dependencies = [
  "alloy-consensus",
  "alloy-contract",
@@ -4889,6 +4889,7 @@ dependencies = [
  "num-bigint",
  "prost",
  "reqwest",
+ "rustix",
  "serde_json",
  "tempfile",
  "tokio",

@@ -1,6 +1,6 @@
 [package]
 name = "zama_sdk"
-version = "3.9.1-beta.1"
+version = "3.9.1-beta.2"
 edition = "2024"
 rust-version = "1.94.1"
 description = "Rust client for the Zama SDK daemon: encrypts, decrypts and prepares confidential transactions over a Unix socket."
@@ -32,6 +32,7 @@ anyhow = "1"
 futures-util = "0.3"
 http = "1"
 num-bigint = "0.4"
+rustix = { version = "1", features = ["process"] }
 tokio-stream = "0.1"
 hyper-util = { version = "0.1", features = ["tokio"] }
 serde_json = "1"

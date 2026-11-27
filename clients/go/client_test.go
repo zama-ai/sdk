@@ -28,17 +28,7 @@ func testClient(t *testing.T, service pb.DaemonServiceServer, interceptor grpc.U
 }
 func testClientServer(t *testing.T, service pb.DaemonServiceServer, interceptor grpc.UnaryServerInterceptor) (*Client, *grpc.Server) {
 	t.Helper()
-	// Short paths stay within macOS Unix-domain socket limits.
-	dir, err := os.MkdirTemp("/tmp", "sdk-go-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { os.RemoveAll(dir) })
-	socket := filepath.Join(dir, "s")
-	listener, err := net.Listen("unix", socket)
-	if err != nil {
-		t.Fatal(err)
-	}
+	socket, listener := testSocket(t)
 	options := []grpc.ServerOption{}
 	if interceptor != nil {
 		options = append(options, grpc.UnaryInterceptor(interceptor))
@@ -53,6 +43,22 @@ func testClientServer(t *testing.T, service pb.DaemonServiceServer, interceptor 
 	}
 	t.Cleanup(func() { client.Close() })
 	return client, server
+}
+func testSocket(t *testing.T) (string, net.Listener) {
+	t.Helper()
+	// t.TempDir paths exceed the 104-byte sun_path limit on macOS.
+	dir, err := os.MkdirTemp("/tmp", "sdk-go-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(dir) })
+	socket := filepath.Join(dir, "s")
+	listener, err := net.Listen("unix", socket)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { listener.Close() })
+	return socket, listener
 }
 func testContext(t *testing.T) context.Context {
 	t.Helper()
