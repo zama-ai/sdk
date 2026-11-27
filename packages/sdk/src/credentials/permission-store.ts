@@ -1,7 +1,7 @@
 import type { Hex } from "viem";
 import type { GenericLogger, GenericStorage } from "../types";
 import { swallow } from "../utils/swallow";
-import { pruneUnusable, withoutPermitsTouching } from "./permissions";
+import { matchesScope, pruneUnusable, withoutPermitsTouching } from "./permissions";
 import { PermissionListSchema, PermissionSchema, ScopeIndexSchema } from "./schemas";
 import { permissionIndexKey, permissionScopeKey, type PermissionScope } from "./storage-keys";
 import type { Permission } from "./types";
@@ -32,7 +32,7 @@ export class PermissionStore {
     this.#logger = config.logger;
   }
 
-  /** Read all stored permissions for the given scope. Returns `[]` if none. */
+  /** Stored permits for `scope`, skipping entries whose signer, chain or delegator names a different scope. */
   async list(scope: PermissionScope): Promise<Permission[]> {
     const key = permissionScopeKey(scope);
     const raw = await this.#storage.get(key);
@@ -44,7 +44,7 @@ export class PermissionStore {
       await this.clearScope(scope);
       return [];
     }
-    return parsed.data;
+    return parsed.data.filter((p) => matchesScope(p, scope));
   }
 
   /**

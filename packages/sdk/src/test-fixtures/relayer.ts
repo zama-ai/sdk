@@ -61,6 +61,7 @@ export function createMockRelayer(overrides: Partial<RelayerSDK> = {}): RelayerS
               startTimestamp: "1000",
               durationDays: "1",
               extraData: "0x",
+              ...(params.delegatorAddress && { delegatorAddress: params.delegatorAddress }),
             },
           };
           const signature = await params.signer.signTypedData(eip712);

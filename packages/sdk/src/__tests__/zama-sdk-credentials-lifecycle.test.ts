@@ -103,11 +103,9 @@ describe("ZamaSDK credentials lifecycle", () => {
       const CHAIN_A = 31337;
       const CHAIN_B = 11155111;
 
-      // Shared storage and relayer so every reconstruction finds the same FHE
-      // keypair (keyed by signer address, chain-independent) — chain isolation
-      // must come from permit scoping, not from a missing keypair.
+      // Shared storage so every reconstruction finds the same chain-independent
+      // keypair: chain isolation must come from permit scoping.
       const storage = new MemoryStorage();
-      const relayer = createMockRelayer();
       const address = createMockSigner().walletAccount.getSnapshot()!.address;
 
       // Permits are keyed by the router's active chain, so the switch has to go
@@ -127,7 +125,8 @@ describe("ZamaSDK credentials lifecycle", () => {
           requireWalletAccount: vi.fn().mockReturnValue(account),
         });
         const provider = createMockProvider({ getChainId: vi.fn().mockResolvedValue(chainId) });
-        const router = createMockRouter({ chains: [createMockChain({ id: chainId })], relayer });
+        const chain = createMockChain({ id: chainId });
+        const router = createMockRouter({ chains: [chain], relayer: createMockRelayer({ chain }) });
         return createSDK({ signer, provider, router, storage });
       }
 
@@ -145,6 +144,7 @@ describe("ZamaSDK credentials lifecycle", () => {
 
       await sdkB.permits.grantPermit([CONTRACT_A]);
       expect(sdkB.signer!.signTypedData).toHaveBeenCalledOnce();
+      expect(await sdkB.permits.hasPermit([CONTRACT_A])).toBe(true);
 
       // Switch back to chain A — the original permit must still be honored.
       const sdkA2 = buildSDK(CHAIN_A);

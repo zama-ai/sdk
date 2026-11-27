@@ -2,6 +2,7 @@ import type { Hex } from "viem";
 import { test as baseTest, describe, expect, vi } from "../../test-fixtures";
 import { MemoryStorage } from "../../storage/memory-storage";
 import { PermissionStore } from "../permission-store";
+import type { ChecksummedAddress } from "../../schemas/primitives";
 import type { Permission } from "../types";
 import { checksum } from "../utils";
 
@@ -21,9 +22,18 @@ function makePermission(
   overrides: Partial<Omit<Permission, "serializedPermit">> & {
     contractAddresses: Permission["contractAddresses"];
     signature?: Hex;
+    signerAddress?: ChecksummedAddress;
+    chainId?: number;
+    delegatorAddress?: ChecksummedAddress;
   },
 ): Permission {
-  const { signature = SIGNATURE, ...rest } = overrides;
+  const {
+    signature = SIGNATURE,
+    signerAddress = USER,
+    chainId = 31337,
+    delegatorAddress,
+    ...rest
+  } = overrides;
   return {
     keypairPublicKey: PUBLIC_KEY,
     startTimestamp: Math.floor(Date.now() / 1000),
@@ -31,9 +41,14 @@ function makePermission(
     ...rest,
     serializedPermit: {
       version: 1,
-      eip712: { primaryType: "UserDecryptRequestVerification", domain: {}, types: {}, message: {} },
+      eip712: {
+        primaryType: "UserDecryptRequestVerification",
+        domain: { chainId: String(chainId) },
+        types: {},
+        message: delegatorAddress ? { delegatorAddress } : {},
+      },
       signature,
-      signerAddress: USER,
+      signerAddress,
     },
   };
 }
@@ -74,7 +89,9 @@ describe("PermissionStore", () => {
     store,
   }) => {
     await store.append(directScope, [makePermission({ contractAddresses: [TOKEN_A] })]);
-    await store.append(delegatedScope, [makePermission({ contractAddresses: [TOKEN_B] })]);
+    await store.append(delegatedScope, [
+      makePermission({ contractAddresses: [TOKEN_B], delegatorAddress: DELEGATOR }),
+    ]);
 
     expect(await store.list(directScope)).toHaveLength(1);
     expect(await store.list(delegatedScope)).toHaveLength(1);
@@ -117,6 +134,26 @@ describe("PermissionStore", () => {
     const surviving = await store.listUsableAndPrune(directScope, PUBLIC_KEY);
     expect(surviving).toHaveLength(1);
     expect(surviving[0]!.contractAddresses).toEqual([TOKEN_B]);
+  });
+
+  test.for([
+    ["signer", { signerAddress: DELEGATOR }],
+    ["chain", { chainId: 1 }],
+    ["delegator", { delegatorAddress: DELEGATOR }],
+  ] as const)("list leaves out a permit signed for another %s", async ([, other], { store }) => {
+    await store.append(directScope, [
+      makePermission({ contractAddresses: [TOKEN_A], ...other }),
+      makePermission({ contractAddresses: [TOKEN_B] }),
+    ]);
+
+    const list = await store.list(directScope);
+    expect(list.map((p) => p.contractAddresses)).toEqual([[TOKEN_B]]);
+  });
+
+  test("list leaves out a direct permit stored under a delegated scope", async ({ store }) => {
+    await store.append(delegatedScope, [makePermission({ contractAddresses: [TOKEN_A] })]);
+
+    expect(await store.list(delegatedScope)).toEqual([]);
   });
 
   test("replace swaps the entry identified by signature", async ({ store }) => {
