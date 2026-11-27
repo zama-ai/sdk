@@ -70,8 +70,8 @@ jobs:
   # anchors are checked above by `pnpm docs:check-links`; this job covers `https://`
   # targets. Runs for PRs and direct pushes to main/beta/alpha, but NOT when this
   # workflow is reused by release.yml: there `github.workflow` is the caller's name
-  # ("Release"), so external flakiness still can't block a release. If it flakes on
-  # PRs, move to a scheduled (cron) workflow.
+  # ("Release"), so external flakiness still can't block a release. On PRs a failure
+  # is reported but doesn't block, since an outage on any linked host would fail it.
   link-check:
     if: github.workflow == 'Docs'
     runs-on: ubuntu-latest
@@ -83,6 +83,7 @@ jobs:
           submodules: false
 
       - name: Check external links (lychee)
+        continue-on-error: ${{ github.event_name == 'pull_request' }}
         uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
         with:
           # Accept 403/429 so bot-hostile hosts (Discord, Etherscan) don't flake the gate.
