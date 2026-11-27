@@ -6,9 +6,7 @@ import (
 	"net"
 )
 
-// dialDaemon connects to the daemon socket and keeps the connection only when
-// the process listening on it runs as uid. The daemon and the application run
-// as the same UID, so any other peer is not the daemon.
+// The daemon runs as the application's UID, so a peer with another UID is not the daemon.
 func dialDaemon(socket string, uid uint32) func(context.Context, string) (net.Conn, error) {
 	return func(ctx context.Context, _ string) (net.Conn, error) {
 		// gRPC passes the target as a "unix://" URL, so dial the socket path itself.
@@ -17,12 +15,13 @@ func dialDaemon(socket string, uid uint32) func(context.Context, string) (net.Co
 			return nil, err
 		}
 		peer, err := peerUID(conn.(*net.UnixConn))
-		if err == nil && peer != uid {
-			err = fmt.Errorf("daemon socket peer runs as UID %d, expected UID %d", peer, uid)
-		}
 		if err != nil {
 			conn.Close()
 			return nil, err
+		}
+		if peer != uid {
+			conn.Close()
+			return nil, fmt.Errorf("daemon socket peer runs as UID %d, expected UID %d", peer, uid)
 		}
 		return conn, nil
 	}

@@ -13,9 +13,7 @@ pub struct Client {
     pub(crate) timeout: Option<Duration>,
 }
 
-/// Connects to the daemon socket and keeps the stream only when the process
-/// listening on it runs as `expected_uid`. The daemon and the application run as
-/// the same UID, so any other peer is not the daemon.
+/// The daemon runs as the application's UID, so a peer with another UID is not the daemon.
 async fn connect_daemon(socket: &Path, expected_uid: u32) -> std::io::Result<UnixStream> {
     let stream = UnixStream::connect(socket).await?;
     let uid = stream.peer_cred()?.uid();
@@ -31,15 +29,12 @@ async fn connect_daemon(socket: &Path, expected_uid: u32) -> std::io::Result<Uni
 impl Client {
     pub async fn connect(socket: impl AsRef<Path>) -> Result<Self> {
         let socket = socket.as_ref().to_owned();
+        let uid = rustix::process::geteuid().as_raw();
         let channel = Endpoint::from_static("http://localhost")
             .connect_timeout(Duration::from_secs(10))
             .connect_with_connector(service_fn(move |_| {
                 let socket = socket.clone();
-                async move {
-                    connect_daemon(&socket, rustix::process::getuid().as_raw())
-                        .await
-                        .map(TokioIo::new)
-                }
+                async move { connect_daemon(&socket, uid).await.map(TokioIo::new) }
             }))
             .await
             .map_err(|error| ClientError::transport("failed to connect to daemon", error))?;
@@ -136,7 +131,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let socket = dir.path().join("s");
         let _listener = tokio::net::UnixListener::bind(&socket).unwrap();
-        let uid = rustix::process::getuid().as_raw();
+        let uid = rustix::process::geteuid().as_raw();
 
         connect_daemon(&socket, uid).await.unwrap();
         let error = connect_daemon(&socket, uid + 1).await.unwrap_err();
