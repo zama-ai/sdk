@@ -32,11 +32,7 @@ export class PermissionStore {
     this.#logger = config.logger;
   }
 
-  /**
-   * Read the stored permissions that match the given scope. Returns `[]` if none.
-   * An entry is not guaranteed to match the key it is stored under, so entries
-   * naming another signer, chain or delegator are left out.
-   */
+  /** Stored permits for `scope`, skipping entries whose signer, chain or delegator names a different scope. */
   async list(scope: PermissionScope): Promise<Permission[]> {
     const key = permissionScopeKey(scope);
     const raw = await this.#storage.get(key);

@@ -602,11 +602,7 @@ export class CredentialService {
     await this.#store.deletePermitsTouching(this.#permissionScope(signerAddress), normalized);
   }
 
-  /**
-   * Permits are keyed by the router's active chain, the same chain their
-   * EIP-712 domain is signed against, so the storage key and the signature
-   * can never disagree.
-   */
+  /** Keys permits by the router's chain, the chain their EIP-712 domain names, not the wallet's chain. */
   #permissionScope(signerAddress: ChecksummedAddress, delegator?: Address): PermissionScope {
     return {
       signerAddress,
