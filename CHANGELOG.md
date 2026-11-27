@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.9.1-beta.3](https://github.com/zama-ai/sdk/compare/v3.9.1-beta.2...v3.9.1-beta.3) (2026-11-27)
+
+### Bug Fixes
+
+- **sdk:** check the socket peer's UID in the Go and Rust clients ([#1025](https://github.com/zama-ai/sdk/issues/1025)) ([1bbb2ad]())
+
 ## [3.9.1-beta.2](https://github.com/zama-ai/sdk/compare/v3.9.1-beta.1...v3.9.1-beta.2) (2026-11-27)
 
 ### Bug Fixes
