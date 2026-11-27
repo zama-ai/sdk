@@ -75,16 +75,18 @@ The security model relies on same-origin isolation: only JavaScript running on t
 
 "Wrapping" here means encrypting the transport private key before it is written to storage. It is unrelated to wrapping ERC-20 tokens into confidential tokens (`shield`/`unshield`).
 
-**The threat.** An attacker obtains a copy of your storage backend: a stolen disk, a leaked database dump, an exposed backup. The attacker does not control your running process. By default the transport private key sits in that copy as plaintext, so the attacker reads it directly. With `transportKeyPairDerivationSecret`, the attacker gets ciphertext instead. This holds only if the secret lives outside the stolen storage.
+**The threat.** An attacker obtains a copy of your storage backend: a stolen disk, a leaked database dump, an exposed backup. The attacker does not control your running process. By default the transport private key sits in that copy as plaintext, so the attacker reads it directly. With `transportKeyPairDerivationSecret`, the attacker gets ciphertext instead. An attacker who can also write to storage cannot plant decrypted values for the SDK to act on. Both protections hold only if the secret lives outside the storage.
 
 **How it works.** Pass the secret at construction: `new ZamaSDK(config, { transportKeyPairDerivationSecret })`. It is a constructor option, not part of the shareable config object, so the secret can never travel with the config. The SDK encrypts the private key before every write and decrypts it after every read. No other API changes. The SDK never persists the secret and never exposes it on any object. The constructor rejects the option in browser contexts, and rejects an `undefined` value (the unset-env-var case); see [Configuration](../guides/configuration.md#10-optional-wrap-the-transport-key-pair-at-rest-headless-environments) for the guards and setup.
 
 ```
 wrappingKey = HKDF-SHA256(ikm: transportKeyPairDerivationSecret, salt: "scope:<transportKeyPairScope>" or "signer:<address>", info: "zama-sdk-keypair-wrapping-v1")
 ciphertext  = AES-256-GCM(wrappingKey, random 96-bit IV, privateKey, aad: publicKey + createdAt + expiresAt + tkmsVersion)
+cacheTagKey = HKDF-SHA256(ikm: transportKeyPairDerivationSecret, salt: empty, info: "zama-sdk-decrypt-cache-tag-v1")
+tag         = HMAC-SHA256(cacheTagKey, storageKey + valueType + value)
 ```
 
-The salt is the storage identity: `transportKeyPairScope` if set, else the signer address, prefixed by kind so the two namespaces never collide. Signers in one scope share one wrapping key. Only the private key is encrypted. The public key, timestamps, and TKMS version stay readable, but are bound to the ciphertext as AES-GCM additional authenticated data: tampering with any of them fails decryption. Permits stay in plaintext because they are already public data. Each wrapped entry records `wrappingVersion: 1`, so a future scheme's entries are recognizable rather than treated as corruption. Cached decrypted values also stay in plaintext, and each is stored with an HMAC-SHA-256 tag from a key derived from the same secret: the SDK ignores a cached value whose tag is missing or does not verify and decrypts it again.
+The salt is the storage identity: `transportKeyPairScope` if set, else the signer address, prefixed by kind so the two namespaces never collide. Signers in one scope share one wrapping key. Only the private key is encrypted. The public key, timestamps, and TKMS version stay readable, but are bound to the ciphertext as AES-GCM additional authenticated data: tampering with any of them fails decryption. Permits stay in plaintext because they are already public data. Cached decrypted values stay in plaintext too, but each is stored with a tag over its storage key and value. The SDK discards a cached value whose tag is missing or does not verify, and decrypts it again. Each wrapped entry records `wrappingVersion: 1`, so a future scheme's entries are recognizable rather than treated as corruption.
 
 Prefer a `Uint8Array` secret. The SDK copies it, imports the copy into a non-extractable WebCrypto key on first use, and zeroizes that copy. The SDK never touches your original buffer: zeroize it after construction. A `string` cannot be scrubbed: JavaScript strings are immutable, so copies may remain in the heap.
 
@@ -98,7 +100,7 @@ Prefer a `Uint8Array` secret. The SDK copies it, imports the copy into a non-ext
 | Wrapped at rest                         | `transportKeyPairDerivationSecret` | Yes             | No, any key-value store   |
 
 {% hint style="info" %}
-This doesn't eliminate storage: the (now wrapped) key pair is still persisted. It eliminates the requirement for storage to be _secure_.
+This doesn't eliminate storage: the (now wrapped) key pair is still persisted. It eliminates the requirement for storage to be _secure_ for the key pair. Cached decrypted values stay readable: if they are sensitive in your context, keep the storage confidential.
 {% endhint %}
 
 #### What not to do

@@ -40,14 +40,15 @@ import { withOperation } from "./telemetry";
 export interface ZamaSDKOptions {
   /**
    * Encrypts the transport key pair's private half at rest. Headless environments only
-   * (CLI tools, servers, agents); the constructor rejects it in browser contexts.
-   * Cached decrypted values stay in plaintext but are stored with a tag derived from
-   * this secret; a cached value whose tag does not verify is decrypted again. Supply
+   * (CLI tools, servers, agents); the constructor rejects it in browser contexts. Supply
    * at least 32 random bytes, or a string of at least 64 characters, from a CSPRNG or
    * secrets manager. The SDK copies a Uint8Array secret and zeroizes its own copy after
    * key import; it never touches your buffer, so zeroize yours after construction.
    * The SDK never persists or exposes this value. Omit for the default:
    * plaintext at rest, security delegated to the storage backend.
+   *
+   * Cached decrypted values stay readable in storage, but each is tagged with a key
+   * derived from this secret, and a value whose tag does not verify is decrypted again.
    */
   transportKeyPairDerivationSecret?: string | Uint8Array;
 }
