@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.9.1-beta.2](https://github.com/zama-ai/sdk/compare/v3.9.1-beta.1...v3.9.1-beta.2) (2026-11-27)
+
+### Bug Fixes
+
+- **sdk:** only load stored permits signed for their scope ([#1023](https://github.com/zama-ai/sdk/issues/1023)) ([1d71627]())
+
 ## [3.9.1-beta.1](https://github.com/zama-ai/sdk/compare/v3.9.0...v3.9.1-beta.1) (2026-11-26)
 
 ### Bug Fixes
