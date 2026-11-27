@@ -16,6 +16,9 @@ export const WRAPPING_SCHEME_V1 = {
   tagLengthBytes: 16,
 } as const;
 
+/** Versioned and distinct from the wrapping scheme's, so the two derived keys never coincide. */
+const CACHE_TAG_KEY_INFO = "zama-sdk-decrypt-cache-tag-v1";
+
 const AES_KEY_LENGTH_BITS = 256;
 
 /** On-disk shape of a wrapped private key. Public key and timestamps are stored alongside, unwrapped. */
@@ -123,6 +126,25 @@ async function deriveWrappingKey(
     { name: "AES-GCM", length: AES_KEY_LENGTH_BITS },
     false,
     ["encrypt", "decrypt"],
+  );
+}
+
+/** Derive the non-extractable HMAC-SHA-256 key that tags cached decrypted values. */
+export async function deriveCacheTagKey(
+  derivationSecret: DerivationSecretHolder,
+): Promise<CryptoKey> {
+  const ikmKey = await derivationSecret.baseKey();
+  return crypto.subtle.deriveKey(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: new Uint8Array(),
+      info: new TextEncoder().encode(CACHE_TAG_KEY_INFO),
+    },
+    ikmKey,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign", "verify"],
   );
 }
 
